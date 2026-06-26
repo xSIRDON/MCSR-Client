@@ -1,4 +1,4 @@
-// IPC channel names + the typed API surface exposed on window.obsidian.
+// IPC channel names + the typed API surface exposed on window.mcsr.
 import type {
   Account,
   AppConfig,
@@ -55,8 +55,8 @@ export const IPC = {
   cfgPickJava: 'cfg:pickJava'
 } as const
 
-/** The bridge surface available to the renderer as window.obsidian. */
-export interface ObsidianApi {
+/** The bridge surface available to the renderer as window.mcsr. */
+export interface McsrApi {
   window: {
     minimize(): void
     close(): void
@@ -107,6 +107,6 @@ export interface ObsidianApi {
 
 declare global {
   interface Window {
-    obsidian: ObsidianApi
+    mcsr: McsrApi
   }
 }

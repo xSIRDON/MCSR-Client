@@ -5,7 +5,7 @@ interface UiState {
   profile: Profile | null
   /** Whether the initial silent auth-restore has finished. */
   authReady: boolean
-  /** The username Obsidian uses for paceman live-pace lookups. */
+  /** The username MCSR Client uses for paceman live-pace lookups. */
   pacemanName: string | null
   setProfile: (p: Profile | null) => void
   setAuthReady: (v: boolean) => void

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useUi } from '../store/uiStore'
-import { ObsidianBlock, PortalBlock } from '../components/BlockArt'
+import { NetheriteBlock, PortalBlock } from '../components/BlockArt'
 
 export function Login() {
   const { setProfile, setPacemanName } = useUi()
@@ -11,7 +11,7 @@ export function Login() {
     setBusy(true)
     setError(null)
     try {
-      const p = await window.obsidian.auth.login()
+      const p = await window.mcsr.auth.login()
       setProfile(p)
       setPacemanName(p.name)
     } catch (e) {
@@ -30,7 +30,7 @@ export function Login() {
 
       <div className="relative w-[380px] text-center animate-fade-up">
         <div className="mb-5 flex items-center justify-center gap-2">
-          <ObsidianBlock size={34} />
+          <NetheriteBlock size={34} />
           <PortalBlock size={34} />
         </div>
         <h1 className="font-display text-4xl tracking-[0.14em] text-text">MCSR CLIENT</h1>

@@ -1,5 +1,5 @@
 // A polite, serialized fetch used by the API clients. A small minimum gap
-// between requests keeps Obsidian a good citizen of the MCSR API even if the
+// between requests keeps MCSR Client a good citizen of the MCSR API even if the
 // query cache is bypassed. The browser Response already matches FetchLike.
 
 type Resp = { ok: boolean; status: number; json(): Promise<unknown> }

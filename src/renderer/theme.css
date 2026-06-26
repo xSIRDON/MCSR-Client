@@ -58,7 +58,7 @@ body {
   text-rendering: optimizeLegibility;
   overflow: hidden;
   background-color: var(--bg);
-  /* Atmospheric depth: gold ember glow + nether-portal haze + obsidian grain. */
+  /* Atmospheric depth: gold ember glow + nether-portal haze + dark grain. */
   background-image:
     radial-gradient(900px 520px at 12% -8%, rgba(245, 200, 66, 0.1), transparent 60%),
     radial-gradient(820px 640px at 108% 116%, rgba(139, 92, 246, 0.14), transparent 58%),
@@ -67,7 +67,7 @@ body {
   background-attachment: fixed;
 }
 
-/* Faint pixel grid overlay — obsidian texture, never loud. */
+/* Faint pixel grid overlay — dark texture, never loud. */
 #root::before {
   content: '';
   position: fixed;
@@ -97,7 +97,7 @@ body {
   -webkit-app-region: no-drag;
 }
 
-/* Glassy obsidian surface used by cards. */
+/* Glassy dark surface used by cards. */
 .surface {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0)) ,

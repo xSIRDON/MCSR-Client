@@ -31,17 +31,17 @@ export const useInstances = create<InstancesState>((set, get) => ({
     set({ initialized: true })
 
     void Promise.all([
-      window.obsidian.instances.status('ranked'),
-      window.obsidian.instances.status('rsg')
+      window.mcsr.instances.status('ranked'),
+      window.mcsr.instances.status('rsg')
     ]).then(([ranked, rsg]) => set({ statuses: { ranked, rsg } }))
 
-    window.obsidian.instances.onStateChanged((s) =>
+    window.mcsr.instances.onStateChanged((s) =>
       set((prev) => {
         const progress = isBusy(s.state) ? prev.progress : { ...prev.progress, [s.id]: null }
         return { statuses: { ...prev.statuses, [s.id]: s }, progress }
       })
     )
-    window.obsidian.instances.onProgress((e) =>
+    window.mcsr.instances.onProgress((e) =>
       set((prev) => ({ progress: { ...prev.progress, [e.instance]: e } }))
     )
   },
@@ -49,7 +49,7 @@ export const useInstances = create<InstancesState>((set, get) => ({
   launch: async (id) => {
     set({ selected: id })
     try {
-      await window.obsidian.instances.launch(id)
+      await window.mcsr.instances.launch(id)
     } catch (e) {
       set((prev) => ({
         statuses: {
@@ -62,7 +62,7 @@ export const useInstances = create<InstancesState>((set, get) => ({
 
   verify: async (id) => {
     try {
-      await window.obsidian.instances.verify(id)
+      await window.mcsr.instances.verify(id)
     } catch {
       // state stream reports the error
     }

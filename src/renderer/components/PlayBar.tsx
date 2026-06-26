@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { InstanceId } from '@shared/types'
 import { useInstances, isBusy } from '../hooks/useInstances'
-import { ObsidianBlock, PortalBlock } from './BlockArt'
+import { NetheriteBlock, PortalBlock } from './BlockArt'
 
 const LABEL: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG' }
 const ACCENT: Record<InstanceId, string> = { ranked: 'var(--gold)', rsg: 'var(--portal)' }
@@ -62,7 +62,7 @@ export function PlayBar() {
                   boxShadow: active ? `inset 0 0 0 1px ${ACCENT[id]}40` : undefined
                 }}
               >
-                {id === 'ranked' ? <ObsidianBlock size={16} /> : <PortalBlock size={16} />}
+                {id === 'ranked' ? <NetheriteBlock size={16} /> : <PortalBlock size={16} />}
                 <span className="font-display tracking-wide">{LABEL[id]}</span>
               </button>
             )
@@ -96,7 +96,7 @@ export function PlayBar() {
           Edit instance
         </button>
         <button
-          onClick={() => void window.obsidian.instances.openFolder(selected)}
+          onClick={() => void window.mcsr.instances.openFolder(selected)}
           className="grid h-[34px] w-[34px] place-items-center rounded-lg border border-[var(--line)] text-muted transition-colors hover:text-text"
           title="Open the installed game folder"
         >

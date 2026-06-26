@@ -1,6 +1,6 @@
 // Thin wrapper over GMLL that owns instance creation, installation, and launch.
 // Each MCSR instance gets its own directory (isolated mods/saves) while sharing
-// the downloaded JRE, assets, and libraries under the Obsidian root.
+// the downloaded JRE, assets, and libraries under the MCSR Client root.
 
 import { init, config, Instance } from 'gmll'
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
@@ -19,7 +19,7 @@ function emit(e: ProgressEvent): void {
   progressSink?.(e)
 }
 
-/** One-time GMLL preflight; points GMLL at the shared Obsidian directories. */
+/** One-time GMLL preflight; points GMLL at the shared MCSR Client directories. */
 export async function ensureCore(onProgress?: (e: ProgressEvent) => void): Promise<void> {
   if (onProgress) progressSink = onProgress
   if (initialised) return

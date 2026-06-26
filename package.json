@@ -1,7 +1,7 @@
 {
-  "name": "obsidian-mcsr-client",
+  "name": "mcsr-client",
   "version": "0.1.0",
-  "description": "Obsidian — a clean, MCSR-Ranked themed Minecraft 1.16.1 speedrunning client with Ranked and RSG instances and built-in paceman integration.",
+  "description": "MCSR Client — a clean Minecraft 1.16.1 speedrunning client with Ranked and RSG instances and built-in paceman integration.",
   "author": "xSIRDON <nsrdawn@gmail.com>",
   "license": "MIT",
   "private": true,
@@ -46,8 +46,8 @@
     "zustand": "^5.0.0"
   },
   "build": {
-    "appId": "gg.obsidian.mcsr",
-    "productName": "Obsidian",
+    "appId": "gg.mcsrclient.app",
+    "productName": "MCSR Client",
     "directories": {
       "output": "release",
       "buildResources": "build"

@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 // as out/preload/index.mjs (ESM). The main process must load that exact file.
 // A stale "../preload/index.js" reference points at a file that does not exist;
 // Electron then fails to inject the preload *without throwing*, leaving
-// window.obsidian undefined so every renderer->main call dies with
+// window.mcsr undefined so every renderer->main call dies with
 // "Cannot read properties of undefined (reading 'auth')".
 describe('main process preload reference', () => {
   // Resolve relative to this test file so it doesn't depend on the working directory.

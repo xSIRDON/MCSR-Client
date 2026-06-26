@@ -10,8 +10,8 @@
 set -euo pipefail
 
 OWNER="xSIRDON"
-REPO="obsidian-mcsr-client"
-DESC="Obsidian — a clean, MCSR-Ranked themed Minecraft 1.16.1 speedrunning client (Ranked + RSG, built-in paceman)."
+REPO="MCSR-Client"
+DESC="MCSR Client — a clean, MCSR-Ranked themed Minecraft 1.16.1 speedrunning client (Ranked + RSG, built-in paceman)."
 
 if [ -z "${GITHUB_TOKEN:-}" ]; then
   echo "ERROR: set GITHUB_TOKEN to a personal access token with 'repo' scope." >&2

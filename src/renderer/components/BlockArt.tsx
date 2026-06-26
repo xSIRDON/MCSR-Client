@@ -30,8 +30,8 @@ export function RankGem({ color, glow, size = 22 }: { color: string; glow: strin
   )
 }
 
-/** A small obsidian block motif. */
-export function ObsidianBlock({ size = 18, className }: BlockProps) {
+/** A small netherite block motif. */
+export function NetheriteBlock({ size = 18, className }: BlockProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" className={`pixelated ${className ?? ''}`} aria-hidden>
       <rect width="16" height="16" fill="#140f24" />

@@ -47,7 +47,7 @@ function DangerCard({ id, onDeleted }: { id: InstanceId; onDeleted: () => void }
     setBusy(true)
     setError(null)
     try {
-      await window.obsidian.instances.delete(id)
+      await window.mcsr.instances.delete(id)
       onDeleted()
     } catch (e) {
       setBusy(false)
@@ -97,14 +97,14 @@ function DangerCard({ id, onDeleted }: { id: InstanceId; onDeleted: () => void }
 function MemoryCard({ id }: { id: InstanceId }) {
   const [config, setConfig] = useState<AppConfig | null>(null)
   useEffect(() => {
-    void window.obsidian.config.get().then(setConfig)
+    void window.mcsr.config.get().then(setConfig)
   }, [])
   if (!config) return null
 
   const mb = config.ram[id]
   const setLocal = (v: number) => setConfig({ ...config, ram: { ...config.ram, [id]: v } })
   const commit = (v: number) =>
-    void window.obsidian.config.set({ ram: { ...config.ram, [id]: v } }).then(setConfig)
+    void window.mcsr.config.set({ ram: { ...config.ram, [id]: v } }).then(setConfig)
 
   return (
     <Card title="Memory">
@@ -132,16 +132,16 @@ function MemoryCard({ id }: { id: InstanceId }) {
 function JavaCard({ id }: { id: InstanceId }) {
   const [config, setConfig] = useState<AppConfig | null>(null)
   useEffect(() => {
-    void window.obsidian.config.get().then(setConfig)
+    void window.mcsr.config.get().then(setConfig)
   }, [])
   if (!config) return null
 
   const java = config.java[id]
   const set = (value: string | null) =>
-    void window.obsidian.config.set({ java: { ...config.java, [id]: value } }).then(setConfig)
+    void window.mcsr.config.set({ java: { ...config.java, [id]: value } }).then(setConfig)
 
   async function browse() {
-    const p = await window.obsidian.config.pickJava()
+    const p = await window.mcsr.config.pickJava()
     if (p) set(p)
   }
 
@@ -197,7 +197,7 @@ function FilesCard({ id }: { id: InstanceId }) {
           Open this instance’s game folder — <span className="text-faint">mods, saves, config, logs</span>.
         </div>
         <button
-          onClick={() => void window.obsidian.instances.openFolder(id)}
+          onClick={() => void window.mcsr.instances.openFolder(id)}
           className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted hover:text-text"
         >
           Open folder
@@ -210,11 +210,11 @@ function FilesCard({ id }: { id: InstanceId }) {
 function ModsCard({ id }: { id: InstanceId }) {
   const [mods, setMods] = useState<ModInfo[] | null>(null)
   useEffect(() => {
-    void window.obsidian.instances.mods(id).then(setMods)
+    void window.mcsr.instances.mods(id).then(setMods)
   }, [id])
 
   const toggle = (file: string, enabled: boolean) =>
-    void window.obsidian.instances.toggleMod(id, file, enabled).then(setMods)
+    void window.mcsr.instances.toggleMod(id, file, enabled).then(setMods)
 
   return (
     <Card title={`Mods${mods ? ` · ${mods.length}` : ''}`}>

@@ -1,6 +1,6 @@
 <div align="center">
 
-# Obsidian
+# MCSR Client
 
 **A clean, MCSR-Ranked–themed Minecraft client for 1.16.1 speedrunning.**
 
@@ -10,7 +10,7 @@ Ranked and RSG in one place — live stats, real launching, built-in paceman.
 
 ---
 
-Obsidian is a standalone desktop launcher built for Minecraft Speedrunning. It signs
+MCSR Client is a standalone desktop launcher built for Minecraft Speedrunning. It signs
 you in with your Microsoft account, downloads and launches Minecraft 1.16.1 + Fabric
 itself, and manages two purpose-built instances — no third-party launcher required.
 
@@ -24,7 +24,7 @@ itself, and manages two purpose-built instances — no third-party launcher requ
   - **RSG** — the same legal mod set with the ranked mod removed, plus the
     **SeedQueue** wall for instant resets. Built straight from the canonical pack so
     it's always tournament-legal.
-- **Built-in paceman.** No Julti, no Jingle. Obsidian bundles and auto-runs the
+- **Built-in paceman.** No Julti, no Jingle. MCSR Client bundles and auto-runs the
   paceman tracker alongside your RSG sessions and shows your **live pace** right on the
   home screen.
 - **It just works.** Java, Minecraft, Fabric, and every mod are fetched and verified
@@ -70,7 +70,7 @@ src/core        pure logic (rank mapping, formatting) — unit tested
 src/services    MCSR Ranked + paceman API clients — unit tested
 src/main        Electron main: auth, launcher, instances, paceman, IPC
 src/preload     typed contextBridge bridge
-src/renderer    React UI (the Obsidian theme + dashboard)
+src/renderer    React UI (the MCSR Client theme + dashboard)
 ```
 
 ```bash
@@ -81,7 +81,7 @@ npm run build     # bundle
 
 ## Credits
 
-Obsidian stands on the shoulders of the MCSR community:
+MCSR Client stands on the shoulders of the MCSR community:
 
 - [MCSR Ranked](https://mcsrranked.com) and its public [API](https://docs.mcsrranked.com)
 - [paceman.gg](https://paceman.gg) and the PaceMan Tracker

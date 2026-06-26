@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipc'
-import type { ObsidianApi } from '../shared/ipc'
+import type { McsrApi } from '../shared/ipc'
 import type {
   AppConfig,
   InstanceId,
@@ -17,7 +17,7 @@ function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
   return () => ipcRenderer.removeListener(channel, listener)
 }
 
-const api: ObsidianApi = {
+const api: McsrApi = {
   window: {
     minimize: () => ipcRenderer.send(IPC.winMinimize),
     close: () => ipcRenderer.send(IPC.winClose)
@@ -70,4 +70,4 @@ const api: ObsidianApi = {
   }
 }
 
-contextBridge.exposeInMainWorld('obsidian', api)
+contextBridge.exposeInMainWorld('mcsr', api)

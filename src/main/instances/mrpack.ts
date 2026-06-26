@@ -89,7 +89,7 @@ export async function fetchPack(
   fetchBuffer: FetchBuffer = nodeFetchBuffer
 ): Promise<ModrinthIndex> {
   const buf = await fetchBuffer(url)
-  const work = join(tmpdir(), `obsidian-mrpack-${Date.now()}`)
+  const work = join(tmpdir(), `mcsr-mrpack-${Date.now()}`)
   const zipPath = join(work, 'pack.mrpack')
   mkdirSync(work, { recursive: true })
   writeFileSync(zipPath, buf)

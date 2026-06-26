@@ -14,7 +14,7 @@ export function AccountMenu({ profile }: { profile: Profile }) {
 
   useEffect(() => {
     if (!open) return
-    void window.obsidian.auth.accounts().then(setAccounts)
+    void window.mcsr.auth.accounts().then(setAccounts)
     const onDoc = (e: MouseEvent): void => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
@@ -23,21 +23,21 @@ export function AccountMenu({ profile }: { profile: Profile }) {
   }, [open])
 
   async function switchTo(uuid: string) {
-    const p = await window.obsidian.auth.switch(uuid)
+    const p = await window.mcsr.auth.switch(uuid)
     if (p) {
       setProfile(p)
       setPacemanName(p.name)
     }
-    setAccounts(await window.obsidian.auth.accounts())
+    setAccounts(await window.mcsr.auth.accounts())
     setOpen(false)
   }
 
   async function add() {
     try {
-      const p = await window.obsidian.auth.login()
+      const p = await window.mcsr.auth.login()
       setProfile(p)
       setPacemanName(p.name)
-      setAccounts(await window.obsidian.auth.accounts())
+      setAccounts(await window.mcsr.auth.accounts())
     } catch {
       /* cancelled */
     }

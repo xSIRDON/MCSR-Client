@@ -52,6 +52,6 @@ demo/
 
 # local verification artifacts (not shipped)
 .playwright-mcp/
-obsidian-home.png
-obsidian-profile.png
+mcsr-home.png
+mcsr-profile.png
 *.screenshot.png

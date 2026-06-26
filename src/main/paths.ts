@@ -25,10 +25,7 @@ function rootDir(): string {
 export function migrateDataDir(): void {
   const current = rootDir()
   if (existsSync(current)) return
-  const legacy = [
-    join(app.getPath('appData'), 'MCSR-Client'),
-    join(app.getPath('appData'), 'Obsidian')
-  ]
+  const legacy = [join(app.getPath('appData'), 'MCSR-Client')]
   for (const old of legacy) {
     if (existsSync(old)) {
       try {

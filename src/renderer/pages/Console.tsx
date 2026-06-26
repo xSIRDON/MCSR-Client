@@ -9,10 +9,10 @@ export function Console() {
 
   useEffect(() => {
     let active = true
-    void window.obsidian.logs.history().then((h) => {
+    void window.mcsr.logs.history().then((h) => {
       if (active) setLines(h)
     })
-    const off = window.obsidian.logs.onLine((l) => setLines((prev) => [...prev.slice(-1999), l]))
+    const off = window.mcsr.logs.onLine((l) => setLines((prev) => [...prev.slice(-1999), l]))
     return () => {
       active = false
       off()
@@ -26,7 +26,7 @@ export function Console() {
   }, [lines, autoscroll])
 
   async function clear() {
-    await window.obsidian.logs.clear()
+    await window.mcsr.logs.clear()
     setLines([])
   }
 

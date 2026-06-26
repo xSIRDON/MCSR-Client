@@ -1,15 +1,15 @@
-import { ObsidianBlock } from './BlockArt'
+import { NetheriteBlock } from './BlockArt'
 
 export function TitleBar() {
   return (
     <div className="drag flex h-10 shrink-0 items-center justify-between border-b border-[var(--line)] px-3">
       <div className="flex items-center gap-2.5 select-none">
-        <ObsidianBlock size={18} />
+        <NetheriteBlock size={18} />
         <span className="font-display text-sm tracking-[0.18em] text-text">MCSR CLIENT</span>
       </div>
       <div className="no-drag flex items-center gap-1">
         <button
-          onClick={() => window.obsidian.window.minimize()}
+          onClick={() => window.mcsr.window.minimize()}
           className="grid h-7 w-9 place-items-center rounded text-muted hover:bg-white/5 hover:text-text"
           aria-label="Minimize"
         >
@@ -18,7 +18,7 @@ export function TitleBar() {
           </svg>
         </button>
         <button
-          onClick={() => window.obsidian.window.close()}
+          onClick={() => window.mcsr.window.close()}
           className="grid h-7 w-9 place-items-center rounded text-muted hover:bg-[var(--loss)]/20 hover:text-[var(--loss)]"
           aria-label="Close"
         >

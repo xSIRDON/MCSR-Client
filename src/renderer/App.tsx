@@ -11,7 +11,7 @@ import { Profile } from './pages/Profile'
 import { Settings } from './pages/Settings'
 import { Instance } from './pages/Instance'
 import { Console } from './pages/Console'
-import { ObsidianBlock } from './components/BlockArt'
+import { NetheriteBlock } from './components/BlockArt'
 
 export function App() {
   const { profile, authReady, setProfile, setAuthReady, setPacemanName } = useUi()
@@ -21,8 +21,8 @@ export function App() {
     void (async () => {
       try {
         const [p, cfg] = await Promise.all([
-          window.obsidian.auth.restore(),
-          window.obsidian.config.get()
+          window.mcsr.auth.restore(),
+          window.mcsr.config.get()
         ])
         if (!active) return
         if (p) setProfile(p)
@@ -70,7 +70,7 @@ function Splash() {
     <div className="grid flex-1 place-items-center">
       <div className="flex flex-col items-center gap-3 opacity-80">
         <div className="animate-pulse-glow">
-          <ObsidianBlock size={40} />
+          <NetheriteBlock size={40} />
         </div>
         <div className="font-display text-sm tracking-[0.3em] text-muted">MCSR CLIENT</div>
       </div>
