@@ -1,6 +1,6 @@
 {
   "name": "mcsr-client",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "MCSR Client — a clean Minecraft 1.16.1 speedrunning client with Ranked and RSG instances and built-in paceman integration.",
   "author": "xSIRDON <nsrdawn@gmail.com>",
   "license": "MIT",
@@ -104,6 +104,7 @@
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
+      "installerHeader": "build/installerHeader.bmp",
       "installerSidebar": "build/installerSidebar.bmp",
       "uninstallerSidebar": "build/installerSidebar.bmp",
       "createDesktopShortcut": true,
