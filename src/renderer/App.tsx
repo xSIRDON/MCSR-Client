@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import type { UpdateStatus } from '@shared/types'
 import { useUi } from './store/uiStore'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
@@ -11,7 +12,7 @@ import { Profile } from './pages/Profile'
 import { Settings } from './pages/Settings'
 import { Instance } from './pages/Instance'
 import { Console } from './pages/Console'
-import { NetheriteBlock } from './components/BlockArt'
+import { McsrLogo } from './components/Logo'
 
 export function App() {
   const { profile, authReady, setProfile, setAuthReady, setPacemanName } = useUi()
@@ -45,6 +46,7 @@ export function App() {
         <Login />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
+          <UpdateBanner />
           <div className="flex min-h-0 flex-1">
             <Sidebar />
             <main className="min-w-0 flex-1 overflow-y-auto">
@@ -65,12 +67,33 @@ export function App() {
   )
 }
 
+/** Slim global banner shown once an update has finished downloading. */
+function UpdateBanner() {
+  const [upd, setUpd] = useState<UpdateStatus>({ state: 'idle' })
+  useEffect(() => {
+    void window.mcsr.updater.status().then(setUpd)
+    return window.mcsr.updater.onStatusChanged(setUpd)
+  }, [])
+  if (upd.state !== 'ready') return null
+  return (
+    <div className="flex shrink-0 items-center justify-center gap-3 border-b border-[var(--win)]/25 bg-[var(--win)]/10 px-4 py-1.5 text-sm text-[var(--win)]">
+      <span>Update {upd.version ? `v${upd.version} ` : ''}downloaded and ready.</span>
+      <button
+        onClick={() => void window.mcsr.updater.install()}
+        className="font-display rounded-md bg-[var(--win)] px-3 py-1 text-xs text-[#07140a] transition-all hover:brightness-110"
+      >
+        Restart &amp; update
+      </button>
+    </div>
+  )
+}
+
 function Splash() {
   return (
     <div className="grid flex-1 place-items-center">
       <div className="flex flex-col items-center gap-3 opacity-80">
         <div className="animate-pulse-glow">
-          <NetheriteBlock size={40} />
+          <McsrLogo size={46} />
         </div>
         <div className="font-display text-sm tracking-[0.3em] text-muted">MCSR CLIENT</div>
       </div>

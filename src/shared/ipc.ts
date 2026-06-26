@@ -10,7 +10,8 @@ import type {
   Profile,
   ProgressEvent,
   StandardSettings,
-  TrackerStatus
+  TrackerStatus,
+  UpdateStatus
 } from './types'
 
 export const IPC = {
@@ -39,8 +40,14 @@ export const IPC = {
   instOpenFolder: 'inst:openFolder',
   instStdGet: 'inst:stdGet',
   instStdSet: 'inst:stdSet',
+  instImportSettings: 'inst:importSettings',
   // system
   sysJava: 'sys:java',
+  // app updates
+  updCheck: 'upd:check',
+  updStatus: 'upd:status',
+  updInstall: 'upd:install',
+  updStatusChanged: 'upd:statusChanged', // main -> renderer stream
   // logs
   logLine: 'log:line', // main -> renderer stream
   logHistory: 'log:history',
@@ -85,9 +92,18 @@ export interface McsrApi {
     openFolder(id: InstanceId): Promise<void>
     getStandardSettings(id: InstanceId): Promise<StandardSettings>
     setStandardSettings(id: InstanceId, patch: StandardSettings): Promise<StandardSettings>
+    /** Import a Minecraft options.txt into this instance's standardoptions.txt.
+     *  Opens a file picker; resolves the count imported, or null if cancelled. */
+    importSettings(id: InstanceId): Promise<{ imported: number } | null>
   }
   system: {
     java(): Promise<JavaInfo>
+  }
+  updater: {
+    check(): Promise<UpdateStatus>
+    status(): Promise<UpdateStatus>
+    install(): Promise<void>
+    onStatusChanged(cb: (s: UpdateStatus) => void): () => void
   }
   logs: {
     history(): Promise<LogLine[]>

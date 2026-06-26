@@ -93,6 +93,18 @@ export interface JavaInfo {
 /** StandardSettings config as key->value pairs (mirrors standardoptions.txt on disk). */
 export type StandardSettings = Record<string, string>
 
+/** App auto-update lifecycle, streamed from the main process to the UI. */
+export interface UpdateStatus {
+  state: 'idle' | 'checking' | 'up-to-date' | 'downloading' | 'ready' | 'error'
+  /** Version of the available/downloaded update. */
+  version?: string
+  /** Download progress 0..100 while state === 'downloading'. */
+  progress?: number
+  error?: string
+  /** Human note, e.g. why updates are inactive in dev. */
+  note?: string
+}
+
 /** A line of console output streamed to the UI (game stdout/stderr or client lifecycle). */
 export interface LogLine {
   source: 'game' | 'system'

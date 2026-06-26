@@ -64,3 +64,28 @@ export function writeStandardSettings(gameDir: string, patch: StandardSettings):
   writeFileSync(file, merged, 'utf8')
   return parseStandardSettings(merged)
 }
+
+/**
+ * Import a Minecraft `options.txt` (same `key:value` format) into this instance's
+ * standardoptions.txt, so the player's keybinds/sensitivity/video carry over. Some
+ * keys (the window resolution, server list, etc.) aren't meaningful as defaults, so
+ * they're skipped. Returns the number of settings imported.
+ */
+const IMPORT_SKIP = new Set(['version', 'lastServer', 'resourcePacks', 'incompatibleResourcePacks'])
+// A real options.txt always carries several of these; a wrong .txt (a log, prose)
+// carries none. Guard so the dialog filter — which the user can bypass — can't feed
+// junk colon-bearing lines straight into standardoptions.txt.
+const OPTIONS_MARKER = /^(version|key_|mouseSensitivity|fov|gamma|renderDistance|guiScale|soundCategory_|lang)$/
+
+export function importOptionsFile(gameDir: string, sourceFile: string): number {
+  const parsed = parseStandardSettings(readFileSync(sourceFile, 'utf8'))
+  if (!Object.keys(parsed).some((k) => OPTIONS_MARKER.test(k))) {
+    throw new Error("That file doesn't look like a Minecraft options.txt.")
+  }
+  const patch: StandardSettings = {}
+  for (const [k, v] of Object.entries(parsed)) {
+    if (!IMPORT_SKIP.has(k)) patch[k] = v
+  }
+  writeStandardSettings(gameDir, patch)
+  return Object.keys(patch).length
+}

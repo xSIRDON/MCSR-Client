@@ -1,15 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { mcsr, paceman } from '../lib/clients'
-import { seasonRanked } from '@services/mcsr-ranked'
 import { eloToRank } from '@core/rank'
-import { msToTime, winRate } from '@core/format'
+import { msToTime } from '@core/format'
 import { useInstances, isBusy } from '../hooks/useInstances'
 import type { ProgressEvent } from '@shared/types'
 import { RankBadge } from './RankBadge'
 import { NetheriteBlock, PortalBlock } from './BlockArt'
 
-/** RANKED — gold/dark. Elo, rank, season form, and a one-tap launch. */
+/** RANKED — gold/dark. Just the Elo and a one-tap launch; deeper stats live on the profile. */
 export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }) {
   const { data: user } = useQuery({ queryKey: ['user', uuid], queryFn: () => mcsr.getUser(uuid) })
   const { statuses, progress, launch } = useInstances()
@@ -18,48 +17,21 @@ export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }
   const busy = isBusy(status.state)
 
   const rank = eloToRank(user?.eloRate)
-  const stats = user ? seasonRanked(user) : null
-  const decay = user?.timestamp?.nextDecay
 
   return (
     <ModeShell accent={rank.color} glow={rank.glow} delay={delay}>
-      <header className="relative flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
+      <header className="relative flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
           <NetheriteBlock size={22} />
-          <div>
+          <div className="min-w-0">
             <div className="font-display text-lg leading-none tracking-wide text-[var(--gold)]">RANKED</div>
-            <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-faint">1v1 Ladder</div>
+            <div className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-faint">1v1 Ladder</div>
           </div>
         </div>
         <RankBadge elo={user?.eloRate} size="sm" />
       </header>
 
-      <div className="relative mt-4 flex items-end gap-4">
-        <div className="shrink-0">
-          <div className="text-[10px] uppercase tracking-[0.16em] text-muted">Elo</div>
-          <div
-            className="font-display tnum text-5xl leading-none"
-            style={{ color: rank.color, textShadow: `0 0 30px ${rank.glow}66` }}
-          >
-            {user?.eloRate ?? '—'}
-          </div>
-        </div>
-        <div className="mb-1 grid flex-1 grid-cols-3 gap-2">
-          <Mini label="Global" value={user?.eloRank ? `#${user.eloRank}` : '—'} />
-          <Mini label="Win rate" value={stats ? `${winRate(stats.wins, stats.loses)}%` : '—'} />
-          <Mini label="Streak" value={stats?.currentStreak ?? '—'} />
-        </div>
-      </div>
-
-      {decay ? (
-        <div className="relative mt-3 inline-flex items-center gap-1.5 rounded-md border border-[var(--loss)]/30 bg-[var(--loss)]/10 px-2.5 py-1 text-xs text-[var(--loss)]">
-          ⚠ ELO decay scheduled — play to reset it
-        </div>
-      ) : (
-        <div className="relative mt-3 text-xs text-faint">
-          {stats ? `${stats.wins}W · ${stats.loses}L · best ${msToTime(stats.bestTime)} this season` : ' '}
-        </div>
-      )}
+      <Hero label="Elo" value={user?.eloRate ?? '—'} color={rank.color} glow={`${rank.glow}66`} />
 
       <PlayButton
         busy={busy}
@@ -71,7 +43,7 @@ export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }
   )
 }
 
-/** RSG — nether-portal purple. PB, clutch, live pace, and a one-tap launch. */
+/** RSG — nether-portal purple. Personal best, a live RUNNING/IDLE badge, and a one-tap launch. */
 export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: number }) {
   const { data: runs } = useQuery({
     queryKey: ['rsg-card', name],
@@ -100,57 +72,21 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
 
   const finished = runs?.filter((r) => r.finish != null) ?? []
   const pb = finished.length ? Math.min(...finished.map((r) => r.finish as number)) : null
-  const shCount = runs?.filter((r) => r.stronghold != null).length ?? 0
-  const clutch = shCount > 0 ? Math.round((finished.length / shCount) * 100) : null
-  const tracked = runs?.length ?? 0
 
   return (
     <ModeShell accent="var(--portal)" glow="var(--portal)" delay={delay}>
-      <header className="relative flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
+      <header className="relative flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
           <PortalBlock size={22} />
-          <div>
+          <div className="min-w-0">
             <div className="font-display text-lg leading-none tracking-wide text-[var(--portal)]">RSG</div>
-            <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-faint">Random Seed Glitchless</div>
+            <div className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-faint">Random Seed Glitchless</div>
           </div>
         </div>
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${isLive ? 'animate-pulse-glow' : ''}`}
-          style={{
-            color: isLive ? 'var(--win)' : 'var(--faint)',
-            background: isLive ? 'rgba(74,255,140,.12)' : 'transparent',
-            border: `1px solid ${isLive ? 'rgba(74,255,140,.3)' : 'var(--line)'}`
-          }}
-        >
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: isLive ? 'var(--win)' : 'var(--faint)' }} />
-          {isLive ? 'RUNNING' : 'IDLE'}
-        </span>
+        <StatusPill live={isLive} />
       </header>
 
-      <div className="relative mt-4 flex items-end gap-4">
-        <div className="shrink-0">
-          <div className="text-[10px] uppercase tracking-[0.16em] text-muted">Personal best</div>
-          <div
-            className="font-display tnum text-5xl leading-none"
-            style={{ color: 'var(--portal)', textShadow: '0 0 30px rgba(159,107,255,.5)' }}
-          >
-            {pb != null ? msToTime(pb) : '—'}
-          </div>
-        </div>
-        <div className="mb-1 grid flex-1 grid-cols-3 gap-2">
-          <Mini label="Clutch" value={clutch != null ? `${clutch}%` : '—'} />
-          <Mini label="SH reached" value={shCount || '—'} />
-          <Mini label="Runs" value={tracked || '—'} />
-        </div>
-      </div>
-
-      <div className="relative mt-3 text-xs text-faint">
-        {!name
-          ? 'Sign in to track your RSG pace.'
-          : tracked
-            ? 'Clutch = runs you finish after reaching the stronghold.'
-            : 'No paceman runs yet — launch RSG to start tracking.'}
-      </div>
+      <Hero label="Personal best" value={pb != null ? msToTime(pb) : '—'} color="var(--portal)" glow="rgba(159,107,255,.5)" />
 
       <PlayButton
         busy={busy}
@@ -162,7 +98,7 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
   )
 }
 
-/** ZSG — teal. The RSG mod set plus the FSG (filtered-seed) mod. */
+/** ZSG — teal. The RSG mod set plus the FSG (filtered-seed) mod. No tracked stats. */
 export function ZsgCard({ delay = 0 }: { delay?: number }) {
   const { statuses, progress, launch } = useInstances()
   const status = statuses.zsg
@@ -177,24 +113,26 @@ export function ZsgCard({ delay = 0 }: { delay?: number }) {
 
   return (
     <ModeShell accent="#4fd6b0" glow="#4fd6b0" delay={delay}>
-      <header className="relative flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
+      <header className="relative flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
           <PortalBlock size={22} />
-          <div>
+          <div className="min-w-0">
             <div className="font-display text-lg leading-none tracking-wide" style={{ color: '#4fd6b0' }}>
               ZSG
             </div>
-            <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-faint">Filtered seed practice</div>
+            <div className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-faint">Filtered seed practice</div>
           </div>
         </div>
-        <span className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] text-faint">
+        <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] text-faint">
           {stateLabel}
         </span>
       </header>
 
-      <p className="relative mt-3 text-sm text-muted">
-        RSG set + the <span className="text-text">FSG</span> filtered-seed mod.
-      </p>
+      <div className="relative flex flex-1 flex-col justify-center py-3">
+        <p className="text-sm leading-relaxed text-muted">
+          RSG set + the <span className="text-text">FSG</span> filtered-seed mod.
+        </p>
+      </div>
 
       <PlayButton
         busy={busy}
@@ -220,6 +158,40 @@ function launchLabel(state: string, ready: string): string {
           : 'INSTALL & PLAY'
 }
 
+/** The single hero stat each card centers on (Elo / PB). */
+function Hero({ label, value, color, glow }: { label: string; value: ReactNode; color: string; glow: string }) {
+  return (
+    <div className="relative flex flex-1 flex-col justify-center py-3">
+      <div className="text-[10px] uppercase tracking-[0.16em] text-muted">{label}</div>
+      <div
+        className="font-display tnum whitespace-nowrap text-5xl leading-none"
+        style={{ color, textShadow: `0 0 34px ${glow}` }}
+      >
+        {value}
+      </div>
+    </div>
+  )
+}
+
+/** RSG live indicator — pulses green while a run is live, otherwise a quiet IDLE chip. */
+function StatusPill({ live }: { live: boolean }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium ${
+        live ? 'animate-pulse-glow' : ''
+      }`}
+      style={{
+        color: live ? 'var(--win)' : 'var(--faint)',
+        background: live ? 'rgba(74,255,140,.12)' : 'transparent',
+        border: `1px solid ${live ? 'rgba(74,255,140,.3)' : 'var(--line)'}`
+      }}
+    >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: live ? 'var(--win)' : 'var(--faint)' }} />
+      {live ? 'RUNNING' : 'IDLE'}
+    </span>
+  )
+}
+
 function ModeShell({
   accent,
   glow,
@@ -233,7 +205,7 @@ function ModeShell({
 }) {
   return (
     <section
-      className="surface group relative flex flex-col overflow-hidden p-4 animate-fade-up"
+      className="surface group relative flex min-h-[208px] flex-col overflow-hidden p-4 animate-fade-up"
       style={{
         animationDelay: `${delay}ms`,
         boxShadow: `0 12px 44px rgba(0,0,0,.5), inset 0 0 70px ${accent}0d`
@@ -249,15 +221,6 @@ function ModeShell({
       />
       <div className="relative flex flex-1 flex-col">{children}</div>
     </section>
-  )
-}
-
-function Mini({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="rounded-lg border border-[var(--line)] bg-black/20 px-2.5 py-1.5">
-      <div className="font-display tnum text-sm text-text">{value}</div>
-      <div className="mt-0.5 text-[9px] uppercase tracking-wider text-faint">{label}</div>
-    </div>
   )
 }
 

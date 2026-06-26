@@ -54,7 +54,7 @@ export function Profile() {
               <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
                 <EloChart uuid={uuid} />
                 <div className="flex min-h-[280px] flex-col">
-                  <MatchFeed uuid={uuid} />
+                  <MatchFeed key={uuid} uuid={uuid} />
                 </div>
               </div>
             ) : null

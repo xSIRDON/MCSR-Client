@@ -1,106 +1,85 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { paceman } from '../lib/clients'
-import type { RecentRun, RunSplits } from '@services/paceman'
-import { msToTime } from '@core/format'
+import type { SessionStats } from '@services/paceman'
 
-interface Seg {
-  key: string
-  label: string
-  from: keyof RunSplits | null
-  to: keyof RunSplits
-}
+// paceman keys everything by MC username and segments by "sessions"; passing huge
+// windows collapses the whole tracked history into one all-time view.
+const ALLTIME = { hours: 999999, hoursBetween: 999999 }
 
-const SEGMENTS: Seg[] = [
-  { key: 'ow', label: 'Overworld', from: null, to: 'nether' },
-  { key: 'bastion', label: 'Bastion', from: 'nether', to: 'bastion' },
-  { key: 'fortress', label: 'Fortress', from: 'bastion', to: 'fortress' },
-  { key: 'blind', label: 'Blind', from: 'fortress', to: 'first_portal' },
-  { key: 'sh', label: 'Stronghold travel', from: 'first_portal', to: 'stronghold' },
-  { key: 'sh_in', label: 'In stronghold', from: 'stronghold', to: 'end' },
-  { key: 'end', label: 'End fight', from: 'end', to: 'finish' }
+const FUNNEL: { key: keyof SessionStats; label: string }[] = [
+  { key: 'nether', label: 'Nether' },
+  { key: 'bastion', label: 'Bastion' },
+  { key: 'fortress', label: 'Fortress' },
+  { key: 'first_portal', label: 'First Portal' },
+  { key: 'stronghold', label: 'Stronghold' },
+  { key: 'end', label: 'Enter End' },
+  { key: 'finish', label: 'Finish' }
 ]
 
-function segDuration(run: RecentRun, seg: Seg): number | null {
-  const to = run[seg.to]
-  if (to == null) return null
-  const from = seg.from == null ? 0 : run[seg.from]
-  if (from == null) return null
-  const d = to - from
-  return d >= 0 ? d : null
-}
-
-/** Deep RSG split breakdown from paceman: best + average per segment, theoretical
- *  best (sum of bests), fort-to-finish, and time in the stronghold. */
+/** RSG stats mirrored from paceman's player page: the grind headline + split funnel. */
 export function RsgStats({ name }: { name: string | null }) {
-  const { data: runs, isLoading } = useQuery({
-    queryKey: ['rsg-stats', name],
-    queryFn: () => paceman.getRecentRuns(name!, { limit: 100, hours: 24 * 365 }),
+  const { data: session, isLoading } = useQuery({
+    queryKey: ['rsg-session', name],
+    queryFn: () => paceman.getSessionStats(name!, ALLTIME),
+    enabled: !!name
+  })
+  const { data: nph } = useQuery({
+    queryKey: ['rsg-nph', name],
+    queryFn: () => paceman.getNetherStats(name!, ALLTIME),
     enabled: !!name
   })
 
   if (!name) return <Empty>No paceman name — set it in Settings to see your RSG stats.</Empty>
-  if (isLoading) return <Empty>Crunching your runs…</Empty>
-  if (!runs || runs.length === 0) return <Empty>No paceman runs yet — play some RSG to start tracking.</Empty>
+  if (isLoading) return <Empty>Crunching your paceman stats…</Empty>
+  if (!session) return <Empty>No paceman data yet — play some RSG to start tracking.</Empty>
 
-  const segStats = SEGMENTS.map((seg) => {
-    const ds = runs.map((r) => segDuration(r, seg)).filter((d): d is number => d != null)
-    return {
-      ...seg,
-      best: ds.length ? Math.min(...ds) : null,
-      avg: ds.length ? Math.round(ds.reduce((a, b) => a + b, 0) / ds.length) : null,
-      count: ds.length
-    }
-  })
-  const sumOfBests = segStats.every((s) => s.best != null)
-    ? segStats.reduce((a, s) => a + (s.best as number), 0)
-    : null
-  const finished = runs.filter((r) => r.finish != null)
-  const pb = finished.length ? Math.min(...finished.map((r) => r.finish as number)) : null
-  const f2f = runs
-    .map((r) => (r.finish != null && r.fortress != null ? r.finish - r.fortress : null))
-    .filter((d): d is number => d != null && d >= 0)
-  const bestF2F = f2f.length ? Math.min(...f2f) : null
-  const shCount = runs.filter((r) => r.stronghold != null).length
-  const clutch = shCount > 0 ? Math.round((finished.length / shCount) * 100) : null
+  const netherCount = session.nether?.count ?? 0
+  const completions = session.finish?.count ?? 0
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Big label="Personal best" value={pb != null ? msToTime(pb) : '—'} accent="var(--portal)" />
+      <div className="grid gap-3 sm:grid-cols-4">
+        <Big label="Avg finish" value={session.finish?.avg ?? '—'} accent="var(--portal)" sub="all completions" />
+        <Big label="Completions" value={completions ? String(completions) : '—'} accent="var(--win)" />
         <Big
-          label="Sum of bests"
-          value={sumOfBests != null ? msToTime(sumOfBests) : '—'}
+          label="Nether / hour"
+          value={nph?.rnph != null ? nph.rnph.toFixed(1) : '—'}
           accent="var(--gold)"
-          sub={pb != null && sumOfBests != null ? `${msToTime(pb - sumOfBests)} untapped` : undefined}
+          sub="grind rate"
         />
-        <Big label="Clutch" value={clutch != null ? `${clutch}%` : '—'} accent="var(--win)" sub="finish from stronghold" />
+        <Big
+          label="Total resets"
+          value={nph?.totalResets != null ? nph.totalResets.toLocaleString('en-US') : '—'}
+          accent="var(--text)"
+        />
       </div>
 
       <section className="surface p-5">
         <h2 className="mb-3 font-display text-sm uppercase tracking-[0.16em] text-muted">
-          Best splits &amp; time per segment
+          Split funnel — reached, average &amp; conversion
         </h2>
         <div className="space-y-0.5">
-          <Row label="Segment" best="Gold" avg="Average" count="Runs" head />
-          {segStats.map((s) => (
-            <Row
-              key={s.key}
-              label={s.label}
-              best={s.best != null ? msToTime(s.best) : '—'}
-              avg={s.avg != null ? msToTime(s.avg) : '—'}
-              count={String(s.count)}
-              highlight={s.key === 'sh_in'}
-            />
-          ))}
-        </div>
-        <div className="mt-3 flex items-center justify-between rounded-lg border border-[var(--line)] bg-black/20 px-3 py-2">
-          <span className="text-sm text-muted">Fort → Finish (best)</span>
-          <span className="font-display tnum text-text">{bestF2F != null ? msToTime(bestF2F) : '—'}</span>
+          <Row label="Split" reached="Reached" avg="Average" conv="Convert" head />
+          {FUNNEL.map((s) => {
+            const stat = session[s.key]
+            const conv =
+              netherCount > 0 && stat ? `${Math.round((stat.count / netherCount) * 100)}%` : '—'
+            return (
+              <Row
+                key={s.key}
+                label={s.label}
+                reached={stat ? String(stat.count) : '—'}
+                avg={stat?.avg ?? '—'}
+                conv={conv}
+                highlight={s.key === 'finish'}
+              />
+            )
+          })}
         </div>
         <p className="mt-2 text-[11px] text-faint">
-          “In stronghold” = entering the stronghold → entering the End. Bastion-type and
-          overworld-type bests aren’t available in paceman’s public data.
+          All-time, from your tracked paceman runs. “Convert” is the share of your Nethers that reach
+          each split; averages are paceman’s.
         </p>
       </section>
     </div>
@@ -111,7 +90,7 @@ function Big({ label, value, accent, sub }: { label: string; value: string; acce
   return (
     <div className="surface p-4">
       <div className="text-[10px] uppercase tracking-[0.16em] text-muted">{label}</div>
-      <div className="font-display tnum text-3xl leading-tight" style={{ color: accent }}>
+      <div className="font-display tnum whitespace-nowrap text-2xl leading-tight" style={{ color: accent }}>
         {value}
       </div>
       {sub && <div className="mt-0.5 text-xs text-faint">{sub}</div>}
@@ -121,30 +100,30 @@ function Big({ label, value, accent, sub }: { label: string; value: string; acce
 
 function Row({
   label,
-  best,
+  reached,
   avg,
-  count,
+  conv,
   head,
   highlight
 }: {
   label: string
-  best: string
+  reached: string
   avg: string
-  count: string
+  conv: string
   head?: boolean
   highlight?: boolean
 }) {
   return (
     <div
-      className={`grid grid-cols-[1.6fr_1fr_1fr_0.6fr] items-center gap-2 rounded-md px-3 py-1.5 ${
+      className={`grid grid-cols-[1.4fr_1fr_1fr_1fr] items-center gap-2 rounded-md px-3 py-1.5 ${
         head ? 'text-[10px] uppercase tracking-wider text-faint' : 'text-sm'
       }`}
-      style={{ background: highlight ? 'rgba(159,107,255,.08)' : undefined }}
+      style={{ background: highlight ? 'rgba(74,255,140,.08)' : undefined }}
     >
       <span className={head ? '' : 'text-muted'}>{label}</span>
-      <span className={head ? '' : 'font-display tnum text-[var(--gold)]'}>{best}</span>
-      <span className={head ? '' : 'font-display tnum text-text'}>{avg}</span>
-      <span className={head ? 'text-right' : 'tnum text-right text-faint'}>{count}</span>
+      <span className={head ? '' : 'font-display tnum text-text'}>{reached}</span>
+      <span className={head ? '' : 'font-display tnum text-[var(--gold)]'}>{avg}</span>
+      <span className={head ? '' : 'tnum text-[var(--win)]'}>{conv}</span>
     </div>
   )
 }

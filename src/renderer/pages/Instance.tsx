@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { AppConfig, InstanceId, ModInfo } from '@shared/types'
-import { MAP_CATALOG } from '@shared/maps'
+import { MAP_CATALOG, ALL_MAP_IDS } from '@shared/maps'
 
 const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
 
@@ -34,6 +34,7 @@ export function Instance() {
       <MemoryCard id={instanceId} />
       <JavaCard id={instanceId} />
       <FilesCard id={instanceId} />
+      <SettingsImportCard id={instanceId} />
       <MapsCard id={instanceId} />
       <ModsCard id={instanceId} />
       <DangerCard id={instanceId} onDeleted={() => navigate('/play')} />
@@ -250,6 +251,56 @@ function ModsCard({ id }: { id: InstanceId }) {
   )
 }
 
+function SettingsImportCard({ id }: { id: InstanceId }) {
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  async function importSettings() {
+    setBusy(true)
+    setResult(null)
+    try {
+      const res = await window.mcsr.instances.importSettings(id)
+      if (res)
+        setResult(
+          res.imported > 0
+            ? { ok: true, msg: `Imported ${res.imported} setting${res.imported === 1 ? '' : 's'}.` }
+            : { ok: false, msg: 'No settings found in that file.' }
+        )
+    } catch (e) {
+      setResult({ ok: false, msg: e instanceof Error ? e.message : 'Could not import that file.' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card title="Game settings">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm text-muted">
+          Import your keybinds, sensitivity and video settings from an existing{' '}
+          <code>options.txt</code> into this instance.
+        </div>
+        <button
+          onClick={importSettings}
+          disabled={busy}
+          className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted transition-colors hover:text-text disabled:opacity-50"
+        >
+          {busy ? 'Importing…' : 'Browse to options.txt…'}
+        </button>
+      </div>
+      {result && (
+        <div className={`mt-2 text-xs ${result.ok ? 'text-[var(--win)]' : 'text-[var(--loss)]'}`}>
+          {result.msg}
+        </div>
+      )}
+      <p className="mt-2 text-xs text-faint">
+        Applies to new worlds via <code>standardoptions.txt</code>. Window size and server list are
+        skipped.
+      </p>
+    </Card>
+  )
+}
+
 function MapsCard({ id }: { id: InstanceId }) {
   const [config, setConfig] = useState<AppConfig | null>(null)
   const [syncing, setSyncing] = useState(false)
@@ -260,30 +311,58 @@ function MapsCard({ id }: { id: InstanceId }) {
 
   const selected = new Set(config.maps[id])
 
-  async function toggle(mapId: string, on: boolean) {
-    const next = on
-      ? [...config!.maps[id], mapId]
-      : config!.maps[id].filter((m) => m !== mapId)
-    const updated = await window.mcsr.config.set({ maps: { ...config!.maps, [id]: next } })
-    setConfig(updated)
+  async function setSelection(next: string[]) {
+    // Flip syncing first so the toggles disable before a second click can race on a
+    // stale `config` closure; the main process also serializes the syncMaps itself.
     setSyncing(true)
     try {
+      const updated = await window.mcsr.config.set({ maps: { ...config!.maps, [id]: next } })
+      setConfig(updated)
       await window.mcsr.instances.syncMaps(id)
     } finally {
       setSyncing(false)
     }
   }
 
+  const toggle = (mapId: string, on: boolean) =>
+    setSelection(on ? [...config!.maps[id], mapId] : config!.maps[id].filter((m) => m !== mapId))
+
+  const allOn = selected.size === MAP_CATALOG.length
+
   return (
-    <Card title={`Practice maps${syncing ? ' · syncing…' : ''}`}>
+    <Card title={`Practice maps${syncing ? ' · syncing…' : ` · ${selected.size}/${MAP_CATALOG.length}`}`}>
+      <div className="mb-2 flex items-center gap-2">
+        <button
+          onClick={() => setSelection([...ALL_MAP_IDS])}
+          disabled={syncing || allOn}
+          className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs text-muted transition-colors hover:text-text disabled:opacity-40"
+        >
+          Install all
+        </button>
+        <button
+          onClick={() => setSelection([])}
+          disabled={syncing || selected.size === 0}
+          className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs text-muted transition-colors hover:text-text disabled:opacity-40"
+        >
+          Clear
+        </button>
+      </div>
       <div className="space-y-1.5">
         {MAP_CATALOG.map((m) => (
           <div
             key={m.id}
-            className="flex items-center justify-between rounded-md border border-[var(--line)] px-3 py-2"
+            className="flex items-center justify-between gap-3 rounded-md border border-[var(--line)] px-3 py-2"
           >
-            <span className="text-sm text-text">{m.name}</span>
-            <Toggle on={selected.has(m.id)} onChange={(v) => toggle(m.id, v)} />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-text">{m.name}</span>
+                <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-faint">
+                  {m.category}
+                </span>
+              </div>
+              <div className="mt-0.5 truncate text-xs text-faint">{m.desc}</div>
+            </div>
+            <Toggle on={selected.has(m.id)} onChange={(v) => toggle(m.id, v)} disabled={syncing} />
           </div>
         ))}
       </div>
@@ -295,15 +374,16 @@ function MapsCard({ id }: { id: InstanceId }) {
   )
 }
 
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ on, onChange, disabled }: { on: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <button
-      onClick={() => onChange(!on)}
+      onClick={() => !disabled && onChange(!on)}
+      disabled={disabled}
       role="switch"
       aria-checked={on}
       className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
         on ? 'bg-[var(--gold)]' : 'border border-[var(--line)] bg-[var(--surface-2)]'
-      }`}
+      } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
     >
       <span
         className="absolute top-0.5 h-4 w-4 rounded-full transition-all"

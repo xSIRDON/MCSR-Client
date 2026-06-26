@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Account, AppConfig, JavaInfo, TrackerStatus } from '@shared/types'
+import type { Account, AppConfig, JavaInfo, TrackerStatus, UpdateStatus } from '@shared/types'
 import { useUi } from '../store/uiStore'
 import { PlayerHead } from '../components/PlayerHead'
 
@@ -12,14 +12,20 @@ export function Settings() {
   const [nameInput, setNameInput] = useState(pacemanName ?? '')
   const [saved, setSaved] = useState<string | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [update, setUpdate] = useState<UpdateStatus>({ state: 'idle' })
 
   useEffect(() => {
     void window.mcsr.config.get().then(setConfig)
     void window.mcsr.paceman.status().then(setTracker)
     void window.mcsr.system.java().then(setJava)
     void window.mcsr.auth.accounts().then(setAccounts)
-    const off = window.mcsr.paceman.onStatusChanged(setTracker)
-    return off
+    void window.mcsr.updater.status().then(setUpdate)
+    const offPace = window.mcsr.paceman.onStatusChanged(setTracker)
+    const offUpd = window.mcsr.updater.onStatusChanged(setUpdate)
+    return () => {
+      offPace()
+      offUpd()
+    }
   }, [])
 
   function patch(p: Partial<AppConfig>) {
@@ -257,6 +263,45 @@ export function Settings() {
             Clear override
           </button>
         )}
+      </Card>
+
+      {/* App updates */}
+      <Card title="Updates">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2 text-sm">
+            <Dot ok={update.state === 'up-to-date' || update.state === 'ready'} />
+            <span className="truncate text-muted">
+              {update.state === 'checking'
+                ? 'Checking for updates…'
+                : update.state === 'downloading'
+                  ? `Downloading v${update.version ?? ''}… ${update.progress ?? 0}%`
+                  : update.state === 'ready'
+                    ? `Update v${update.version ?? ''} ready to install`
+                    : update.state === 'error'
+                      ? (update.error ?? 'Update check failed')
+                      : update.state === 'up-to-date'
+                        ? 'You’re on the latest version'
+                        : 'Check for a new version of MCSR Client'}
+            </span>
+          </div>
+          {update.state === 'ready' ? (
+            <button
+              onClick={() => void window.mcsr.updater.install()}
+              className="font-display shrink-0 rounded-lg bg-[var(--win)] px-4 py-2 text-sm text-[#07140a]"
+            >
+              Restart &amp; update
+            </button>
+          ) : (
+            <button
+              onClick={() => void window.mcsr.updater.check()}
+              disabled={update.state === 'checking' || update.state === 'downloading'}
+              className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-2 text-sm text-muted transition-colors hover:text-text disabled:opacity-50"
+            >
+              Check for updates
+            </button>
+          )}
+        </div>
+        {update.note && <p className="mt-2 text-xs text-faint">{update.note}</p>}
       </Card>
 
       {saved && (

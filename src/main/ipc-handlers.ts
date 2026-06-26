@@ -24,7 +24,8 @@ import {
 import { writeRankedConfigs, writeRsgConfigs } from './instances/configs'
 import { syncMaps } from './instances/maps'
 import { listMods, setModEnabled } from './instances/mods'
-import { readStandardSettings, writeStandardSettings } from './instances/standard-settings'
+import { readStandardSettings, writeStandardSettings, importOptionsFile } from './instances/standard-settings'
+import { checkForUpdates, currentUpdateStatus, quitAndInstall } from './updater'
 import { detectJava } from './system/java'
 import { removeLinkIfPresent } from './launcher/links'
 import { pushLog, onLog, logHistory, clearLog } from './log'
@@ -48,6 +49,29 @@ function setState(id: InstanceId, patch: Partial<InstanceStatus>): void {
 function sendProgress(e: ProgressEvent): void {
   win()?.webContents.send(IPC.instProgress, e)
   pushLog('system', `[${e.instance}] ${e.message}`)
+}
+
+// syncMaps mutates saves/ and a manifest non-atomically, so concurrent runs for the
+// same instance would race. Serialize per instance: each call waits for the prior.
+const syncChains: Record<InstanceId, Promise<unknown>> = {
+  ranked: Promise.resolve(),
+  rsg: Promise.resolve(),
+  zsg: Promise.resolve()
+}
+
+function runSyncMaps(id: InstanceId, label: string): Promise<void> {
+  const run = syncChains[id].then(() =>
+    syncMaps(join(gmll.gameDir(id), 'saves'), store.getConfig().maps[id], (done, total, lbl) =>
+      sendProgress({
+        instance: id,
+        phase: 'configs',
+        fraction: total > 0 ? done / total : null,
+        message: `${label}: ${lbl} (${done}/${total})`
+      })
+    )
+  )
+  syncChains[id] = run.catch(() => undefined) // keep the chain alive past failures
+  return run
 }
 
 function versionFile(id: InstanceId): string {
@@ -96,14 +120,7 @@ async function ensureInstanceExtras(id: InstanceId, gameDir: string): Promise<vo
   } catch {
     // optional — not fatal if the bundled hotbar is missing
   }
-  await syncMaps(join(gameDir, 'saves'), store.getConfig().maps[id], (done, total, label) =>
-    sendProgress({
-      instance: id,
-      phase: 'configs',
-      fraction: total > 0 ? done / total : null,
-      message: `Practice maps: ${label} (${done}/${total})`
-    })
-  )
+  await runSyncMaps(id, 'Practice maps')
 }
 
 const FSG_MOD = {
@@ -236,16 +253,7 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.instLaunch, (_e, id: InstanceId) => launchInstance(id))
   ipcMain.handle(IPC.instVerify, (_e, id: InstanceId) => installInstance(id))
   ipcMain.handle(IPC.instDelete, (_e, id: InstanceId) => deleteInstance(id))
-  ipcMain.handle(IPC.instSyncMaps, (_e, id: InstanceId) =>
-    syncMaps(join(gmll.gameDir(id), 'saves'), store.getConfig().maps[id], (done, total, label) =>
-      sendProgress({
-        instance: id,
-        phase: 'configs',
-        fraction: total > 0 ? done / total : null,
-        message: `Maps: ${label} (${done}/${total})`
-      })
-    )
-  )
+  ipcMain.handle(IPC.instSyncMaps, (_e, id: InstanceId) => runSyncMaps(id, 'Maps'))
   ipcMain.handle(IPC.instMods, (_e, id: InstanceId) => listMods(join(gmll.gameDir(id), 'mods')))
   ipcMain.handle(IPC.instToggleMod, (_e, id: InstanceId, file: string, enabled: boolean) => {
     const dir = join(gmll.gameDir(id), 'mods')
@@ -269,7 +277,20 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.instStdSet, (_e, id: InstanceId, patch: StandardSettings) =>
     writeStandardSettings(gmll.gameDir(id), patch)
   )
+  ipcMain.handle(IPC.instImportSettings, async (_e, id: InstanceId) => {
+    const res = await dialog.showOpenDialog({
+      title: 'Import a Minecraft options.txt',
+      filters: [{ name: 'Minecraft options', extensions: ['txt'] }],
+      properties: ['openFile']
+    })
+    if (res.canceled || res.filePaths.length === 0) return null
+    return { imported: importOptionsFile(gmll.gameDir(id), res.filePaths[0]) }
+  })
   ipcMain.handle(IPC.sysJava, () => detectJava())
+
+  ipcMain.handle(IPC.updCheck, () => checkForUpdates())
+  ipcMain.handle(IPC.updStatus, () => currentUpdateStatus())
+  ipcMain.handle(IPC.updInstall, () => quitAndInstall())
   ipcMain.handle(IPC.logHistory, () => logHistory())
   ipcMain.handle(IPC.logClear, () => clearLog())
 

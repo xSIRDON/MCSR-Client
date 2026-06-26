@@ -8,7 +8,8 @@ import type {
   LogLine,
   ProgressEvent,
   StandardSettings,
-  TrackerStatus
+  TrackerStatus,
+  UpdateStatus
 } from '../shared/types'
 
 function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
@@ -47,10 +48,18 @@ const api: McsrApi = {
     openFolder: (id: InstanceId) => ipcRenderer.invoke(IPC.instOpenFolder, id),
     getStandardSettings: (id: InstanceId) => ipcRenderer.invoke(IPC.instStdGet, id),
     setStandardSettings: (id: InstanceId, patch: StandardSettings) =>
-      ipcRenderer.invoke(IPC.instStdSet, id, patch)
+      ipcRenderer.invoke(IPC.instStdSet, id, patch),
+    importSettings: (id: InstanceId) => ipcRenderer.invoke(IPC.instImportSettings, id)
   },
   system: {
     java: () => ipcRenderer.invoke(IPC.sysJava)
+  },
+  updater: {
+    check: () => ipcRenderer.invoke(IPC.updCheck),
+    status: () => ipcRenderer.invoke(IPC.updStatus),
+    install: () => ipcRenderer.invoke(IPC.updInstall),
+    onStatusChanged: (cb: (s: UpdateStatus) => void) =>
+      subscribe<UpdateStatus>(IPC.updStatusChanged, cb)
   },
   logs: {
     history: () => ipcRenderer.invoke(IPC.logHistory),

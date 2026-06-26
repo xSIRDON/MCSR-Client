@@ -1,6 +1,7 @@
 import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc-handlers'
+import { setupUpdater } from './updater'
 import { migrateDataDir } from './paths'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
@@ -61,6 +62,7 @@ app.whenReady().then(() => {
   enablePacemanCors()
   registerIpc()
   createWindow()
+  setupUpdater()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

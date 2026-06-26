@@ -41,8 +41,10 @@ export interface WorldResponse {
 }
 
 export interface SplitStat {
+  /** Number of runs that reached this split in the window. */
   count: number
-  avg: number | null
+  /** Average time to this split, pre-formatted by paceman as "m:ss" (or null). */
+  avg: string | null
 }
 export interface SessionStats {
   nether: SplitStat
@@ -54,6 +56,26 @@ export interface SessionStats {
   stronghold: SplitStat
   end: SplitStat
   finish: SplitStat
+}
+
+/** Aggregate grind/activity stats (paceman's getNPH — "nether per hour"). */
+export interface NetherStats {
+  /** Real nether-per-hour — the headline grind-rate paceman shows. */
+  rnph: number
+  /** Lifetime nether-per-hour. */
+  lnph: number
+  /** Completions counted in the window. */
+  count: number
+  /** Average completion time, in ms. */
+  avg: number
+  /** Resets across all tracked time. */
+  totalResets: number
+  /** Resets in the window. */
+  resets: number
+  /** Play time in the window (minutes). */
+  playtime: number
+  /** Resets per enter (nether). */
+  rpe: number
 }
 
 function qs(params: Record<string, string | number | boolean | undefined>): string {
@@ -79,7 +101,7 @@ export function createPacemanClient(fetchImpl: FetchLike, base = PACEMAN_BASE) {
     getRecentRuns(name: string, opts: RecentOpts = {}): Promise<RecentRun[]> {
       return getJson<RecentRun[]>(
         fetchImpl,
-        `${base}/getRecentRuns${qs({
+        `${base}/getRecentRuns/${qs({
           name,
           hours: opts.hours,
           hoursBetween: opts.hoursBetween,
@@ -91,9 +113,20 @@ export function createPacemanClient(fetchImpl: FetchLike, base = PACEMAN_BASE) {
       return getJson<WorldResponse>(fetchImpl, `${base}/getWorld/${qs({ worldId })}`)
     },
     getSessionStats(name: string, opts: RecentOpts = {}): Promise<SessionStats> {
+      // Trailing slash: paceman 308-redirects the slashless form (extra round-trip).
       return getJson<SessionStats>(
         fetchImpl,
-        `${base}/getSessionStats${qs({
+        `${base}/getSessionStats/${qs({
+          name,
+          hours: opts.hours,
+          hoursBetween: opts.hoursBetween
+        })}`
+      )
+    },
+    getNetherStats(name: string, opts: RecentOpts = {}): Promise<NetherStats> {
+      return getJson<NetherStats>(
+        fetchImpl,
+        `${base}/getNPH/${qs({
           name,
           hours: opts.hours,
           hoursBetween: opts.hoursBetween

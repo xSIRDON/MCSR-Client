@@ -11,7 +11,7 @@ describe('createPacemanClient', () => {
     const client = createPacemanClient(fetchImpl)
     await client.getRecentRuns('xSIRDON')
     expect(fetchImpl).toHaveBeenCalledWith(
-      'https://paceman.gg/stats/api/getRecentRuns?name=xSIRDON&limit=1'
+      'https://paceman.gg/stats/api/getRecentRuns/?name=xSIRDON&limit=1'
     )
   })
 
