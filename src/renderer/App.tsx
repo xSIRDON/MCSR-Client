@@ -9,6 +9,8 @@ import { Home } from './pages/Home'
 import { Play } from './pages/Play'
 import { Profile } from './pages/Profile'
 import { Settings } from './pages/Settings'
+import { Instance } from './pages/Instance'
+import { Console } from './pages/Console'
 import { ObsidianBlock } from './components/BlockArt'
 
 export function App() {
@@ -49,6 +51,8 @@ export function App() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/play" element={<Play />} />
+                <Route path="/console" element={<Console />} />
+                <Route path="/instance/:id" element={<Instance />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
               </Routes>
@@ -68,7 +72,7 @@ function Splash() {
         <div className="animate-pulse-glow">
           <ObsidianBlock size={40} />
         </div>
-        <div className="font-display text-sm tracking-[0.3em] text-muted">OBSIDIAN</div>
+        <div className="font-display text-sm tracking-[0.3em] text-muted">MCSR CLIENT</div>
       </div>
     </div>
   )

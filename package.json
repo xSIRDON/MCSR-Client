@@ -61,6 +61,10 @@
         "from": "resources/tracker",
         "to": "tracker",
         "filter": ["**/*"]
+      },
+      {
+        "from": "resources/hotbar.nbt",
+        "to": "hotbar.nbt"
       }
     ],
     "win": {

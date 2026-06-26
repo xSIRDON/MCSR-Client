@@ -5,10 +5,7 @@ export function TitleBar() {
     <div className="drag flex h-10 shrink-0 items-center justify-between border-b border-[var(--line)] px-3">
       <div className="flex items-center gap-2.5 select-none">
         <ObsidianBlock size={18} />
-        <span className="font-display text-sm tracking-[0.22em] text-text">OBSIDIAN</span>
-        <span className="ml-1 rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-faint">
-          MCSR
-        </span>
+        <span className="font-display text-sm tracking-[0.18em] text-text">MCSR CLIENT</span>
       </div>
       <div className="no-drag flex items-center gap-1">
         <button

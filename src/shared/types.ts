@@ -5,6 +5,12 @@ export interface Profile {
   name: string
 }
 
+export interface Account {
+  uuid: string
+  name: string
+  active: boolean
+}
+
 export interface ProgressEvent {
   instance: InstanceId
   phase: 'java' | 'client' | 'assets' | 'libraries' | 'fabric' | 'mods' | 'configs' | 'launch'
@@ -34,13 +40,36 @@ export interface TrackerStatus {
 }
 
 export interface AppConfig {
-  ramMb: number
+  ram: Record<InstanceId, number>
+  java: Record<InstanceId, string | null>
   seedQueueOverride: string | null
   pacemanName: string | null
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
-  ramMb: 3072,
+  ram: { ranked: 3072, rsg: 3072 },
+  java: { ranked: null, rsg: null },
   seedQueueOverride: null,
   pacemanName: null
+}
+
+export interface ModInfo {
+  file: string
+  name: string
+  version: string
+  enabled: boolean
+}
+
+export interface JavaInfo {
+  found: boolean
+  version: string | null
+  major: number | null
+  ok: boolean
+}
+
+export type StandardSettings = Record<string, string>
+
+export interface LogLine {
+  source: 'game' | 'system'
+  text: string
 }
