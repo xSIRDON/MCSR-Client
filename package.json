@@ -16,10 +16,12 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "test": "vitest run",
     "test:watch": "vitest",
+    "predist": "node scripts/check-publish.mjs",
     "dist": "electron-vite build && electron-builder --win",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "gmll": "^4.2.1",
     "msmc": "^5.0.5"
   },
@@ -48,6 +50,13 @@
   "build": {
     "appId": "gg.mcsrclient.app",
     "productName": "MCSR Client",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "REPLACE_WITH_GITHUB_OWNER",
+        "repo": "REPLACE_WITH_REPO_NAME"
+      }
+    ],
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -60,7 +69,9 @@
       {
         "from": "resources/tracker",
         "to": "tracker",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "resources/hotbar.nbt",
@@ -68,7 +79,9 @@
       }
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "nsis": {
