@@ -1,8 +1,23 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc-handlers'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
+
+function enablePacemanCors(): void {
+  session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+    if (details.url.includes('paceman.gg')) {
+      cb({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Access-Control-Allow-Origin': ['*']
+        }
+      })
+    } else {
+      cb({})
+    }
+  })
+}
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -37,6 +52,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  enablePacemanCors()
   registerIpc()
   createWindow()
 
