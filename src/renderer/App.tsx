@@ -5,6 +5,7 @@ import { useUi } from './store/uiStore'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
 import { PlayBar } from './components/PlayBar'
+import { InstallMapPicker } from './components/InstallMapPicker'
 import { Login } from './pages/Login'
 import { Home } from './pages/Home'
 import { Play } from './pages/Play'
@@ -61,6 +62,7 @@ export function App() {
             </main>
           </div>
           <PlayBar />
+          <InstallMapPicker />
         </div>
       )}
     </div>

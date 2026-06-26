@@ -76,12 +76,17 @@
       {
         "from": "resources/hotbar.nbt",
         "to": "hotbar.nbt"
+      },
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
       }
     ],
     "win": {
       "target": [
         "nsis"
       ],
+      "icon": "build/icon.ico",
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "nsis": {

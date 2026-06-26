@@ -59,6 +59,10 @@ export interface AppConfig {
   seedQueueOverride: string | null
   /** Last seen MCSR username for the live-pace name match (defaults to profile name). */
   pacemanName: string | null
+  /** Launch Ninjabrain Bot (stronghold calculator) alongside the game. */
+  ninjabrain: boolean
+  /** Auto-install Toolscreen into an instance on its first launch (Windows only). */
+  toolscreen: boolean
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -66,7 +70,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   java: { ranked: null, rsg: null, zsg: null },
   maps: { ranked: [...ALL_MAP_IDS], rsg: [...ALL_MAP_IDS], zsg: [...ALL_MAP_IDS] },
   seedQueueOverride: null,
-  pacemanName: null
+  pacemanName: null,
+  ninjabrain: true,
+  toolscreen: true
 }
 
 /** A single mod jar inside an instance's mods/ folder. */

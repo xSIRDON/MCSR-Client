@@ -12,6 +12,8 @@ type RawConfig = {
   ramMb?: number
   seedQueueOverride?: string | null
   pacemanName?: string | null
+  ninjabrain?: boolean
+  toolscreen?: boolean
 }
 
 /** Coerce a stored (possibly legacy) config into the current AppConfig shape. */
@@ -37,7 +39,9 @@ function normalizeConfig(raw: RawConfig): AppConfig {
       typeof raw.seedQueueOverride === 'string'
         ? raw.seedQueueOverride
         : DEFAULT_CONFIG.seedQueueOverride,
-    pacemanName: typeof raw.pacemanName === 'string' ? raw.pacemanName : DEFAULT_CONFIG.pacemanName
+    pacemanName: typeof raw.pacemanName === 'string' ? raw.pacemanName : DEFAULT_CONFIG.pacemanName,
+    ninjabrain: typeof raw.ninjabrain === 'boolean' ? raw.ninjabrain : DEFAULT_CONFIG.ninjabrain,
+    toolscreen: typeof raw.toolscreen === 'boolean' ? raw.toolscreen : DEFAULT_CONFIG.toolscreen
   }
 }
 

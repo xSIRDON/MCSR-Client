@@ -24,8 +24,8 @@ export function Sidebar() {
   const rank = eloToRank(user?.eloRate)
 
   return (
-    <aside className="flex w-[68px] shrink-0 flex-col items-center border-r border-[var(--line)] bg-black/25 py-3">
-      <nav className="flex flex-col items-center gap-1.5">
+    <aside className="flex w-[72px] shrink-0 flex-col items-center border-r border-[var(--line)] bg-black/25 py-3">
+      <nav className="flex w-full flex-col items-center gap-1 px-2">
         {NAV.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -33,27 +33,28 @@ export function Sidebar() {
             end={end}
             title={label}
             className={({ isActive }) =>
-              `group relative flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-xl transition-colors ${
+              `group relative flex h-[54px] w-full flex-col items-center justify-center gap-1 rounded-xl transition-all duration-150 ${
                 isActive
-                  ? 'bg-[var(--gold)]/10 text-[var(--gold)]'
-                  : 'text-muted hover:bg-white/5 hover:text-text'
+                  ? 'bg-[var(--gold)]/[0.13] text-[var(--gold)]'
+                  : 'text-muted hover:bg-white/[0.06] hover:text-text'
               }`
             }
           >
             {({ isActive }) => (
               <>
                 {isActive && (
-                  <span className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r bg-[var(--gold)]" />
+                  <span className="absolute left-[-8px] top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--gold)]" />
                 )}
                 <Icon />
-                <span className="text-[10px] tracking-wide">{label}</span>
+                <span className="text-[10px] font-medium tracking-[0.03em]">{label}</span>
               </>
             )}
           </NavLink>
         ))}
       </nav>
 
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col items-center gap-2.5">
+        <div className="h-px w-7 bg-[var(--line)]" />
         {profile && (
           <div
             className="rounded-lg p-0.5"
@@ -69,21 +70,21 @@ export function Sidebar() {
 
 function HomeIcon() {
   return (
-    <svg width="19" height="19" viewBox="0 0 18 18" fill="none">
+    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
       <path d="M3 8l6-5 6 5v6a1 1 0 01-1 1h-3v-4H7v4H4a1 1 0 01-1-1V8z" stroke="currentColor" strokeWidth="1.3" />
     </svg>
   )
 }
 function PlayIcon() {
   return (
-    <svg width="19" height="19" viewBox="0 0 18 18" fill="none">
+    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
       <path d="M5 3.5l9 5.5-9 5.5v-11z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
     </svg>
   )
 }
 function ConsoleIcon() {
   return (
-    <svg width="19" height="19" viewBox="0 0 18 18" fill="none">
+    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
       <rect x="2.5" y="3.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
       <path
         d="M5.5 7l2 1.6-2 1.6M9.5 11h3"
@@ -97,7 +98,7 @@ function ConsoleIcon() {
 }
 function UserIcon() {
   return (
-    <svg width="19" height="19" viewBox="0 0 18 18" fill="none">
+    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
       <circle cx="9" cy="6" r="3" stroke="currentColor" strokeWidth="1.3" />
       <path d="M3.5 15a5.5 5.5 0 0111 0" stroke="currentColor" strokeWidth="1.3" />
     </svg>
@@ -105,7 +106,7 @@ function UserIcon() {
 }
 function GearIcon() {
   return (
-    <svg width="19" height="19" viewBox="0 0 18 18" fill="none">
+    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
       <circle cx="9" cy="9" r="2.4" stroke="currentColor" strokeWidth="1.3" />
       <path
         d="M9 2v2M9 14v2M2 9h2M14 9h2M4 4l1.5 1.5M12.5 12.5L14 14M14 4l-1.5 1.5M5.5 12.5L4 14"

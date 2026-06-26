@@ -9,9 +9,13 @@ interface InstancesState {
   statuses: Record<InstanceId, InstanceStatus>
   progress: Record<InstanceId, ProgressEvent | null>
   initialized: boolean
+  /** Instance awaiting the pre-install map picker, or null. */
+  installPrompt: InstanceId | null
   select: (id: InstanceId) => void
   init: () => void
   launch: (id: InstanceId) => Promise<void>
+  proceedLaunch: (id: InstanceId) => Promise<void>
+  cancelInstall: () => void
   verify: (id: InstanceId) => Promise<void>
 }
 
@@ -24,6 +28,7 @@ export const useInstances = create<InstancesState>((set, get) => ({
   },
   progress: { ranked: null, rsg: null, zsg: null },
   initialized: false,
+  installPrompt: null,
 
   select: (selected) => set({ selected }),
 
@@ -48,8 +53,18 @@ export const useInstances = create<InstancesState>((set, get) => ({
     )
   },
 
+  // First-time install? Pop the map picker; otherwise go straight to launch.
   launch: async (id) => {
     set({ selected: id })
+    if (get().statuses[id].state === 'not-installed') {
+      set({ installPrompt: id })
+      return
+    }
+    await get().proceedLaunch(id)
+  },
+
+  proceedLaunch: async (id) => {
+    set({ selected: id, installPrompt: null })
     try {
       await window.mcsr.instances.launch(id)
     } catch (e) {
@@ -61,6 +76,8 @@ export const useInstances = create<InstancesState>((set, get) => ({
       }))
     }
   },
+
+  cancelInstall: () => set({ installPrompt: null }),
 
   verify: async (id) => {
     try {

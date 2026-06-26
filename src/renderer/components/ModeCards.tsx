@@ -6,7 +6,7 @@ import { msToTime } from '@core/format'
 import { useInstances, isBusy } from '../hooks/useInstances'
 import type { ProgressEvent } from '@shared/types'
 import { RankBadge } from './RankBadge'
-import { NetheriteBlock, PortalBlock } from './BlockArt'
+import { ModeBadge } from './ModeBadge'
 
 /** RANKED — gold/dark. Just the Elo and a one-tap launch; deeper stats live on the profile. */
 export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }) {
@@ -22,7 +22,7 @@ export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }
     <ModeShell accent={rank.color} glow={rank.glow} delay={delay}>
       <header className="relative flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <NetheriteBlock size={22} />
+          <ModeBadge mode="ranked" size={28} />
           <div className="min-w-0">
             <div className="font-display text-lg leading-none tracking-wide text-[var(--gold)]">RANKED</div>
             <div className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-faint">1v1 Ladder</div>
@@ -77,7 +77,7 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
     <ModeShell accent="var(--portal)" glow="var(--portal)" delay={delay}>
       <header className="relative flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <PortalBlock size={22} />
+          <ModeBadge mode="rsg" size={28} />
           <div className="min-w-0">
             <div className="font-display text-lg leading-none tracking-wide text-[var(--portal)]">RSG</div>
             <div className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-faint">Random Seed Glitchless</div>
@@ -104,18 +104,12 @@ export function ZsgCard({ delay = 0 }: { delay?: number }) {
   const status = statuses.zsg
   const prog = progress.zsg
   const busy = isBusy(status.state)
-  const stateLabel =
-    status.state === 'ready'
-      ? 'Installed'
-      : status.state === 'not-installed'
-        ? 'Not installed'
-        : 'Working…'
 
   return (
     <ModeShell accent="#4fd6b0" glow="#4fd6b0" delay={delay}>
       <header className="relative flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <PortalBlock size={22} />
+          <ModeBadge mode="zsg" size={28} />
           <div className="min-w-0">
             <div className="font-display text-lg leading-none tracking-wide" style={{ color: '#4fd6b0' }}>
               ZSG
@@ -123,9 +117,7 @@ export function ZsgCard({ delay = 0 }: { delay?: number }) {
             <div className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-faint">Filtered seed practice</div>
           </div>
         </div>
-        <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] text-faint">
-          {stateLabel}
-        </span>
+        <StatusPill live={false} />
       </header>
 
       <div className="relative flex flex-1 flex-col justify-center py-3">

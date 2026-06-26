@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { InstanceId } from '@shared/types'
 import { useInstances, isBusy } from '../hooks/useInstances'
-import { NetheriteBlock, PortalBlock } from './BlockArt'
+import { ModeBadge } from './ModeBadge'
 
 const LABEL: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
 const INSTANCES: InstanceId[] = ['ranked', 'rsg', 'zsg']
 
-function InstanceIcon({ id, size = 16 }: { id: InstanceId; size?: number }) {
-  return id === 'ranked' ? <NetheriteBlock size={size} /> : <PortalBlock size={size} />
+function InstanceIcon({ id, size = 20 }: { id: InstanceId; size?: number }) {
+  return <ModeBadge mode={id} size={size} />
 }
 
 export function PlayBar() {

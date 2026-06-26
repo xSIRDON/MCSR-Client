@@ -10,17 +10,15 @@ interface Props {
   className?: string
 }
 
-// mc-heads → mc-heads (cache-busted retry) → crafatar → letter block.
-// Stage 1 exists because mc-heads renders bodies on demand: the first hit for a
-// fresh uuid can 404/5xx while it generates, so a single retry (with a differing
-// query) usually succeeds rather than cascading straight to the dead-ended block.
-const MAX_STAGE = 3
+type Source = { url: string; tall: boolean }
 
 /**
- * Player head/body with a resilient source cascade. The stage resets synchronously
- * when the player changes (adjust-state-during-render), and the <img> is keyed by
- * player+stage so an aborted load from a previous player can never advance the next
- * player's stage.
+ * Player head/body across multiple independent hosts. mc-heads is preferred, with
+ * minotar as a fully separate backup (different infra) so one host being blocked or
+ * down — a VPN/network filter, a 5xx, crafatar's outage — can't take skins out. Body
+ * renders fall back to the always-reliable face before the letter block. The cascade
+ * resets synchronously when the player changes, and the <img> is keyed by player+stage
+ * so a stale load from the previous player can't advance the next player's stage.
  */
 export function PlayerHead({ id, uuid, size = 64, render = 'avatar', className }: Props) {
   const playerKey = `${id}|${uuid ?? ''}`
@@ -32,13 +30,28 @@ export function PlayerHead({ id, uuid, size = 64, render = 'avatar', className }
   }
 
   const raw = (uuid ?? id).replace(/-/g, '')
-  // crafatar resolves a *dashed* uuid; build one when we actually have a 32-char hex.
+  // crafatar wants a dashed uuid; build one when we actually have a 32-char hex.
   const dashed = /^[0-9a-fA-F]{32}$/.test(raw)
     ? raw.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5')
     : uuid ?? id
   const isBody = render === 'body'
 
-  if (stage >= MAX_STAGE) {
+  const sources: Source[] = isBody
+    ? [
+        { url: `https://mc-heads.net/body/${raw}/${size}`, tall: true },
+        { url: `https://minotar.net/armor/body/${raw}/${size}`, tall: true },
+        { url: `https://mc-heads.net/avatar/${raw}/${size}`, tall: false },
+        { url: `https://minotar.net/avatar/${raw}/${size}`, tall: false }
+      ]
+    : [
+        { url: `https://mc-heads.net/avatar/${raw}/${size}`, tall: false },
+        { url: `https://minotar.net/avatar/${raw}/${size}`, tall: false },
+        { url: `https://crafatar.com/avatars/${dashed}?size=${size}&overlay`, tall: false }
+      ]
+
+  const cur = sources[stage]
+
+  if (!cur) {
     return (
       <div
         className={`pixelated grid place-items-center rounded-md ${className ?? ''}`}
@@ -56,24 +69,16 @@ export function PlayerHead({ id, uuid, size = 64, render = 'avatar', className }
     )
   }
 
-  const mcHeads = `https://mc-heads.net/${isBody ? 'body' : 'avatar'}/${encodeURIComponent(raw)}/${size}`
-  const src =
-    stage === 0
-      ? mcHeads
-      : stage === 1
-        ? `${mcHeads}?r=1`
-        : `https://crafatar.com/${isBody ? 'renders/body' : 'avatars'}/${encodeURIComponent(dashed)}?size=${size}&overlay`
-
   return (
     <img
       key={`${playerKey}-${stage}`}
-      src={src}
+      src={cur.url}
       alt={id}
       width={size}
-      height={isBody ? size * 2 : size}
+      height={cur.tall ? size * 2 : size}
       className={`pixelated ${className ?? ''}`}
       style={{ imageRendering: 'pixelated' }}
-      onError={() => setStage((s) => (s < MAX_STAGE ? s + 1 : s))}
+      onError={() => setStage((s) => Math.min(s + 1, sources.length))}
       draggable={false}
     />
   )
