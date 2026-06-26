@@ -37,7 +37,7 @@ export interface WorldResponse {
 
 export interface SplitStat {
   count: number
-  avg: number | null
+  avg: string | null
 }
 export interface SessionStats {
   nether: SplitStat
@@ -49,6 +49,17 @@ export interface SessionStats {
   stronghold: SplitStat
   end: SplitStat
   finish: SplitStat
+}
+
+export interface NetherStats {
+  rnph: number
+  lnph: number
+  count: number
+  avg: number
+  totalResets: number
+  resets: number
+  playtime: number
+  rpe: number
 }
 
 function qs(params: Record<string, string | number | boolean | undefined>): string {
@@ -74,7 +85,7 @@ export function createPacemanClient(fetchImpl: FetchLike, base = PACEMAN_BASE) {
     getRecentRuns(name: string, opts: RecentOpts = {}): Promise<RecentRun[]> {
       return getJson<RecentRun[]>(
         fetchImpl,
-        `${base}/getRecentRuns${qs({
+        `${base}/getRecentRuns/${qs({
           name,
           hours: opts.hours,
           hoursBetween: opts.hoursBetween,
@@ -88,7 +99,17 @@ export function createPacemanClient(fetchImpl: FetchLike, base = PACEMAN_BASE) {
     getSessionStats(name: string, opts: RecentOpts = {}): Promise<SessionStats> {
       return getJson<SessionStats>(
         fetchImpl,
-        `${base}/getSessionStats${qs({
+        `${base}/getSessionStats/${qs({
+          name,
+          hours: opts.hours,
+          hoursBetween: opts.hoursBetween
+        })}`
+      )
+    },
+    getNetherStats(name: string, opts: RecentOpts = {}): Promise<NetherStats> {
+      return getJson<NetherStats>(
+        fetchImpl,
+        `${base}/getNPH/${qs({
           name,
           hours: opts.hours,
           hoursBetween: opts.hoursBetween
