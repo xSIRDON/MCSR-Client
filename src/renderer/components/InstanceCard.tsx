@@ -4,7 +4,7 @@ import type { InstanceId } from '@shared/types'
 import { useUi } from '../store/uiStore'
 import { useInstances, isBusy } from '../hooks/useInstances'
 import { ProgressBar } from './ProgressBar'
-import { NetheriteBlock, PortalBlock } from './BlockArt'
+import { ModeBadge } from './ModeBadge'
 
 interface Meta {
   title: string
@@ -20,21 +20,21 @@ const META: Record<InstanceId, Meta> = {
     tagline: '1v1 ladder — the full MCSR Ranked modpack.',
     accent: 'var(--gold)',
     mods: '22 mods · MCSR Ranked',
-    icon: () => <NetheriteBlock size={20} />
+    icon: () => <ModeBadge mode="ranked" size={22} />
   },
   rsg: {
     title: 'RSG',
     tagline: 'Random Seed Glitchless — SeedQueue wall + paceman. No ranked mod.',
     accent: 'var(--portal)',
     mods: 'SeedQueue · SpeedRunIGT · paceman',
-    icon: () => <PortalBlock size={20} />
+    icon: () => <ModeBadge mode="rsg" size={22} />
   },
   zsg: {
     title: 'ZSG',
     tagline: 'RSG set + the FSG (filtered-seed) mod. No ranked mod.',
     accent: '#4fd6b0',
     mods: 'SeedQueue · SpeedRunIGT · FSG',
-    icon: () => <PortalBlock size={20} />
+    icon: () => <ModeBadge mode="zsg" size={22} />
   }
 }
 

@@ -2,7 +2,7 @@ import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc-handlers'
 import { setupUpdater } from './updater'
-import { migrateDataDir } from './paths'
+import { migrateDataDir, paths } from './paths'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
 
@@ -31,6 +31,7 @@ function createWindow(): void {
     frame: false,
     backgroundColor: '#0d0d0f',
     title: 'MCSR Client',
+    icon: paths.resource('icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
@@ -54,6 +55,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === 'win32') app.setAppUserModelId('gg.mcsrclient.app')
   migrateDataDir()
   enablePacemanCors()
   registerIpc()

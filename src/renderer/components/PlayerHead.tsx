@@ -8,7 +8,7 @@ interface Props {
   className?: string
 }
 
-const MAX_STAGE = 3
+type Source = { url: string; tall: boolean }
 
 export function PlayerHead({ id, uuid, size = 64, render = 'avatar', className }: Props) {
   const playerKey = `${id}|${uuid ?? ''}`
@@ -25,7 +25,22 @@ export function PlayerHead({ id, uuid, size = 64, render = 'avatar', className }
     : uuid ?? id
   const isBody = render === 'body'
 
-  if (stage >= MAX_STAGE) {
+  const sources: Source[] = isBody
+    ? [
+        { url: `https://mc-heads.net/body/${raw}/${size}`, tall: true },
+        { url: `https://minotar.net/armor/body/${raw}/${size}`, tall: true },
+        { url: `https://mc-heads.net/avatar/${raw}/${size}`, tall: false },
+        { url: `https://minotar.net/avatar/${raw}/${size}`, tall: false }
+      ]
+    : [
+        { url: `https://mc-heads.net/avatar/${raw}/${size}`, tall: false },
+        { url: `https://minotar.net/avatar/${raw}/${size}`, tall: false },
+        { url: `https://crafatar.com/avatars/${dashed}?size=${size}&overlay`, tall: false }
+      ]
+
+  const cur = sources[stage]
+
+  if (!cur) {
     return (
       <div
         className={`pixelated grid place-items-center rounded-md ${className ?? ''}`}
@@ -43,24 +58,16 @@ export function PlayerHead({ id, uuid, size = 64, render = 'avatar', className }
     )
   }
 
-  const mcHeads = `https://mc-heads.net/${isBody ? 'body' : 'avatar'}/${encodeURIComponent(raw)}/${size}`
-  const src =
-    stage === 0
-      ? mcHeads
-      : stage === 1
-        ? `${mcHeads}?r=1`
-        : `https://crafatar.com/${isBody ? 'renders/body' : 'avatars'}/${encodeURIComponent(dashed)}?size=${size}&overlay`
-
   return (
     <img
       key={`${playerKey}-${stage}`}
-      src={src}
+      src={cur.url}
       alt={id}
       width={size}
-      height={isBody ? size * 2 : size}
+      height={cur.tall ? size * 2 : size}
       className={`pixelated ${className ?? ''}`}
       style={{ imageRendering: 'pixelated' }}
-      onError={() => setStage((s) => (s < MAX_STAGE ? s + 1 : s))}
+      onError={() => setStage((s) => Math.min(s + 1, sources.length))}
       draggable={false}
     />
   )

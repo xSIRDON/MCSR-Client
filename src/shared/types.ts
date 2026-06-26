@@ -47,6 +47,8 @@ export interface AppConfig {
   maps: Record<InstanceId, string[]>
   seedQueueOverride: string | null
   pacemanName: string | null
+  ninjabrain: boolean
+  toolscreen: boolean
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -54,7 +56,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   java: { ranked: null, rsg: null, zsg: null },
   maps: { ranked: [...ALL_MAP_IDS], rsg: [...ALL_MAP_IDS], zsg: [...ALL_MAP_IDS] },
   seedQueueOverride: null,
-  pacemanName: null
+  pacemanName: null,
+  ninjabrain: true,
+  toolscreen: true
 }
 
 export interface ModInfo {
