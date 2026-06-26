@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
-import type { InstanceId, InstanceStatus, ProgressEvent } from '@shared/types'
+import { useEffect } from 'react'
+import type { InstanceId } from '@shared/types'
 import { useUi } from '../store/uiStore'
+import { useInstances, isBusy } from '../hooks/useInstances'
 import { ProgressBar } from './ProgressBar'
 import { ObsidianBlock, PortalBlock } from './BlockArt'
 
@@ -18,54 +19,26 @@ const META: Record<InstanceId, Meta> = {
     tagline: '1v1 ladder — the full MCSR Ranked modpack.',
     accent: 'var(--gold)',
     mods: '22 mods · MCSR Ranked',
-    icon: () => <ObsidianBlock size={22} />
+    icon: () => <ObsidianBlock size={20} />
   },
   rsg: {
     title: 'RSG',
-    tagline: 'Random Seed Glitchless — SeedQueue wall, paceman pace. No ranked mod.',
+    tagline: 'Random Seed Glitchless — SeedQueue wall + paceman. No ranked mod.',
     accent: 'var(--portal)',
     mods: 'SeedQueue · SpeedRunIGT · paceman',
-    icon: () => <PortalBlock size={22} />
+    icon: () => <PortalBlock size={20} />
   }
 }
-
-const BUSY: InstanceStatus['state'][] = ['installing', 'launching', 'running']
 
 export function InstanceCard({ id }: { id: InstanceId }) {
   const meta = META[id]
   const profile = useUi((s) => s.profile)
-  const [status, setStatus] = useState<InstanceStatus>({ id, state: 'not-installed' })
-  const [progress, setProgress] = useState<ProgressEvent | null>(null)
+  const { statuses, progress, init, launch, verify, select } = useInstances()
+  useEffect(() => init(), [init])
 
-  useEffect(() => {
-    let active = true
-    void window.obsidian.instances.status(id).then((s) => active && setStatus(s))
-    const offState = window.obsidian.instances.onStateChanged((s) => {
-      if (s.id === id) {
-        setStatus(s)
-        if (!BUSY.includes(s.state)) setProgress(null)
-      }
-    })
-    const offProg = window.obsidian.instances.onProgress((e) => {
-      if (e.instance === id) setProgress(e)
-    })
-    return () => {
-      active = false
-      offState()
-      offProg()
-    }
-  }, [id])
-
-  const busy = BUSY.includes(status.state)
-  const canPlay = !!profile && !busy
-
-  async function play() {
-    try {
-      await window.obsidian.instances.launch(id)
-    } catch (e) {
-      setStatus((s) => ({ ...s, state: 'error', error: String(e) }))
-    }
-  }
+  const status = statuses[id]
+  const prog = progress[id]
+  const busy = isBusy(status.state)
 
   const stateLabel =
     status.state === 'running'
@@ -82,25 +55,23 @@ export function InstanceCard({ id }: { id: InstanceId }) {
 
   return (
     <div
-      className="surface relative flex flex-col overflow-hidden p-6"
-      style={{ boxShadow: `inset 0 0 60px ${meta.accent}0a, 0 10px 34px rgba(0,0,0,.5)` }}
+      className="surface relative flex flex-col overflow-hidden p-4"
+      style={{ boxShadow: `inset 0 0 50px ${meta.accent}0a, 0 8px 26px rgba(0,0,0,.5)` }}
+      onMouseEnter={() => select(id)}
     >
       <div
-        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full blur-3xl"
+        className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full blur-3xl"
         style={{ background: meta.accent, opacity: 0.1 }}
       />
-      <div className="relative flex items-start justify-between">
-        <div className="flex items-center gap-3">
+      <div className="relative flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
           {meta.icon()}
-          <div>
-            <h3 className="font-display text-xl" style={{ color: meta.accent }}>
-              {meta.title}
-            </h3>
-            <div className="text-xs text-faint">{meta.mods}</div>
-          </div>
+          <h3 className="font-display text-lg" style={{ color: meta.accent }}>
+            {meta.title}
+          </h3>
         </div>
         <span
-          className="rounded-full px-2.5 py-1 text-[11px]"
+          className="rounded-full px-2.5 py-0.5 text-[11px]"
           style={{
             color: status.state === 'error' ? 'var(--loss)' : meta.accent,
             border: `1px solid ${status.state === 'error' ? 'var(--loss)' : meta.accent}40`
@@ -110,11 +81,12 @@ export function InstanceCard({ id }: { id: InstanceId }) {
         </span>
       </div>
 
-      <p className="relative mt-3 text-sm text-muted">{meta.tagline}</p>
+      <div className="relative mt-1 text-xs text-faint">{meta.mods}</div>
+      <p className="relative mt-2 text-sm text-muted">{meta.tagline}</p>
 
-      <div className="relative mt-5 min-h-[42px]">
-        {busy && progress ? (
-          <ProgressBar fraction={progress.fraction} label={progress.message} color={meta.accent} />
+      <div className="relative mt-3 min-h-[34px]">
+        {busy && prog ? (
+          <ProgressBar fraction={prog.fraction} label={prog.message} color={meta.accent} />
         ) : status.state === 'error' ? (
           <div className="text-xs text-[var(--loss)]">{status.error ?? 'Something went wrong.'}</div>
         ) : status.versionId ? (
@@ -122,19 +94,19 @@ export function InstanceCard({ id }: { id: InstanceId }) {
         ) : null}
       </div>
 
-      <div className="relative mt-4 flex items-center gap-2">
+      <div className="relative mt-3 flex items-center gap-2">
         <button
-          onClick={play}
-          disabled={!canPlay}
-          className="font-display flex-1 rounded-lg px-4 py-2.5 text-sm transition-all disabled:cursor-not-allowed disabled:opacity-40"
-          style={{ background: meta.accent, color: '#0a0a10', boxShadow: `0 6px 20px ${meta.accent}40` }}
+          onClick={() => launch(id)}
+          disabled={!profile || busy}
+          className="font-display flex-1 rounded-lg px-4 py-2 text-sm transition-all disabled:cursor-not-allowed disabled:opacity-40"
+          style={{ background: meta.accent, color: '#0a0a10' }}
         >
-          {status.state === 'running' ? 'PLAYING' : busy ? 'WORKING…' : status.state === 'ready' ? 'PLAY' : 'INSTALL & PLAY'}
+          {status.state === 'running' ? 'PLAYING' : busy ? 'WORKING…' : status.state === 'ready' ? 'PLAY' : 'INSTALL'}
         </button>
         <button
-          onClick={() => window.obsidian.instances.verify(id)}
+          onClick={() => verify(id)}
           disabled={busy}
-          className="rounded-lg border border-[var(--line)] px-3 py-2.5 text-sm text-muted transition-colors hover:text-text disabled:opacity-40"
+          className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm text-muted transition-colors hover:text-text disabled:opacity-40"
           title="Re-download and verify all files"
         >
           Verify
@@ -144,13 +116,11 @@ export function InstanceCard({ id }: { id: InstanceId }) {
       {id === 'rsg' && (
         <button
           onClick={() => window.obsidian.config.pickJar()}
-          className="relative mt-3 text-left text-xs text-faint underline-offset-2 hover:text-muted hover:underline"
+          className="relative mt-2.5 text-left text-xs text-faint underline-offset-2 hover:text-muted hover:underline"
         >
           Use my own SeedQueue jar (Discord beta)…
         </button>
       )}
-
-      {!profile && <div className="relative mt-3 text-xs text-[var(--gold)]">Sign in to play.</div>}
     </div>
   )
 }

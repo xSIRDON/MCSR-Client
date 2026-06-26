@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { useUi } from './store/uiStore'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
+import { PlayBar } from './components/PlayBar'
 import { Login } from './pages/Login'
 import { Home } from './pages/Home'
 import { Play } from './pages/Play'
@@ -41,16 +42,19 @@ export function App() {
       ) : !profile ? (
         <Login />
       ) : (
-        <div className="flex min-h-0 flex-1">
-          <Sidebar />
-          <main className="min-w-0 flex-1 overflow-y-auto">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/play" element={<Play />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
-          </main>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 flex-1">
+            <Sidebar />
+            <main className="min-w-0 flex-1 overflow-y-auto">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/play" element={<Play />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
+              </Routes>
+            </main>
+          </div>
+          <PlayBar />
         </div>
       )}
     </div>
