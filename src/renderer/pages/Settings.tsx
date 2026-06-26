@@ -301,6 +301,7 @@ export function Settings() {
             </button>
           )}
         </div>
+        <p className="mt-2 text-xs text-faint">You’re running MCSR Client v{__APP_VERSION__}.</p>
         {update.note && <p className="mt-2 text-xs text-faint">{update.note}</p>}
       </Card>
 
