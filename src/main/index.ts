@@ -9,19 +9,22 @@ const isDev = !!process.env['ELECTRON_RENDERER_URL']
 // The paceman stats API doesn't send CORS headers, so a renderer-side fetch is
 // blocked. Inject an allow-origin header on its responses so the live-pace panel
 // can read it. (The MCSR Ranked API already returns Access-Control-Allow-Origin.)
+//
+// Scoped to paceman URLs only: previously this hook ran for EVERY response and
+// replied cb({}) to the rest, which can drop headers and break image rendering —
+// the likely reason skins (mc-heads / minotar) failed to load in the renderer.
 function enablePacemanCors(): void {
-  session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
-    if (details.url.includes('paceman.gg')) {
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['https://paceman.gg/*', 'https://*.paceman.gg/*'] },
+    (details, cb) => {
       cb({
         responseHeaders: {
           ...details.responseHeaders,
           'Access-Control-Allow-Origin': ['*']
         }
       })
-    } else {
-      cb({})
     }
-  })
+  )
 }
 
 function createWindow(): void {
