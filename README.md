@@ -1,96 +1,132 @@
 <div align="center">
 
-# MCSR Client
+<img src=".github/assets/banner.svg" alt="MCSR Client" width="100%" />
 
-**A clean, MCSR-Ranked–themed Minecraft client for 1.16.1 speedrunning.**
+<br />
+<br />
 
-Ranked and RSG in one place — live stats, real launching, built-in paceman.
+[![Version](https://img.shields.io/badge/version-v0.2.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Windows-3b82f6?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&labelColor=15151c)](LICENSE)
+
+<br />
+
+**The all-in-one desktop client for Minecraft 1.16.1 speedrunning.**
+
+One app to sign in, install your instances, launch the game, and watch your rank climb — no third-party launcher, no manual modpack juggling.
+
+<br />
+
+### [⬇  Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+
+<sub>Windows installer · auto-updates · v0.2.0</sub>
 
 </div>
 
+<br />
+
 ---
 
-MCSR Client is a standalone desktop launcher built for Minecraft Speedrunning. It signs
-you in with your Microsoft account, downloads and launches Minecraft 1.16.1 + Fabric
-itself, and manages two purpose-built instances — no third-party launcher required.
+## What it is
+
+MCSR Client is a self-contained launcher and dashboard built for the Minecraft Speedrunning Ranked community. It downloads and runs Minecraft 1.16.1 + Fabric on its own, manages Java for you, and ships ready-to-play instances for Ranked, RSG, and ZSG. Sign in with Microsoft, click an instance, and play. Your ELO, tier, pace, and recent matches live right on the home screen.
+
+No Julti. No Jingle. No assembling a mod folder by hand. Just download, sign in, and run.
+
+<br />
 
 ## Features
 
-- **Live Ranked dashboard.** Your MCSR Ranked profile front and center: ELO, tier
-  (Coal → Netherite), peak, win rate, streaks, an ELO-over-time chart, your recent
-  matches, the global leaderboard, and search for any player.
-- **Two instances, one click.**
-  - **Ranked** — the full MCSR Ranked modpack.
-  - **RSG** — the same legal mod set with the ranked mod removed, plus the
-    **SeedQueue** wall for instant resets. Built straight from the canonical pack so
-    it's always tournament-legal.
-- **Built-in paceman.** No Julti, no Jingle. MCSR Client bundles and auto-runs the
-  paceman tracker alongside your RSG sessions and shows your **live pace** right on the
-  home screen.
-- **It just works.** Java, Minecraft, Fabric, and every mod are fetched and verified
-  for you. Hit *Verify* any time to repair an instance.
+### One-click instances
+Three curated, ready-to-run setups — each downloads and configures itself:
 
-## Getting started
+- **Ranked** — the full MCSR Ranked modpack, with the latest MCSR Ranked mod pulled straight from Modrinth.
+- **RSG** — random-seed glitchless. The same legal mod set with the ranked mod removed, plus the **SeedQueue** wall for instant resets.
+- **ZSG** — the RSG mod set with the **FSG** mod added on top, for filtered-seed practice.
 
-> Requires a Minecraft: Java Edition account.
+SeedQueue wall resource packs come pre-installed for RSG and ZSG.
+
+### Launches Minecraft for you
+- Downloads and runs **Minecraft 1.16.1 + Fabric** directly — no external launcher required.
+- **Java is fetched and managed** automatically.
+- Sign in with your **Microsoft account**, add as many as you like, and switch between them in a click.
+
+### Live MCSR Ranked dashboard
+Your stats, front and center:
+
+- ELO, tier (**Coal → Netherite**), peak rating, win rate, win streak, best time, and total matches.
+- An **ELO-over-time chart** and a feed of your recent matches.
+- The **global leaderboard** plus full **player search** — with skins.
+
+### Built-in pace tracking
+- A **paceman tracker** runs alongside RSG automatically and surfaces your live pace on the home screen.
+
+### Bundled tools, set up on install
+- **Ninjabrain Bot** — the stronghold calculator, with a desktop shortcut created for you.
+- **Toolscreen** — ready to go out of the box.
+
+### Per-instance control
+Open **Edit instance** to fine-tune anything:
+
+- RAM and Java settings.
+- Mod toggles and a practice-map picker.
+- Open the game folder directly.
+- **Import settings** — copy `options.txt`, `hotbar.nbt`, and the whole `config/` folder from another instance, or pull in an external `options.txt`. Offered on the Edit page and during a first-time install.
+
+### Built for Windows
+- A branded Windows installer.
+- **Automatic updates** straight from GitHub.
+- The app version is always visible in the sidebar.
+
+<br />
+
+## A look inside
+
+<div align="center">
+
+<img src=".github/assets/home.svg" alt="MCSR Client home screen" width="90%" />
+
+<br />
+<sub>The home screen — instances, live pace, and your Ranked stats at a glance.</sub>
+
+</div>
+
+<br />
+
+## Build from source
+
+Want to hack on it? You'll need [Node.js](https://nodejs.org/) installed.
 
 ```bash
+# install dependencies
 npm install
+
+# run in development
 npm run dev
-```
 
-1. Sign in with Microsoft.
-2. Open **Play** and launch **Ranked** or **RSG** (first launch downloads everything).
-3. For RSG pace, paste your paceman.gg access key in **Settings**
-   (paceman.gg → sign in with Discord → Generate Access Token).
-
-### Build a Windows installer
-
-```bash
+# build a distributable installer
 npm run dist
 ```
 
-Outputs an installer under `release/`.
-
-## How it works
-
-| Area | Approach |
-| --- | --- |
-| Launching | GMLL installs Java + Minecraft 1.16.1 + Fabric and isolates each instance |
-| Auth | Microsoft sign-in; your session stays encrypted on this device |
-| Mods | Parses the MCSR Ranked `.mrpack`, verifies every file (sha512), filters ranked-only jars for RSG |
-| Pace | The standalone paceman tracker, configured and run for you |
-| Stats | The public MCSR Ranked API + the paceman stats API |
-
-## Project layout
-
-```
-src/shared      IPC contract + shared types
-src/core        pure logic (rank mapping, formatting) — unit tested
-src/services    MCSR Ranked + paceman API clients — unit tested
-src/main        Electron main: auth, launcher, instances, paceman, IPC
-src/preload     typed contextBridge bridge
-src/renderer    React UI (the MCSR Client theme + dashboard)
-```
-
-```bash
-npm test          # unit tests
-npm run typecheck # main + renderer
-npm run build     # bundle
-```
+<br />
 
 ## Credits
 
-MCSR Client stands on the shoulders of the MCSR community:
+Built and maintained by **xSIRDON**.
 
-- [MCSR Ranked](https://mcsrranked.com) and its public [API](https://docs.mcsrranked.com)
-- [paceman.gg](https://paceman.gg) and the PaceMan Tracker
-- The [legal-mods](https://github.com/Minecraft-Java-Edition-Speedrunning/legal-mods) project and [RedLime's MCSR Mods](https://redlime.github.io/MCSRMods/)
-- **SeedQueue** by contariaa, **SpeedRunIGT**, and the wider speedrunning mod ecosystem
-- [Monocraft](https://github.com/IdreesInc/Monocraft) (SIL OFL 1.1) for the display font
+Made possible by the tools and communities that power Minecraft speedrunning:
 
-Not affiliated with Mojang or Microsoft. Minecraft is a trademark of Mojang AB.
+- **MCSR Ranked** and the wider Minecraft Speedrunning Ranked community
+- **Fabric**
+- **SeedQueue** and **FSG**
+- **Ninjabrain Bot**
+- **paceman**
+- **Modrinth**
+
+Huge thanks to everyone in the MCSR community who builds, tests, and runs.
+
+<br />
 
 ## License
 
-[MIT](LICENSE) © xSIRDON
+Released under the [MIT License](LICENSE). © 2026 xSIRDON.
