@@ -43,3 +43,12 @@ Thumbs.db
 # Test / coverage
 coverage/
 .vitest/
+
+# local visual-verification harness (not shipped)
+demo/
+
+# local verification artifacts (not shipped)
+.playwright-mcp/
+obsidian-home.png
+obsidian-profile.png
+*.screenshot.png

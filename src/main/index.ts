@@ -1,8 +1,26 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc-handlers'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
+
+// The paceman stats API doesn't send CORS headers, so a renderer-side fetch is
+// blocked. Inject an allow-origin header on its responses so the live-pace panel
+// can read it. (The MCSR Ranked API already returns Access-Control-Allow-Origin.)
+function enablePacemanCors(): void {
+  session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+    if (details.url.includes('paceman.gg')) {
+      cb({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Access-Control-Allow-Origin': ['*']
+        }
+      })
+    } else {
+      cb({})
+    }
+  })
+}
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -38,6 +56,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  enablePacemanCors()
   registerIpc()
   createWindow()
 
