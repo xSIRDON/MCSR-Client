@@ -1,5 +1,6 @@
 import { ipcMain, BrowserWindow, dialog, shell } from 'electron'
-import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, rmSync } from 'node:fs'
+import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { IPC } from '../shared/ipc'
 import type {
@@ -25,6 +26,7 @@ import { installDefaultMaps } from './instances/maps'
 import { listMods, setModEnabled } from './instances/mods'
 import { readStandardSettings, writeStandardSettings } from './instances/standard-settings'
 import { detectJava } from './system/java'
+import { removeLinkIfPresent } from './launcher/links'
 import { pushLog, onLog, logHistory, clearLog } from './log'
 import { paths } from './paths'
 
@@ -176,6 +178,20 @@ async function launchInstance(id: InstanceId): Promise<void> {
   })
 }
 
+const BUSY_STATES = ['installing', 'launching', 'running']
+
+/** Delete an instance's files. Clears shared-link junctions first so the recursive
+ *  remove can never follow them into the shared assets/libraries. */
+function deleteInstance(id: InstanceId): void {
+  if (BUSY_STATES.includes(states[id].state)) {
+    throw new Error('Close the game before deleting this instance.')
+  }
+  removeLinkIfPresent(join(paths.instanceDir(id), 'libraries'))
+  removeLinkIfPresent(join(paths.instanceDir(id), 'assets'))
+  rmSync(paths.instanceDir(id), { recursive: true, force: true })
+  setState(id, { state: 'not-installed', versionId: undefined, error: undefined })
+}
+
 export function registerIpc(): void {
   hydrateStates()
   tracker.onStatus((s) => win()?.webContents.send(IPC.paceStatusChanged, s))
@@ -196,6 +212,7 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.instInstall, (_e, id: InstanceId) => installInstance(id))
   ipcMain.handle(IPC.instLaunch, (_e, id: InstanceId) => launchInstance(id))
   ipcMain.handle(IPC.instVerify, (_e, id: InstanceId) => installInstance(id))
+  ipcMain.handle(IPC.instDelete, (_e, id: InstanceId) => deleteInstance(id))
   ipcMain.handle(IPC.instMods, (_e, id: InstanceId) => listMods(join(gmll.gameDir(id), 'mods')))
   ipcMain.handle(IPC.instToggleMod, (_e, id: InstanceId, file: string, enabled: boolean) => {
     const dir = join(gmll.gameDir(id), 'mods')
@@ -205,6 +222,14 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.instOpenFolder, (_e, id: InstanceId) => {
     const dir = paths.instanceDir(id)
     mkdirSync(dir, { recursive: true })
+    // shell.openPath reports "Location is not available" for instance folders that
+    // contain junctions; explorer.exe opens them reliably. Fall back elsewhere.
+    if (process.platform === 'win32') {
+      const child = spawn('explorer.exe', [dir], { detached: true, stdio: 'ignore' })
+      child.on('error', () => void shell.openPath(dir))
+      child.unref()
+      return
+    }
     return shell.openPath(dir)
   })
   ipcMain.handle(IPC.instStdGet, (_e, id: InstanceId) => readStandardSettings(gmll.gameDir(id)))

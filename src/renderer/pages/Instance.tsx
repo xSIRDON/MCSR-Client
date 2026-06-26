@@ -33,7 +33,64 @@ export function Instance() {
       <JavaCard id={instanceId} />
       <FilesCard id={instanceId} />
       <ModsCard id={instanceId} />
+      <DangerCard id={instanceId} onDeleted={() => navigate('/play')} />
     </div>
+  )
+}
+
+function DangerCard({ id, onDeleted }: { id: InstanceId; onDeleted: () => void }) {
+  const [confirm, setConfirm] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function del() {
+    setBusy(true)
+    setError(null)
+    try {
+      await window.obsidian.instances.delete(id)
+      onDeleted()
+    } catch (e) {
+      setBusy(false)
+      setConfirm(false)
+      setError(e instanceof Error ? e.message : 'Could not delete the instance.')
+    }
+  }
+
+  return (
+    <section className="surface p-5">
+      <h2 className="mb-3 font-display text-sm uppercase tracking-[0.16em] text-[var(--loss)]">Danger zone</h2>
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm text-muted">
+          Delete this instance — removes its mods, saves, configs and downloaded files.{' '}
+          <span className="text-faint">Shared game files (assets/libraries) are kept.</span>
+        </div>
+        {!confirm ? (
+          <button
+            onClick={() => setConfirm(true)}
+            className="shrink-0 rounded-lg border border-[var(--loss)]/40 px-3 py-1.5 text-sm text-[var(--loss)] transition-colors hover:bg-[var(--loss)]/10"
+          >
+            Delete…
+          </button>
+        ) : (
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              onClick={() => setConfirm(false)}
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted hover:text-text"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={del}
+              disabled={busy}
+              className="rounded-lg bg-[var(--loss)] px-3 py-1.5 text-sm text-[#0a0a10] disabled:opacity-50"
+            >
+              {busy ? 'Deleting…' : 'Yes, delete'}
+            </button>
+          </div>
+        )}
+      </div>
+      {error && <div className="mt-2 text-xs text-[var(--loss)]">{error}</div>}
+    </section>
   )
 }
 

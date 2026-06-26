@@ -30,6 +30,7 @@ export const IPC = {
   instInstall: 'inst:install',
   instLaunch: 'inst:launch',
   instVerify: 'inst:verify',
+  instDelete: 'inst:delete',
   instProgress: 'inst:progress', // main -> renderer stream
   instStateChanged: 'inst:stateChanged', // main -> renderer stream
   instMods: 'inst:mods',
@@ -74,6 +75,7 @@ export interface ObsidianApi {
     install(id: InstanceId): Promise<void>
     launch(id: InstanceId): Promise<void>
     verify(id: InstanceId): Promise<void>
+    delete(id: InstanceId): Promise<void>
     onProgress(cb: (e: ProgressEvent) => void): () => void
     onStateChanged(cb: (s: InstanceStatus) => void): () => void
     mods(id: InstanceId): Promise<ModInfo[]>
