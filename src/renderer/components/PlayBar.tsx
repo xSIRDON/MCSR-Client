@@ -1,14 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { InstanceId } from '@shared/types'
 import { useInstances, isBusy } from '../hooks/useInstances'
 import { NetheriteBlock, PortalBlock } from './BlockArt'
 
 const LABEL: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
-const ACCENT: Record<InstanceId, string> = {
-  ranked: 'var(--gold)',
-  rsg: 'var(--portal)',
-  zsg: '#4fd6b0'
+const INSTANCES: InstanceId[] = ['ranked', 'rsg', 'zsg']
+
+function InstanceIcon({ id, size = 16 }: { id: InstanceId; size?: number }) {
+  return id === 'ranked' ? <NetheriteBlock size={size} /> : <PortalBlock size={size} />
 }
 
 export function PlayBar() {
@@ -50,26 +50,7 @@ export function PlayBar() {
       )}
 
       <div className="flex items-center gap-4 px-5 py-3">
-        <div className="flex items-center gap-1 rounded-xl border border-[var(--line)] bg-[var(--bg-2)] p-1">
-          {(['ranked', 'rsg', 'zsg'] as InstanceId[]).map((id) => {
-            const active = selected === id
-            return (
-              <button
-                key={id}
-                onClick={() => select(id)}
-                className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-all"
-                style={{
-                  color: active ? ACCENT[id] : 'var(--muted)',
-                  background: active ? `${ACCENT[id]}14` : 'transparent',
-                  boxShadow: active ? `inset 0 0 0 1px ${ACCENT[id]}40` : undefined
-                }}
-              >
-                {id === 'ranked' ? <NetheriteBlock size={16} /> : <PortalBlock size={16} />}
-                <span className="font-display tracking-wide">{LABEL[id]}</span>
-              </button>
-            )
-          })}
-        </div>
+        <InstanceSelect selected={selected} onSelect={select} />
 
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm text-text">
@@ -130,6 +111,124 @@ export function PlayBar() {
           {playLabel}
         </button>
       </div>
+    </div>
+  )
+}
+
+function InstanceSelect({ selected, onSelect }: { selected: InstanceId; onSelect: (id: InstanceId) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    window.addEventListener('mousedown', onDown)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('mousedown', onDown)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
+    items?.[Math.max(0, INSTANCES.indexOf(selected))]?.focus()
+  }, [open, selected])
+
+  function onMenuKey(e: React.KeyboardEvent) {
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [])
+    if (!items.length) return
+    const cur = items.findIndex((el) => el === document.activeElement)
+    const go = (i: number) => {
+      e.preventDefault()
+      items[(i + items.length) % items.length].focus()
+    }
+    if (e.key === 'ArrowDown') go(cur + 1)
+    else if (e.key === 'ArrowUp') go(cur - 1)
+    else if (e.key === 'Home') go(0)
+    else if (e.key === 'End') go(items.length - 1)
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex min-w-[148px] items-center gap-2 rounded-xl border bg-[var(--bg-2)] px-3 py-2 text-sm transition-colors"
+        style={{
+          color: 'var(--win)',
+          borderColor: open ? 'rgba(74,255,140,0.5)' : 'var(--line)'
+        }}
+      >
+        <InstanceIcon id={selected} />
+        <span className="font-display tracking-wide">{LABEL[selected]}</span>
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          aria-hidden
+          className={`ml-auto text-muted transition-transform ${open ? 'rotate-180' : ''}`}
+        >
+          <path
+            d="M2.5 4.5L6 8l3.5-3.5"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          ref={menuRef}
+          role="menu"
+          onKeyDown={onMenuKey}
+          className="absolute bottom-full left-0 z-40 mb-2 w-[184px] overflow-hidden rounded-xl border border-[var(--line-strong)] bg-[#0e0e16] p-1 shadow-[0_14px_44px_rgba(0,0,0,.6)] animate-fade-up"
+        >
+          {INSTANCES.map((id) => {
+            const active = selected === id
+            return (
+              <button
+                key={id}
+                role="menuitem"
+                aria-current={active || undefined}
+                onClick={() => {
+                  onSelect(id)
+                  setOpen(false)
+                }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm outline-none transition-colors hover:bg-white/[0.05] focus-visible:bg-white/[0.07]"
+                style={{
+                  color: active ? 'var(--win)' : 'var(--text)',
+                  background: active ? 'rgba(74,255,140,0.12)' : undefined
+                }}
+              >
+                <InstanceIcon id={id} />
+                <span className="font-display tracking-wide">{LABEL[id]}</span>
+                {active && (
+                  <svg className="ml-auto" width="13" height="13" viewBox="0 0 14 14" aria-hidden>
+                    <path
+                      d="M2.5 7.5l3 3 6-7"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
