@@ -21,7 +21,7 @@ export function Home() {
   if (!profile) return null
 
   return (
-    <div className="mx-auto max-w-[1120px] space-y-4 px-5 py-4">
+    <div className="mx-auto max-w-[1120px] space-y-3 px-5 py-3">
       <HomeHero uuid={profile.uuid} name={profile.name} />
 
       {/* the dashboard: three living mode cards */}

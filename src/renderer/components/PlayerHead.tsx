@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface Props {
   /** username or dashless uuid */
@@ -13,6 +13,10 @@ interface Props {
 /** Player head/body via mc-heads, falling back to crafatar, then a pixel block. */
 export function PlayerHead({ id, uuid, size = 64, render = 'avatar', className }: Props) {
   const [stage, setStage] = useState<0 | 1 | 2>(0)
+  // Retry from the best source when the player changes — searched profiles resolve
+  // their uuid after the first render, which previously left the head stuck on the
+  // letter fallback.
+  useEffect(() => setStage(0), [id, uuid])
   // Prefer the dashless uuid — both providers resolve it far more reliably than a
   // username, which is the usual reason only some heads load on a busy list.
   const dashless = (uuid ?? id).replace(/-/g, '')

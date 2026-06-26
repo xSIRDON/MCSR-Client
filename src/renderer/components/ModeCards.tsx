@@ -38,7 +38,7 @@ export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }
         <div className="shrink-0">
           <div className="text-[10px] uppercase tracking-[0.16em] text-muted">Elo</div>
           <div
-            className="font-display tnum text-6xl leading-none"
+            className="font-display tnum text-5xl leading-none"
             style={{ color: rank.color, textShadow: `0 0 30px ${rank.glow}66` }}
           >
             {user?.eloRate ?? '—'}
@@ -131,7 +131,7 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
         <div className="shrink-0">
           <div className="text-[10px] uppercase tracking-[0.16em] text-muted">Personal best</div>
           <div
-            className="font-display tnum text-6xl leading-none"
+            className="font-display tnum text-5xl leading-none"
             style={{ color: 'var(--portal)', textShadow: '0 0 30px rgba(159,107,255,.5)' }}
           >
             {pb != null ? msToTime(pb) : '—'}
@@ -192,11 +192,9 @@ export function ZsgCard({ delay = 0 }: { delay?: number }) {
         </span>
       </header>
 
-      <p className="relative mt-4 text-sm text-muted">
-        The RSG mod set plus the <span className="text-text">FSG</span> (filtered-seed) mod — generate
-        practice seeds on demand. No ranked mod.
+      <p className="relative mt-3 text-sm text-muted">
+        RSG set + the <span className="text-text">FSG</span> filtered-seed mod.
       </p>
-      <div className="relative mt-2 text-xs text-faint">SeedQueue · SpeedRunIGT · FSG</div>
 
       <PlayButton
         busy={busy}
@@ -235,7 +233,7 @@ function ModeShell({
 }) {
   return (
     <section
-      className="surface group relative overflow-hidden p-5 animate-fade-up"
+      className="surface group relative flex flex-col overflow-hidden p-4 animate-fade-up"
       style={{
         animationDelay: `${delay}ms`,
         boxShadow: `0 12px 44px rgba(0,0,0,.5), inset 0 0 70px ${accent}0d`
@@ -249,7 +247,7 @@ function ModeShell({
         className="pointer-events-none absolute inset-0 opacity-[0.04]"
         style={{ backgroundImage: 'radial-gradient(circle at 1px 1px,#fff 1px,transparent 0)', backgroundSize: '7px 7px' }}
       />
-      <div className="relative">{children}</div>
+      <div className="relative flex flex-1 flex-col">{children}</div>
     </section>
   )
 }
@@ -278,7 +276,7 @@ function PlayButton({
     <button
       onClick={onClick}
       disabled={busy}
-      className="font-display relative mt-4 w-full overflow-hidden rounded-xl px-5 py-3 text-base tracking-wide transition-all hover:brightness-110 disabled:cursor-not-allowed"
+      className="font-display relative mt-auto w-full overflow-hidden rounded-xl px-5 py-2.5 text-base tracking-wide transition-all hover:brightness-110 disabled:cursor-not-allowed"
       style={{
         color: '#07140a',
         background: busy
