@@ -8,6 +8,7 @@ import { PlayerHead } from './PlayerHead'
 const NAV = [
   { to: '/', label: 'Home', icon: HomeIcon, end: true },
   { to: '/play', label: 'Play', icon: PlayIcon, end: false },
+  { to: '/console', label: 'Console', icon: ConsoleIcon, end: false },
   { to: '/profile', label: 'Profile', icon: UserIcon, end: false },
   { to: '/settings', label: 'Settings', icon: GearIcon, end: false }
 ]
@@ -79,6 +80,20 @@ function PlayIcon() {
   return (
     <svg width="19" height="19" viewBox="0 0 18 18" fill="none">
       <path d="M5 3.5l9 5.5-9 5.5v-11z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function ConsoleIcon() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 18 18" fill="none">
+      <rect x="2.5" y="3.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <path
+        d="M5.5 7l2 1.6-2 1.6M9.5 11h3"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }

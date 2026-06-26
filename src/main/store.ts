@@ -2,7 +2,36 @@ import { safeStorage } from 'electron'
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { paths } from './paths'
-import { DEFAULT_CONFIG, type AppConfig } from '../shared/types'
+import { DEFAULT_CONFIG, type AppConfig, type InstanceId } from '../shared/types'
+
+type RawConfig = {
+  ram?: Partial<Record<InstanceId, number>>
+  java?: Partial<Record<InstanceId, string | null>>
+  /** Legacy single global RAM value, migrated to per-instance. */
+  ramMb?: number
+  seedQueueOverride?: string | null
+  pacemanName?: string | null
+}
+
+/** Coerce a stored (possibly legacy) config into the current AppConfig shape. */
+function normalizeConfig(raw: RawConfig): AppConfig {
+  const legacy = typeof raw.ramMb === 'number' ? raw.ramMb : undefined
+  return {
+    ram: {
+      ranked: raw.ram?.ranked ?? legacy ?? DEFAULT_CONFIG.ram.ranked,
+      rsg: raw.ram?.rsg ?? legacy ?? DEFAULT_CONFIG.ram.rsg
+    },
+    java: {
+      ranked: raw.java?.ranked ?? null,
+      rsg: raw.java?.rsg ?? null
+    },
+    seedQueueOverride:
+      typeof raw.seedQueueOverride === 'string'
+        ? raw.seedQueueOverride
+        : DEFAULT_CONFIG.seedQueueOverride,
+    pacemanName: typeof raw.pacemanName === 'string' ? raw.pacemanName : DEFAULT_CONFIG.pacemanName
+  }
+}
 
 function ensureDir(file: string): void {
   mkdirSync(dirname(file), { recursive: true })
@@ -27,7 +56,7 @@ let config: AppConfig | null = null
 
 export const store = {
   getConfig(): AppConfig {
-    if (!config) config = readJson<AppConfig>(paths.configFile(), DEFAULT_CONFIG)
+    if (!config) config = normalizeConfig(readJson<RawConfig>(paths.configFile(), {}))
     return config
   },
   setConfig(patch: Partial<AppConfig>): AppConfig {

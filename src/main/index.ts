@@ -1,6 +1,7 @@
 import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc-handlers'
+import { migrateDataDir } from './paths'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
 
@@ -31,9 +32,9 @@ function createWindow(): void {
     show: false,
     frame: false,
     backgroundColor: '#0d0d0f',
-    title: 'Obsidian',
+    title: 'MCSR Client',
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false
@@ -56,6 +57,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  migrateDataDir()
   enablePacemanCors()
   registerIpc()
   createWindow()

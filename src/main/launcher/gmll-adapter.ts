@@ -5,8 +5,10 @@
 import { init, config, Instance } from 'gmll'
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { paths } from '../paths'
 import { store } from '../store'
+import { removeLinkIfPresent } from './links'
 import type { InstanceId, ProgressEvent } from '../../shared/types'
 
 let initialised = false
@@ -25,7 +27,7 @@ export async function ensureCore(onProgress?: (e: ProgressEvent) => void): Promi
   mkdirSync(paths.instances(), { recursive: true })
   config.setRoot(paths.shared())
   config.setInstances(paths.instances())
-  config.setLauncherName('Obsidian')
+  config.setLauncherName('MCSR Client')
 
   try {
     const ev = config.getEventListener()
@@ -48,16 +50,31 @@ export async function ensureCore(onProgress?: (e: ProgressEvent) => void): Promi
   initialised = true
 }
 
+/**
+ * GMLL re-links the shared libraries/assets into the instance directory on every
+ * install and launch (via gfsl). gfsl hard-exits the whole process if such a link
+ * already exists in a state its existsSync check misses — which happens on Windows
+ * once an instance has been installed once. Drop any stale links first so GMLL
+ * always takes its reliable "create fresh" path. This never deletes shared data.
+ */
+function clearSharedLinks(id: InstanceId): void {
+  removeLinkIfPresent(join(paths.instanceDir(id), 'libraries'))
+  removeLinkIfPresent(join(paths.instanceDir(id), 'assets'))
+}
+
 const FABRIC_VERSION_FALLBACK = 'fabric-loader-0.19.2-1.16.1'
 
 export function makeInstance(id: InstanceId, fabricVersion = FABRIC_VERSION_FALLBACK): Instance {
   const cfg = store.getConfig()
-  return new Instance({
+  const inst = new Instance({
     name: id,
     version: fabricVersion,
     path: paths.instanceDir(id),
-    ram: Math.max(1, Math.round(cfg.ramMb / 1024))
+    ram: Math.max(1, Math.round(cfg.ram[id] / 1024))
   })
+  // GMLL launches with this.javaPath, falling back to its bundled JRE on "default".
+  inst.javaPath = cfg.java[id] ?? 'default'
+  return inst
 }
 
 /** The game directory GMLL uses for this instance (where mods/ lives). */
@@ -74,6 +91,7 @@ export async function installBase(
   await ensureCore(onProgress)
   if (onProgress) progressSink = onProgress
   activePhaseInstance = id
+  clearSharedLinks(id)
   emit({ instance: id, phase: 'fabric', fraction: null, message: 'Installing Minecraft 1.16.1 + Fabric…' })
   const inst = makeInstance(id, fabricVersion)
   await inst.install()
@@ -89,6 +107,7 @@ export async function launch(
 ): Promise<ChildProcessWithoutNullStreams> {
   await ensureCore(onProgress)
   activePhaseInstance = id
+  clearSharedLinks(id)
   emit({ instance: id, phase: 'launch', fraction: null, message: 'Launching…' })
   const inst = makeInstance(id, fabricVersion)
   // msmc's gmll() token is GMLL-compatible; GMLL's Player type is structurally equivalent.

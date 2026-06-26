@@ -33,7 +33,7 @@ export function Login() {
           <ObsidianBlock size={34} />
           <PortalBlock size={34} />
         </div>
-        <h1 className="font-display text-4xl tracking-[0.18em] text-text">OBSIDIAN</h1>
+        <h1 className="font-display text-4xl tracking-[0.14em] text-text">MCSR CLIENT</h1>
         <p className="mt-2 text-sm text-muted">The clean MCSR client — Ranked &amp; RSG, one place.</p>
 
         <button

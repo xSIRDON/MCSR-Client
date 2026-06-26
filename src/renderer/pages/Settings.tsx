@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react'
-import type { AppConfig, TrackerStatus } from '@shared/types'
+import type { Account, AppConfig, JavaInfo, TrackerStatus } from '@shared/types'
 import { useUi } from '../store/uiStore'
+import { PlayerHead } from '../components/PlayerHead'
 
 export function Settings() {
   const { profile, setProfile, pacemanName, setPacemanName } = useUi()
   const [config, setConfig] = useState<AppConfig | null>(null)
   const [tracker, setTracker] = useState<TrackerStatus>({ running: false, hasKey: false })
+  const [java, setJava] = useState<JavaInfo | null>(null)
   const [keyInput, setKeyInput] = useState('')
   const [nameInput, setNameInput] = useState(pacemanName ?? '')
   const [saved, setSaved] = useState<string | null>(null)
+  const [accounts, setAccounts] = useState<Account[]>([])
 
   useEffect(() => {
     void window.obsidian.config.get().then(setConfig)
     void window.obsidian.paceman.status().then(setTracker)
+    void window.obsidian.system.java().then(setJava)
+    void window.obsidian.auth.accounts().then(setAccounts)
     const off = window.obsidian.paceman.onStatusChanged(setTracker)
     return off
   }, [])
@@ -40,51 +45,135 @@ export function Settings() {
     }
   }
 
-  async function logout() {
-    await window.obsidian.auth.logout()
-    setProfile(null)
+  async function refreshAccounts() {
+    setAccounts(await window.obsidian.auth.accounts())
+  }
+  async function addAccount() {
+    try {
+      const p = await window.obsidian.auth.login()
+      setProfile(p)
+      setPacemanName(p.name)
+      await refreshAccounts()
+      flash('Account added')
+    } catch {
+      flash('Sign-in cancelled')
+    }
+  }
+  async function switchTo(uuid: string) {
+    const p = await window.obsidian.auth.switch(uuid)
+    if (p) {
+      setProfile(p)
+      setPacemanName(p.name)
+    }
+    await refreshAccounts()
+  }
+  async function removeAccount(uuid: string) {
+    const list = await window.obsidian.auth.remove(uuid)
+    setAccounts(list)
+    const active = list.find((a) => a.active)
+    if (!active) {
+      setProfile(null)
+    } else {
+      const p = await window.obsidian.auth.switch(active.uuid)
+      if (p) {
+        setProfile(p)
+        setPacemanName(p.name)
+      }
+    }
   }
 
   return (
     <div className="mx-auto max-w-[740px] space-y-4 px-5 py-5">
       <h1 className="font-display text-xl tracking-wide text-text">Settings</h1>
 
-      {/* Account */}
-      <Card title="Account">
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted">
-            Signed in as <span className="text-text">{profile?.name ?? '—'}</span>
-          </div>
-          <button
-            onClick={logout}
-            className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted hover:text-[var(--loss)]"
-          >
-            Sign out
-          </button>
+      {/* Accounts */}
+      <Card title="Accounts">
+        <div className="space-y-1.5">
+          {accounts.length === 0 ? (
+            <div className="text-sm text-muted">No accounts yet — add one to sign in.</div>
+          ) : (
+            accounts.map((a) => (
+              <div
+                key={a.uuid}
+                className="flex items-center justify-between rounded-md border px-3 py-2"
+                style={{ borderColor: a.active ? 'var(--gold)' : 'var(--line)' }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <PlayerHead id={a.uuid} uuid={a.uuid} size={26} className="rounded" />
+                  <span className={a.active ? 'text-sm text-text' : 'text-sm text-muted'}>{a.name}</span>
+                  {a.active && (
+                    <span className="rounded-full bg-[var(--gold)]/15 px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--gold)]">
+                      Active
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  {!a.active && (
+                    <button
+                      onClick={() => switchTo(a.uuid)}
+                      className="rounded-lg border border-[var(--line)] px-3 py-1 text-sm text-muted hover:text-text"
+                    >
+                      Switch
+                    </button>
+                  )}
+                  <button
+                    onClick={() => removeAccount(a.uuid)}
+                    className="text-xs text-faint hover:text-[var(--loss)]"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
+        <button
+          onClick={addAccount}
+          className="mt-3 rounded-lg border border-dashed border-[var(--line)] px-3 py-2 text-sm text-muted hover:text-text"
+        >
+          + Add account
+        </button>
       </Card>
 
-      {/* Memory */}
+      {/* Java runtime for the bundled tools */}
+      <Card title="Java runtime (for tools)">
+        <div className="flex items-center gap-2 text-sm">
+          <Dot ok={!!java?.ok} />
+          <span className="text-muted">
+            {java === null
+              ? 'Checking…'
+              : !java.found
+                ? 'No system Java found on PATH'
+                : `Java ${java.version}`}
+          </span>
+        </div>
+        <p className="mt-2 text-xs text-faint">
+          The bundled tools (paceman tracker — Ninjabrain Bot later) need Java 17+. The game itself is
+          unaffected; it runs on its own bundled Java 8.
+          {java && !java.ok && (
+            <>
+              {' '}
+              Install{' '}
+              <a
+                href="https://adoptium.net/temurin/releases/?version=17"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[var(--gold)] underline"
+              >
+                Temurin 17
+              </a>
+              .
+            </>
+          )}
+        </p>
+      </Card>
+
+      {/* Per-instance memory lives on each instance's Manage page. */}
       <Card title="Game memory">
-        {config && (
-          <div>
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="text-muted">Allocated RAM</span>
-              <span className="font-display text-text">{(config.ramMb / 1024).toFixed(1)} GB</span>
-            </div>
-            <input
-              type="range"
-              min={2048}
-              max={12288}
-              step={512}
-              value={config.ramMb}
-              onChange={(e) => setConfig({ ...config, ramMb: Number(e.target.value) })}
-              onMouseUp={(e) => patch({ ramMb: Number((e.target as HTMLInputElement).value) })}
-              className="w-full accent-[var(--gold)]"
-            />
-            <div className="mt-1 text-xs text-faint">3–4 GB is plenty for 1.16.1 + SeedQueue.</div>
-          </div>
-        )}
+        <div className="text-sm text-muted">
+          RAM is now set per instance. Open an instance’s <span className="text-text">Manage</span>{' '}
+          page (Play → Manage) to adjust Ranked and RSG independently.
+        </div>
       </Card>
 
       {/* Paceman */}

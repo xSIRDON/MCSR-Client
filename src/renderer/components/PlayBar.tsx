@@ -87,7 +87,28 @@ export function PlayBar() {
           </div>
         </div>
 
-        {/* details + play */}
+        {/* edit + folder + details + play */}
+        <button
+          onClick={() => navigate(`/instance/${selected}`)}
+          className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs text-muted transition-colors hover:text-text"
+          title="Java, RAM, mods, settings"
+        >
+          Edit instance
+        </button>
+        <button
+          onClick={() => void window.obsidian.instances.openFolder(selected)}
+          className="grid h-[34px] w-[34px] place-items-center rounded-lg border border-[var(--line)] text-muted transition-colors hover:text-text"
+          title="Open the installed game folder"
+        >
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+            <path
+              d="M2.5 5.5A1.5 1.5 0 014 4h2.8l1.4 1.6H14A1.5 1.5 0 0115.5 7v6A1.5 1.5 0 0114 14.5H4A1.5 1.5 0 012.5 13V5.5z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
         <button
           onClick={() => navigate('/play')}
           className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs text-muted transition-colors hover:text-text"

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { InstanceId } from '@shared/types'
 import { useUi } from '../store/uiStore'
 import { useInstances, isBusy } from '../hooks/useInstances'
@@ -32,6 +33,7 @@ const META: Record<InstanceId, Meta> = {
 
 export function InstanceCard({ id }: { id: InstanceId }) {
   const meta = META[id]
+  const navigate = useNavigate()
   const profile = useUi((s) => s.profile)
   const { statuses, progress, init, launch, verify, select } = useInstances()
   useEffect(() => init(), [init])
@@ -110,6 +112,13 @@ export function InstanceCard({ id }: { id: InstanceId }) {
           title="Re-download and verify all files"
         >
           Verify
+        </button>
+        <button
+          onClick={() => navigate(`/instance/${id}`)}
+          className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm text-muted transition-colors hover:text-text"
+          title="Mods, RAM, game settings, folder"
+        >
+          Manage
         </button>
       </div>
 
