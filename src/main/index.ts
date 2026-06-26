@@ -7,18 +7,17 @@ import { migrateDataDir, paths } from './paths'
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
 
 function enablePacemanCors(): void {
-  session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
-    if (details.url.includes('paceman.gg')) {
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['https://paceman.gg/*', 'https://*.paceman.gg/*'] },
+    (details, cb) => {
       cb({
         responseHeaders: {
           ...details.responseHeaders,
           'Access-Control-Allow-Origin': ['*']
         }
       })
-    } else {
-      cb({})
     }
-  })
+  )
 }
 
 function createWindow(): void {
