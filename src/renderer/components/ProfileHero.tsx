@@ -48,9 +48,16 @@ export function ProfileHero({ identifier }: { identifier: string }) {
           <div className="flex items-center gap-2.5">
             <h1 className="truncate text-2xl font-bold tracking-tight">{user.nickname}</h1>
             {user.country && (
-              <span className="rounded bg-[var(--surface-2)] px-2 py-0.5 text-[11px] uppercase tracking-wider text-muted">
-                {user.country}
-              </span>
+              <img
+                src={`https://flagcdn.com/h20/${user.country.toLowerCase()}.png`}
+                alt={user.country}
+                title={user.country.toUpperCase()}
+                width={20}
+                className="h-[15px] w-auto rounded-[2px] ring-1 ring-[var(--line)]"
+                onError={(e) => {
+                  ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                }}
+              />
             )}
           </div>
 

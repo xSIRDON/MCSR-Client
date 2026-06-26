@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useUi } from '../store/uiStore'
 import { mcsr } from '../lib/clients'
 import { eloToRank } from '@core/rank'
-import { PlayerHead } from './PlayerHead'
+import { AccountMenu } from './AccountMenu'
 
 const NAV = [
   { to: '/', label: 'Home', icon: HomeIcon, end: true },
@@ -55,14 +55,12 @@ export function Sidebar() {
 
       <div className="mt-auto">
         {profile && (
-          <NavLink to="/profile" title={`${profile.name} · ${user?.eloRate ?? '—'} elo`}>
-            <div
-              className="rounded-lg p-0.5"
-              style={{ boxShadow: `0 0 0 1.5px ${rank.color}66, 0 0 12px ${rank.glow}33` }}
-            >
-              <PlayerHead id={profile.uuid} uuid={profile.uuid} size={40} className="rounded-md" />
-            </div>
-          </NavLink>
+          <div
+            className="rounded-lg p-0.5"
+            style={{ boxShadow: `0 0 0 1.5px ${rank.color}66, 0 0 12px ${rank.glow}33` }}
+          >
+            <AccountMenu profile={profile} />
+          </div>
         )}
       </div>
     </aside>

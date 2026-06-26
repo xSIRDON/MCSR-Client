@@ -202,7 +202,11 @@ export function registerIpc(): void {
     setModEnabled(dir, file, enabled)
     return listMods(dir)
   })
-  ipcMain.handle(IPC.instOpenFolder, (_e, id: InstanceId) => shell.openPath(gmll.gameDir(id)))
+  ipcMain.handle(IPC.instOpenFolder, (_e, id: InstanceId) => {
+    const dir = paths.instanceDir(id)
+    mkdirSync(dir, { recursive: true })
+    return shell.openPath(dir)
+  })
   ipcMain.handle(IPC.instStdGet, (_e, id: InstanceId) => readStandardSettings(gmll.gameDir(id)))
   ipcMain.handle(IPC.instStdSet, (_e, id: InstanceId, patch: StandardSettings) =>
     writeStandardSettings(gmll.gameDir(id), patch)
