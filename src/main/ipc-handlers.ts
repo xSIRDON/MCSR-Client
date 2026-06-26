@@ -17,6 +17,7 @@ import * as tracker from './paceman/tracker'
 import {
   fetchPack,
   installPackFiles,
+  installLatestRankedMod,
   fabricVersionString,
   RSG_EXCLUDE_PREFIXES,
   type ModrinthIndex
@@ -27,6 +28,7 @@ import { listMods, setModEnabled } from './instances/mods'
 import { readStandardSettings, writeStandardSettings, importOptionsFile } from './instances/standard-settings'
 import { checkForUpdates, currentUpdateStatus, quitAndInstall } from './updater'
 import { setupNinjabrain } from './tools/ninjabrain'
+import { setupToolscreen } from './tools/toolscreen'
 import { detectJava } from './system/java'
 import { removeLinkIfPresent } from './launcher/links'
 import { pushLog, onLog, logHistory, clearLog } from './log'
@@ -157,6 +159,15 @@ async function installInstance(id: InstanceId): Promise<void> {
     const fabric = fabricVersionString(index)
     const gameDir = await gmll.installBase(id, fabric, sendProgress)
 
+    try {
+      if (store.getConfig().toolscreen) {
+        sendProgress({ instance: id, phase: 'configs', fraction: null, message: 'Setting up Toolscreen…' })
+        await setupToolscreen(id)
+      }
+    } catch (e) {
+      pushLog('system', `Toolscreen setup skipped: ${e instanceof Error ? e.message : e}`)
+    }
+
     sendProgress({ instance: id, phase: 'mods', fraction: 0, message: 'Installing mods…' })
     await installPackFiles(index, gameDir, {
       excludePrefixes: id === 'rsg' || id === 'zsg' ? RSG_EXCLUDE_PREFIXES : [],
@@ -175,6 +186,16 @@ async function installInstance(id: InstanceId): Promise<void> {
     else writeRsgConfigs(gameDir)
 
     if (id === 'zsg') await installFsgMod(gameDir, id)
+
+    if (id === 'ranked') {
+      sendProgress({ instance: id, phase: 'mods', fraction: null, message: 'Installing the latest MCSR Ranked mod…' })
+      try {
+        const v = await installLatestRankedMod(gameDir)
+        pushLog('system', `MCSR Ranked ${v} installed from Modrinth.`)
+      } catch (e) {
+        pushLog('system', `Latest Ranked mod fetch failed; keeping the pack version. ${e instanceof Error ? e.message : e}`)
+      }
+    }
 
     await ensureInstanceExtras(id, gameDir)
 

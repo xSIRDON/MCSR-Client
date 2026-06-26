@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, cpSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync, cpSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import extract from 'extract-zip'
@@ -139,4 +139,44 @@ export async function installPackFiles(
   }
 
   opts.onProgress?.(total, total, 'done')
+}
+
+const RANKED_MODRINTH_VERSIONS =
+  'https://api.modrinth.com/v2/project/mcsr-ranked/version?loaders=%5B%22fabric%22%5D&game_versions=%5B%221.16.1%22%5D'
+
+interface ModrinthVersion {
+  version_number: string
+  date_published: string
+  files: { url: string; filename: string; primary: boolean; hashes: { sha512?: string; sha1?: string } }[]
+}
+
+export async function installLatestRankedMod(
+  gameDir: string,
+  fetchBuffer: FetchBuffer = nodeFetchBuffer
+): Promise<string> {
+  const res = await fetch(RANKED_MODRINTH_VERSIONS, { redirect: 'follow' })
+  if (!res.ok) throw new Error(`Modrinth lookup failed (${res.status})`)
+  const versions = (await res.json()) as ModrinthVersion[]
+  if (!Array.isArray(versions) || versions.length === 0) {
+    throw new Error('No MCSR Ranked release found on Modrinth')
+  }
+  const latest = versions.reduce((a, b) => (a.date_published >= b.date_published ? a : b))
+  const file = latest.files.find((f) => f.primary) ?? latest.files[0]
+  if (!file) throw new Error('MCSR Ranked release has no downloadable file')
+
+  const buf = await fetchBuffer(file.url)
+  verifyBuffer(buf, file.hashes)
+  const modsDir = join(gameDir, 'mods')
+  mkdirSync(modsDir, { recursive: true })
+  writeFileSync(join(modsDir, file.filename), buf)
+
+  for (const f of readdirSync(modsDir)) {
+    if (f !== file.filename && f.toLowerCase().startsWith('mcsrranked')) {
+      try {
+        rmSync(join(modsDir, f), { force: true })
+      } catch {
+      }
+    }
+  }
+  return latest.version_number
 }
