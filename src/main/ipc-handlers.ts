@@ -26,6 +26,7 @@ import { syncMaps } from './instances/maps'
 import { listMods, setModEnabled } from './instances/mods'
 import { readStandardSettings, writeStandardSettings, importOptionsFile } from './instances/standard-settings'
 import { checkForUpdates, currentUpdateStatus, quitAndInstall } from './updater'
+import { setupNinjabrain } from './tools/ninjabrain'
 import { detectJava } from './system/java'
 import { removeLinkIfPresent } from './launcher/links'
 import { pushLog, onLog, logHistory, clearLog } from './log'
@@ -167,6 +168,13 @@ async function installInstance(id: InstanceId): Promise<void> {
     if (id === 'zsg') await installFsgMod(gameDir, id)
 
     await ensureInstanceExtras(id, gameDir)
+
+    // Bundle Ninjabrain Bot + a desktop shortcut (asks first if it's already running).
+    try {
+      if (store.getConfig().ninjabrain) await setupNinjabrain()
+    } catch (e) {
+      pushLog('system', `Ninjabrain Bot setup skipped: ${e instanceof Error ? e.message : e}`)
+    }
 
     mkdirSync(paths.instanceDir(id), { recursive: true })
     writeFileSync(versionFile(id), index.versionId, 'utf8')

@@ -47,6 +47,8 @@ export const paths = {
   /** The .minecraft game directory for an instance. */
   gameDir: (id: InstanceId) => join(rootDir(), 'instances', id, '.minecraft'),
   tracker: () => join(rootDir(), 'tracker'),
+  /** Bundled standalone tools (Ninjabrain Bot, etc.). */
+  tools: () => join(rootDir(), 'tools'),
   configFile: () => join(rootDir(), 'config.json'),
   secretsFile: () => join(rootDir(), 'secrets.json'),
   /** A bundled resource (resources/ in dev, process.resourcesPath when packaged). */
