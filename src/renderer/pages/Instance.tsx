@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { AppConfig, InstanceId, ModInfo } from '@shared/types'
 
-const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG' }
+const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
 
 /** Per-instance management: memory, Java, files, and mods. */
 export function Instance() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const instanceId: InstanceId | null = id === 'ranked' || id === 'rsg' ? id : null
+  const instanceId: InstanceId | null =
+    id === 'ranked' || id === 'rsg' || id === 'zsg' ? id : null
 
   if (!instanceId) {
     return <div className="mx-auto max-w-[760px] px-5 py-6 text-muted">Unknown instance.</div>

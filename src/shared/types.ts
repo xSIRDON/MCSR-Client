@@ -1,6 +1,6 @@
 // Shared DTOs used across the main process, preload bridge, and renderer.
 
-export type InstanceId = 'ranked' | 'rsg'
+export type InstanceId = 'ranked' | 'rsg' | 'zsg'
 
 /** Minecraft account profile returned after Microsoft login. */
 export interface Profile {
@@ -58,8 +58,8 @@ export interface AppConfig {
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
-  ram: { ranked: 3072, rsg: 3072 },
-  java: { ranked: null, rsg: null },
+  ram: { ranked: 3072, rsg: 3072, zsg: 3072 },
+  java: { ranked: null, rsg: null, zsg: null },
   seedQueueOverride: null,
   pacemanName: null
 }

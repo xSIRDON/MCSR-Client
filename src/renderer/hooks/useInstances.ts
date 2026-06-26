@@ -19,9 +19,10 @@ export const useInstances = create<InstancesState>((set, get) => ({
   selected: 'ranked',
   statuses: {
     ranked: { id: 'ranked', state: 'not-installed' },
-    rsg: { id: 'rsg', state: 'not-installed' }
+    rsg: { id: 'rsg', state: 'not-installed' },
+    zsg: { id: 'zsg', state: 'not-installed' }
   },
-  progress: { ranked: null, rsg: null },
+  progress: { ranked: null, rsg: null, zsg: null },
   initialized: false,
 
   select: (selected) => set({ selected }),
@@ -32,8 +33,9 @@ export const useInstances = create<InstancesState>((set, get) => ({
 
     void Promise.all([
       window.mcsr.instances.status('ranked'),
-      window.mcsr.instances.status('rsg')
-    ]).then(([ranked, rsg]) => set({ statuses: { ranked, rsg } }))
+      window.mcsr.instances.status('rsg'),
+      window.mcsr.instances.status('zsg')
+    ]).then(([ranked, rsg, zsg]) => set({ statuses: { ranked, rsg, zsg } }))
 
     window.mcsr.instances.onStateChanged((s) =>
       set((prev) => {

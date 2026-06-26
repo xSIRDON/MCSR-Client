@@ -4,8 +4,12 @@ import type { InstanceId } from '@shared/types'
 import { useInstances, isBusy } from '../hooks/useInstances'
 import { NetheriteBlock, PortalBlock } from './BlockArt'
 
-const LABEL: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG' }
-const ACCENT: Record<InstanceId, string> = { ranked: 'var(--gold)', rsg: 'var(--portal)' }
+const LABEL: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
+const ACCENT: Record<InstanceId, string> = {
+  ranked: 'var(--gold)',
+  rsg: 'var(--portal)',
+  zsg: '#4fd6b0'
+}
 
 export function PlayBar() {
   const navigate = useNavigate()
@@ -49,7 +53,7 @@ export function PlayBar() {
       <div className="flex items-center gap-4 px-5 py-3">
         {/* instance selector */}
         <div className="flex items-center gap-1 rounded-xl border border-[var(--line)] bg-[var(--bg-2)] p-1">
-          {(['ranked', 'rsg'] as InstanceId[]).map((id) => {
+          {(['ranked', 'rsg', 'zsg'] as InstanceId[]).map((id) => {
             const active = selected === id
             return (
               <button

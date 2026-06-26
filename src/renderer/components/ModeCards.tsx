@@ -162,6 +162,52 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
   )
 }
 
+/** ZSG — teal. The RSG mod set plus the FSG (filtered-seed) mod. */
+export function ZsgCard({ delay = 0 }: { delay?: number }) {
+  const { statuses, progress, launch } = useInstances()
+  const status = statuses.zsg
+  const prog = progress.zsg
+  const busy = isBusy(status.state)
+  const stateLabel =
+    status.state === 'ready'
+      ? 'Installed'
+      : status.state === 'not-installed'
+        ? 'Not installed'
+        : 'Working…'
+
+  return (
+    <ModeShell accent="#4fd6b0" glow="#4fd6b0" delay={delay}>
+      <header className="relative flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <PortalBlock size={22} />
+          <div>
+            <div className="font-display text-lg leading-none tracking-wide" style={{ color: '#4fd6b0' }}>
+              ZSG
+            </div>
+            <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-faint">Filtered seed practice</div>
+          </div>
+        </div>
+        <span className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] text-faint">
+          {stateLabel}
+        </span>
+      </header>
+
+      <p className="relative mt-4 text-sm text-muted">
+        The RSG mod set plus the <span className="text-text">FSG</span> (filtered-seed) mod — generate
+        practice seeds on demand. No ranked mod.
+      </p>
+      <div className="relative mt-2 text-xs text-faint">SeedQueue · SpeedRunIGT · FSG</div>
+
+      <PlayButton
+        busy={busy}
+        progress={prog}
+        label={launchLabel(status.state, 'PLAY ZSG')}
+        onClick={() => void launch('zsg')}
+      />
+    </ModeShell>
+  )
+}
+
 // ---- shared kit ----
 
 function launchLabel(state: string, ready: string): string {

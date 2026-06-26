@@ -32,7 +32,8 @@ import { paths } from './paths'
 
 const states: Record<InstanceId, InstanceStatus> = {
   ranked: { id: 'ranked', state: 'not-installed' },
-  rsg: { id: 'rsg', state: 'not-installed' }
+  rsg: { id: 'rsg', state: 'not-installed' },
+  zsg: { id: 'zsg', state: 'not-installed' }
 }
 
 function win(): BrowserWindow | null {
@@ -75,7 +76,7 @@ function hasMods(id: InstanceId): boolean {
 
 /** Recompute persisted state at startup. */
 function hydrateStates(): void {
-  for (const id of ['ranked', 'rsg'] as InstanceId[]) {
+  for (const id of ['ranked', 'rsg', 'zsg'] as InstanceId[]) {
     const v = installedVersion(id)
     if (v && hasMods(id)) setState(id, { state: 'ready', versionId: v })
   }
@@ -105,6 +106,23 @@ async function ensureInstanceExtras(id: InstanceId, gameDir: string): Promise<vo
   )
 }
 
+const FSG_MOD = {
+  file: 'FSG-Mod-5.3.0+MC1.16.1.jar',
+  url: 'https://cdn.modrinth.com/data/XZOGBIpM/versions/qc4OUmcd/FSG-Mod-5.3.0%2BMC1.16.1.jar'
+}
+
+/** ZSG is the RSG mod set plus the FSG (filtered seed) mod. Idempotent. */
+async function installFsgMod(gameDir: string, id: InstanceId): Promise<void> {
+  const modsDir = join(gameDir, 'mods')
+  mkdirSync(modsDir, { recursive: true })
+  const dest = join(modsDir, FSG_MOD.file)
+  if (existsSync(dest)) return
+  sendProgress({ instance: id, phase: 'mods', fraction: null, message: 'Installing FSG mod…' })
+  const res = await fetch(FSG_MOD.url, { redirect: 'follow' })
+  if (!res.ok) throw new Error(`FSG mod download failed (${res.status})`)
+  writeFileSync(dest, Buffer.from(await res.arrayBuffer()))
+}
+
 async function installInstance(id: InstanceId): Promise<void> {
   setState(id, { state: 'installing', error: undefined })
   try {
@@ -114,7 +132,7 @@ async function installInstance(id: InstanceId): Promise<void> {
 
     sendProgress({ instance: id, phase: 'mods', fraction: 0, message: 'Installing mods…' })
     await installPackFiles(index, gameDir, {
-      excludePrefixes: id === 'rsg' ? RSG_EXCLUDE_PREFIXES : [],
+      excludePrefixes: id === 'rsg' || id === 'zsg' ? RSG_EXCLUDE_PREFIXES : [],
       seedQueueOverride: store.getConfig().seedQueueOverride,
       onProgress: (done, total, label) =>
         sendProgress({
@@ -128,6 +146,8 @@ async function installInstance(id: InstanceId): Promise<void> {
     sendProgress({ instance: id, phase: 'configs', fraction: null, message: 'Writing configs…' })
     if (id === 'ranked') writeRankedConfigs(gameDir)
     else writeRsgConfigs(gameDir)
+
+    if (id === 'zsg') await installFsgMod(gameDir, id)
 
     await ensureInstanceExtras(id, gameDir)
 

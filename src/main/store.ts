@@ -19,11 +19,13 @@ function normalizeConfig(raw: RawConfig): AppConfig {
   return {
     ram: {
       ranked: raw.ram?.ranked ?? legacy ?? DEFAULT_CONFIG.ram.ranked,
-      rsg: raw.ram?.rsg ?? legacy ?? DEFAULT_CONFIG.ram.rsg
+      rsg: raw.ram?.rsg ?? legacy ?? DEFAULT_CONFIG.ram.rsg,
+      zsg: raw.ram?.zsg ?? legacy ?? DEFAULT_CONFIG.ram.zsg
     },
     java: {
       ranked: raw.java?.ranked ?? null,
-      rsg: raw.java?.rsg ?? null
+      rsg: raw.java?.rsg ?? null,
+      zsg: raw.java?.zsg ?? null
     },
     seedQueueOverride:
       typeof raw.seedQueueOverride === 'string'
