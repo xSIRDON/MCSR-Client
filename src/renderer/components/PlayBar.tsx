@@ -87,7 +87,7 @@ export function PlayBar() {
           </div>
         </div>
 
-        {/* edit + folder + details + play */}
+        {/* edit + folder + play */}
         <button
           onClick={() => navigate(`/instance/${selected}`)}
           className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs text-muted transition-colors hover:text-text"
@@ -108,12 +108,6 @@ export function PlayBar() {
               strokeLinejoin="round"
             />
           </svg>
-        </button>
-        <button
-          onClick={() => navigate('/play')}
-          className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs text-muted transition-colors hover:text-text"
-        >
-          Details
         </button>
         <button
           onClick={() => launch(selected)}
