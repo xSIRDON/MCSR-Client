@@ -254,8 +254,36 @@ function ModsCard({ id }: { id: InstanceId }) {
 function SettingsImportCard({ id }: { id: InstanceId }) {
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [sources, setSources] = useState<InstanceId[]>([])
+  const [source, setSource] = useState<InstanceId | ''>('')
 
-  async function importSettings() {
+  useEffect(() => {
+    void window.mcsr.instances.installedIds().then((ids) => {
+      const others = ids.filter((i) => i !== id)
+      setSources(others)
+      setSource(others[0] ?? '')
+    })
+  }, [id])
+
+  async function importFromInstance() {
+    if (!source) return
+    setBusy(true)
+    setResult(null)
+    try {
+      const { copied } = await window.mcsr.instances.importFromInstance(id, source)
+      setResult(
+        copied.length > 0
+          ? { ok: true, msg: `Imported ${copied.join(', ')} from ${TITLES[source]}.` }
+          : { ok: false, msg: `Nothing to import from ${TITLES[source]} yet.` }
+      )
+    } catch (e) {
+      setResult({ ok: false, msg: e instanceof Error ? e.message : 'Could not import from that instance.' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function importFile() {
     setBusy(true)
     setResult(null)
     try {
@@ -263,7 +291,7 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
       if (res)
         setResult(
           res.imported > 0
-            ? { ok: true, msg: `Imported ${res.imported} setting${res.imported === 1 ? '' : 's'}.` }
+            ? { ok: true, msg: `Imported ${res.imported} setting${res.imported === 1 ? '' : 's'} from options.txt.` }
             : { ok: false, msg: 'No settings found in that file.' }
         )
     } catch (e) {
@@ -274,28 +302,62 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
   }
 
   return (
-    <Card title="Game settings">
+    <Card title="Import settings">
+      {/* From another instance */}
       <div className="flex items-center justify-between gap-3">
-        <div className="text-sm text-muted">
-          Import your keybinds, sensitivity and video settings from an existing{' '}
-          <code>options.txt</code> into this instance.
+        <div className="min-w-0 text-sm text-muted">
+          Copy <code>options.txt</code>, <code>hotbar.nbt</code>, and the whole <code>config/</code>{' '}
+          folder (keybinds, sensitivity, StandardSettings and world options) from another instance.
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <select
+            value={source}
+            onChange={(e) => setSource(e.target.value as InstanceId | '')}
+            disabled={busy || sources.length === 0}
+            className="rounded-lg border border-[var(--line)] bg-[var(--bg-2)] px-2 py-1.5 text-sm text-text outline-none focus:border-[var(--gold)]/40 disabled:opacity-50"
+          >
+            {sources.length === 0 ? (
+              <option value="">No other instances</option>
+            ) : (
+              sources.map((s) => (
+                <option key={s} value={s}>
+                  {TITLES[s]}
+                </option>
+              ))
+            )}
+          </select>
+          <button
+            onClick={importFromInstance}
+            disabled={busy || !source}
+            className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted transition-colors hover:text-text disabled:opacity-50"
+          >
+            Import
+          </button>
+        </div>
+      </div>
+
+      {/* From an external options.txt */}
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
+        <div className="min-w-0 text-sm text-muted">
+          …or pull just keybinds/sensitivity/video from an external <code>options.txt</code>.
         </div>
         <button
-          onClick={importSettings}
+          onClick={importFile}
           disabled={busy}
           className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted transition-colors hover:text-text disabled:opacity-50"
         >
           {busy ? 'Importing…' : 'Browse to options.txt…'}
         </button>
       </div>
+
       {result && (
         <div className={`mt-2 text-xs ${result.ok ? 'text-[var(--win)]' : 'text-[var(--loss)]'}`}>
           {result.msg}
         </div>
       )}
       <p className="mt-2 text-xs text-faint">
-        Applies to new worlds via <code>standardoptions.txt</code>. Window size and server list are
-        skipped.
+        Importing from an instance overwrites this instance’s matching files; your world saves aren’t
+        touched.
       </p>
     </Card>
   )

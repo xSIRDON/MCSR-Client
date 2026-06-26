@@ -14,7 +14,7 @@ interface InstancesState {
   select: (id: InstanceId) => void
   init: () => void
   launch: (id: InstanceId) => Promise<void>
-  proceedLaunch: (id: InstanceId) => Promise<void>
+  proceedLaunch: (id: InstanceId, opts?: { importFrom?: InstanceId | null }) => Promise<void>
   cancelInstall: () => void
   verify: (id: InstanceId) => Promise<void>
 }
@@ -63,10 +63,10 @@ export const useInstances = create<InstancesState>((set, get) => ({
     await get().proceedLaunch(id)
   },
 
-  proceedLaunch: async (id) => {
+  proceedLaunch: async (id, opts) => {
     set({ selected: id, installPrompt: null })
     try {
-      await window.mcsr.instances.launch(id)
+      await window.mcsr.instances.launch(id, opts)
     } catch (e) {
       set((prev) => ({
         statuses: {

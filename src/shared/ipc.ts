@@ -41,6 +41,8 @@ export const IPC = {
   instStdGet: 'inst:stdGet',
   instStdSet: 'inst:stdSet',
   instImportSettings: 'inst:importSettings',
+  instImportFromInstance: 'inst:importFromInstance',
+  instInstalledIds: 'inst:installedIds',
   // system
   sysJava: 'sys:java',
   // app updates
@@ -81,7 +83,7 @@ export interface McsrApi {
   instances: {
     status(id: InstanceId): Promise<InstanceStatus>
     install(id: InstanceId): Promise<void>
-    launch(id: InstanceId): Promise<void>
+    launch(id: InstanceId, opts?: { importFrom?: InstanceId | null }): Promise<void>
     verify(id: InstanceId): Promise<void>
     delete(id: InstanceId): Promise<void>
     syncMaps(id: InstanceId): Promise<void>
@@ -95,6 +97,11 @@ export interface McsrApi {
     /** Import a Minecraft options.txt into this instance's standardoptions.txt.
      *  Opens a file picker; resolves the count imported, or null if cancelled. */
     importSettings(id: InstanceId): Promise<{ imported: number } | null>
+    /** Instances that are installed and can be used as an import source. */
+    installedIds(): Promise<InstanceId[]>
+    /** Copy options.txt, hotbar.nbt, and the whole config/ folder from `source`
+     *  into `target`. Resolves the list of items copied. */
+    importFromInstance(target: InstanceId, source: InstanceId): Promise<{ copied: string[] }>
   }
   system: {
     java(): Promise<JavaInfo>

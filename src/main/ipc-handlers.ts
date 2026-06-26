@@ -26,6 +26,7 @@ import { writeRankedConfigs, writeRsgConfigs } from './instances/configs'
 import { syncMaps } from './instances/maps'
 import { listMods, setModEnabled } from './instances/mods'
 import { readStandardSettings, writeStandardSettings, importOptionsFile } from './instances/standard-settings'
+import { copyInstanceSettings } from './instances/copy-instance'
 import { checkForUpdates, currentUpdateStatus, quitAndInstall } from './updater'
 import { setupNinjabrain } from './tools/ninjabrain'
 import { setupToolscreen } from './tools/toolscreen'
@@ -84,9 +85,7 @@ function versionFile(id: InstanceId): string {
 function installedVersion(id: InstanceId): string | undefined {
   try {
     if (existsSync(versionFile(id))) return readFileSync(versionFile(id), 'utf8').trim()
-    // Fall back to the pre-rename marker so existing installs aren't re-downloaded.
-    const legacy = join(paths.instanceDir(id), '.obsidian-version')
-    return existsSync(legacy) ? readFileSync(legacy, 'utf8').trim() : undefined
+    return undefined
   } catch {
     return undefined
   }
@@ -161,7 +160,7 @@ async function installFsgMod(gameDir: string, id: InstanceId): Promise<void> {
   writeFileSync(dest, Buffer.from(await res.arrayBuffer()))
 }
 
-async function installInstance(id: InstanceId): Promise<void> {
+async function installInstance(id: InstanceId, importFrom: InstanceId | null = null): Promise<void> {
   setState(id, { state: 'installing', error: undefined })
   try {
     const index = await getIndex()
@@ -210,7 +209,17 @@ async function installInstance(id: InstanceId): Promise<void> {
 
     await ensureInstanceExtras(id, gameDir)
 
-    // Bundle Ninjabrain Bot + a desktop shortcut (asks first if it's already running).
+    // First-install import: copy a chosen instance's options.txt, hotbar.nbt, and config/.
+    if (importFrom && importFrom !== id) {
+      try {
+        const copied = copyInstanceSettings(gmll.gameDir(importFrom), gameDir)
+        pushLog('system', `Imported settings from ${importFrom}: ${copied.join(', ') || 'nothing found'}.`)
+      } catch (e) {
+        pushLog('system', `Settings import skipped: ${e instanceof Error ? e.message : e}`)
+      }
+    }
+
+    // Bundle Ninjabrain Bot + a desktop shortcut.
     try {
       if (store.getConfig().ninjabrain) await setupNinjabrain()
     } catch (e) {
@@ -226,7 +235,10 @@ async function installInstance(id: InstanceId): Promise<void> {
   }
 }
 
-async function launchInstance(id: InstanceId): Promise<void> {
+async function launchInstance(
+  id: InstanceId,
+  opts?: { importFrom?: InstanceId | null }
+): Promise<void> {
   const token = auth.getLaunchToken()
   if (!token) throw new Error('Sign in with Microsoft before launching.')
 
@@ -240,12 +252,14 @@ async function launchInstance(id: InstanceId): Promise<void> {
   } catch {
     // network unavailable — launch what we have
   }
+  const wasFresh = states[id].state === 'not-installed'
   const stale = latest !== undefined && installedVersion(id) !== latest
   if (states[id].state !== 'ready' || stale) {
     if (stale) {
       sendProgress({ instance: id, phase: 'mods', fraction: null, message: `Updating MCSR pack to ${latest}…` })
     }
-    await installInstance(id)
+    // Only honor a settings import on a genuine first install, not a stale-pack reinstall.
+    await installInstance(id, wasFresh ? (opts?.importFrom ?? null) : null)
   }
 
   const index = await getIndex()
@@ -299,7 +313,9 @@ export function registerIpc(): void {
 
   ipcMain.handle(IPC.instStatus, (_e, id: InstanceId) => states[id])
   ipcMain.handle(IPC.instInstall, (_e, id: InstanceId) => installInstance(id))
-  ipcMain.handle(IPC.instLaunch, (_e, id: InstanceId) => launchInstance(id))
+  ipcMain.handle(IPC.instLaunch, (_e, id: InstanceId, opts?: { importFrom?: InstanceId | null }) =>
+    launchInstance(id, opts)
+  )
   ipcMain.handle(IPC.instVerify, (_e, id: InstanceId) => installInstance(id))
   ipcMain.handle(IPC.instDelete, (_e, id: InstanceId) => deleteInstance(id))
   ipcMain.handle(IPC.instSyncMaps, (_e, id: InstanceId) => runSyncMaps(id, 'Maps'))
@@ -334,6 +350,16 @@ export function registerIpc(): void {
     })
     if (res.canceled || res.filePaths.length === 0) return null
     return { imported: importOptionsFile(gmll.gameDir(id), res.filePaths[0]) }
+  })
+  ipcMain.handle(IPC.instInstalledIds, () =>
+    (['ranked', 'rsg', 'zsg'] as InstanceId[]).filter((i) =>
+      ['ready', 'running', 'launching'].includes(states[i].state)
+    )
+  )
+  ipcMain.handle(IPC.instImportFromInstance, (_e, target: InstanceId, source: InstanceId) => {
+    const copied = copyInstanceSettings(gmll.gameDir(source), gmll.gameDir(target))
+    pushLog('system', `Imported settings from ${source} into ${target}: ${copied.join(', ') || 'nothing found'}.`)
+    return { copied }
   })
   ipcMain.handle(IPC.sysJava, () => detectJava())
 

@@ -10,8 +10,10 @@ export function InstallMapPicker() {
   const id = useInstances((s) => s.installPrompt)
   const cancel = useInstances((s) => s.cancelInstall)
   const proceed = useInstances((s) => s.proceedLaunch)
+  const statuses = useInstances((s) => s.statuses)
   const [config, setConfig] = useState<AppConfig | null>(null)
   const [sel, setSel] = useState<Set<string>>(new Set(ALL_MAP_IDS))
+  const [importFrom, setImportFrom] = useState<InstanceId | ''>('')
 
   useEffect(() => {
     if (!id) return
@@ -22,6 +24,10 @@ export function InstallMapPicker() {
   }, [id])
 
   if (!id) return null
+
+  const sources = (['ranked', 'rsg', 'zsg'] as InstanceId[]).filter(
+    (i) => i !== id && ['ready', 'running', 'launching'].includes(statuses[i].state)
+  )
 
   const toggle = (mapId: string) =>
     setSel((prev) => {
@@ -34,7 +40,7 @@ export function InstallMapPicker() {
   async function install() {
     if (!id) return
     if (config) await window.mcsr.config.set({ maps: { ...config.maps, [id]: [...sel] } })
-    await proceed(id)
+    await proceed(id, { importFrom: importFrom || null })
   }
 
   return (
@@ -45,7 +51,31 @@ export function InstallMapPicker() {
           Choose which practice maps to download now. You can change these any time in Edit Instance.
         </p>
 
-        <div className="mb-2 mt-3 flex gap-2">
+        {sources.length > 0 && (
+          <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--bg-2)]/50 p-3">
+            <label className="block text-sm text-text">Import settings from another instance</label>
+            <p className="mt-1 text-xs text-faint">
+              Copy your <code>options.txt</code>, <code>hotbar.nbt</code>, and entire{' '}
+              <code>config/</code> folder (keybinds, sensitivity, and your StandardSettings / world
+              options) from an instance you’ve already set up. World saves aren’t touched.
+            </p>
+            <select
+              value={importFrom}
+              onChange={(e) => setImportFrom(e.target.value as InstanceId | '')}
+              className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[var(--bg-2)] px-3 py-2 text-sm text-text outline-none focus:border-[var(--gold)]/40"
+            >
+              <option value="">Don’t import — fresh install</option>
+              {sources.map((s) => (
+                <option key={s} value={s}>
+                  From {TITLES[s]}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="mb-1 mt-3 text-xs uppercase tracking-wider text-faint">Practice maps</div>
+        <div className="mb-2 flex gap-2">
           <button
             onClick={() => setSel(new Set(ALL_MAP_IDS))}
             className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs text-muted transition-colors hover:text-text"
