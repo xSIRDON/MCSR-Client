@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface Props {
   id: string
@@ -10,6 +10,7 @@ interface Props {
 
 export function PlayerHead({ id, uuid, size = 64, render = 'avatar', className }: Props) {
   const [stage, setStage] = useState<0 | 1 | 2>(0)
+  useEffect(() => setStage(0), [id, uuid])
   const dashless = (uuid ?? id).replace(/-/g, '')
   const dashed = uuid ?? id
 
