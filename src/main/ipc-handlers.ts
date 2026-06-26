@@ -113,7 +113,24 @@ async function getIndex(): Promise<ModrinthIndex> {
   return cachedIndex
 }
 
-/** Copy the bundled hotbars and install the default practice maps. Both idempotent. */
+/** Drop the bundled SeedQueue wall resource packs into RSG/ZSG. Idempotent. */
+function ensureWalls(gameDir: string): void {
+  try {
+    const wallsDir = paths.resource('walls')
+    if (!existsSync(wallsDir)) return
+    const dest = join(gameDir, 'resourcepacks')
+    mkdirSync(dest, { recursive: true })
+    for (const file of readdirSync(wallsDir)) {
+      if (!file.toLowerCase().endsWith('.zip')) continue
+      const target = join(dest, file)
+      if (!existsSync(target)) copyFileSync(join(wallsDir, file), target)
+    }
+  } catch {
+    // optional — a missing wall pack must never break an install
+  }
+}
+
+/** Copy the bundled hotbars, walls (RSG/ZSG), and install practice maps. All idempotent. */
 async function ensureInstanceExtras(id: InstanceId, gameDir: string): Promise<void> {
   try {
     const hotbar = join(gameDir, 'hotbar.nbt')
@@ -121,6 +138,7 @@ async function ensureInstanceExtras(id: InstanceId, gameDir: string): Promise<vo
   } catch {
     // optional — not fatal if the bundled hotbar is missing
   }
+  if (id === 'rsg' || id === 'zsg') ensureWalls(gameDir)
   await runSyncMaps(id, 'Practice maps')
 }
 
