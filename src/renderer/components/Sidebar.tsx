@@ -62,6 +62,9 @@ export function Sidebar() {
             <AccountMenu profile={profile} />
           </div>
         )}
+        <div className="font-display text-[9px] tracking-wide text-faint/70" title="MCSR Client version">
+          v{__APP_VERSION__}
+        </div>
       </div>
     </aside>
   )

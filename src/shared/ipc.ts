@@ -37,6 +37,8 @@ export const IPC = {
   instStdGet: 'inst:stdGet',
   instStdSet: 'inst:stdSet',
   instImportSettings: 'inst:importSettings',
+  instImportFromInstance: 'inst:importFromInstance',
+  instInstalledIds: 'inst:installedIds',
   sysJava: 'sys:java',
   updCheck: 'upd:check',
   updStatus: 'upd:status',
@@ -71,7 +73,7 @@ export interface McsrApi {
   instances: {
     status(id: InstanceId): Promise<InstanceStatus>
     install(id: InstanceId): Promise<void>
-    launch(id: InstanceId): Promise<void>
+    launch(id: InstanceId, opts?: { importFrom?: InstanceId | null }): Promise<void>
     verify(id: InstanceId): Promise<void>
     delete(id: InstanceId): Promise<void>
     syncMaps(id: InstanceId): Promise<void>
@@ -83,6 +85,8 @@ export interface McsrApi {
     getStandardSettings(id: InstanceId): Promise<StandardSettings>
     setStandardSettings(id: InstanceId, patch: StandardSettings): Promise<StandardSettings>
     importSettings(id: InstanceId): Promise<{ imported: number } | null>
+    installedIds(): Promise<InstanceId[]>
+    importFromInstance(target: InstanceId, source: InstanceId): Promise<{ copied: string[] }>
   }
   system: {
     java(): Promise<JavaInfo>

@@ -35,7 +35,8 @@ const api: McsrApi = {
   instances: {
     status: (id: InstanceId) => ipcRenderer.invoke(IPC.instStatus, id),
     install: (id: InstanceId) => ipcRenderer.invoke(IPC.instInstall, id),
-    launch: (id: InstanceId) => ipcRenderer.invoke(IPC.instLaunch, id),
+    launch: (id: InstanceId, opts?: { importFrom?: InstanceId | null }) =>
+      ipcRenderer.invoke(IPC.instLaunch, id, opts),
     verify: (id: InstanceId) => ipcRenderer.invoke(IPC.instVerify, id),
     delete: (id: InstanceId) => ipcRenderer.invoke(IPC.instDelete, id),
     syncMaps: (id: InstanceId) => ipcRenderer.invoke(IPC.instSyncMaps, id),
@@ -49,7 +50,10 @@ const api: McsrApi = {
     getStandardSettings: (id: InstanceId) => ipcRenderer.invoke(IPC.instStdGet, id),
     setStandardSettings: (id: InstanceId, patch: StandardSettings) =>
       ipcRenderer.invoke(IPC.instStdSet, id, patch),
-    importSettings: (id: InstanceId) => ipcRenderer.invoke(IPC.instImportSettings, id)
+    importSettings: (id: InstanceId) => ipcRenderer.invoke(IPC.instImportSettings, id),
+    installedIds: () => ipcRenderer.invoke(IPC.instInstalledIds),
+    importFromInstance: (target: InstanceId, source: InstanceId) =>
+      ipcRenderer.invoke(IPC.instImportFromInstance, target, source)
   },
   system: {
     java: () => ipcRenderer.invoke(IPC.sysJava)
