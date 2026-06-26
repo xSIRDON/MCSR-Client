@@ -7,6 +7,7 @@ import { DEFAULT_CONFIG, type AppConfig, type InstanceId } from '../shared/types
 type RawConfig = {
   ram?: Partial<Record<InstanceId, number>>
   java?: Partial<Record<InstanceId, string | null>>
+  maps?: Partial<Record<InstanceId, string[]>>
   ramMb?: number
   seedQueueOverride?: string | null
   pacemanName?: string | null
@@ -24,6 +25,11 @@ function normalizeConfig(raw: RawConfig): AppConfig {
       ranked: raw.java?.ranked ?? null,
       rsg: raw.java?.rsg ?? null,
       zsg: raw.java?.zsg ?? null
+    },
+    maps: {
+      ranked: raw.maps?.ranked ?? [...DEFAULT_CONFIG.maps.ranked],
+      rsg: raw.maps?.rsg ?? [...DEFAULT_CONFIG.maps.rsg],
+      zsg: raw.maps?.zsg ?? [...DEFAULT_CONFIG.maps.zsg]
     },
     seedQueueOverride:
       typeof raw.seedQueueOverride === 'string'

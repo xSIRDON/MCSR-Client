@@ -2,6 +2,7 @@ import {
   existsSync,
   mkdirSync,
   writeFileSync,
+  readFileSync,
   readdirSync,
   statSync,
   cpSync,
@@ -10,42 +11,16 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import extract from 'extract-zip'
+import { MAP_CATALOG, type MapDef } from '../../shared/maps'
 
-interface MapDef {
-  name: string
-  url: string
-}
-
-const DEFAULT_MAPS: MapDef[] = [
-  {
-    name: 'Portal Practice v2.8',
-    url: 'https://github.com/Semperzz/Portal-Practice/releases/download/v2.8/Portal.Practice.v2.zip'
-  },
-  {
-    name: 'Zero Practice v1.2.2',
-    url: 'https://github.com/Mescht/Zero-Practice/releases/download/v1.2.2/Zero.Practice.v1.2.2.zip'
-  },
-  {
-    name: 'MCSR Practice v2.0.0',
-    url: 'https://github.com/Dibedy/The-MCSR-Practice-Map/releases/download/latest/MCSR.Practice.v2.0.0.zip'
-  },
-  {
-    name: 'Crafting Practice v2.1',
-    url: 'https://github.com/Semperzz/Crafting-Practice-v2/releases/download/v2.1/Crafting.Practice.v2.zip'
-  },
-  {
-    name: 'Llama Bastion Practice 3.15.0',
-    url: 'https://github.com/LlamaPag/bastion/releases/download/3.15.0/LBP.3.15.0.zip'
-  }
-]
-
-const SENTINEL = '.mcsrclient-maps.json'
+const MANIFEST = '.mcsrclient-maps.json'
+type Manifest = Record<string, string[]>
 
 export function sanitize(name: string): string {
   return name.replace(/[<>:"/\\|?*]/g, '_').trim() || 'world'
 }
 
-export function placeWorlds(extractDir: string, savesDir: string, fallbackName: string): void {
+export function placeWorlds(extractDir: string, savesDir: string, fallbackName: string): string[] {
   const entries = readdirSync(extractDir)
   const roots = entries.includes('level.dat')
     ? [{ src: extractDir, name: fallbackName }]
@@ -59,48 +34,87 @@ export function placeWorlds(extractDir: string, savesDir: string, fallbackName: 
         })
         .map((e) => ({ src: join(extractDir, e), name: e }))
 
+  const placed: string[] = []
   for (const { src, name } of roots) {
-    let dest = join(savesDir, sanitize(name))
+    let base = sanitize(name)
     let n = 2
-    while (existsSync(dest)) dest = join(savesDir, `${sanitize(name)} (${n++})`)
-    cpSync(src, dest, { recursive: true })
+    while (existsSync(join(savesDir, base))) base = `${sanitize(name)} (${n++})`
+    cpSync(src, join(savesDir, base), { recursive: true })
+    placed.push(base)
   }
+  return placed
 }
 
-async function installOneMap(savesDir: string, map: MapDef, seq: number): Promise<void> {
+function readManifest(savesDir: string): Manifest {
+  try {
+    const f = join(savesDir, MANIFEST)
+    if (existsSync(f)) {
+      const parsed = JSON.parse(readFileSync(f, 'utf8'))
+      if (parsed && Array.isArray(parsed.maps)) {
+        const m: Manifest = {}
+        for (const def of MAP_CATALOG) m[def.id] = []
+        return m
+      }
+      if (parsed && typeof parsed === 'object') return parsed as Manifest
+    }
+  } catch {
+  }
+  return {}
+}
+
+function writeManifest(savesDir: string, m: Manifest): void {
+  writeFileSync(join(savesDir, MANIFEST), JSON.stringify(m, null, 2), 'utf8')
+}
+
+async function installMap(savesDir: string, map: MapDef): Promise<string[]> {
   const res = await fetch(map.url, { redirect: 'follow' })
   if (!res.ok) throw new Error(`map "${map.name}" download failed (${res.status})`)
   const buf = Buffer.from(await res.arrayBuffer())
 
-  const base = join(tmpdir(), `mcsrmap-${process.pid}-${seq}`)
+  const base = join(tmpdir(), `mcsrmap-${process.pid}-${map.id}`)
   const zip = `${base}.zip`
   const out = `${base}-x`
   mkdirSync(out, { recursive: true })
   writeFileSync(zip, buf)
   try {
     await extract(zip, { dir: out })
-    placeWorlds(out, savesDir, map.name)
+    return placeWorlds(out, savesDir, map.name)
   } finally {
     rmSync(zip, { force: true })
     rmSync(out, { recursive: true, force: true })
   }
 }
 
-export async function installDefaultMaps(
+export async function syncMaps(
   savesDir: string,
+  selectedIds: string[],
   onProgress?: (done: number, total: number, label: string) => void
 ): Promise<void> {
   mkdirSync(savesDir, { recursive: true })
-  if (existsSync(join(savesDir, SENTINEL))) return
+  const manifest = readManifest(savesDir)
+  const selected = new Set(selectedIds)
 
-  const total = DEFAULT_MAPS.length
-  for (let i = 0; i < total; i++) {
-    onProgress?.(i, total, DEFAULT_MAPS[i].name)
+  for (const mapId of Object.keys(manifest)) {
+    if (!selected.has(mapId)) {
+      for (const folder of manifest[mapId]) {
+        try {
+          rmSync(join(savesDir, folder), { recursive: true, force: true })
+        } catch {
+        }
+      }
+      delete manifest[mapId]
+    }
+  }
+
+  const toInstall = MAP_CATALOG.filter((m) => selected.has(m.id) && !(m.id in manifest))
+  for (let i = 0; i < toInstall.length; i++) {
+    onProgress?.(i, toInstall.length, toInstall[i].name)
     try {
-      await installOneMap(savesDir, DEFAULT_MAPS[i], i)
+      manifest[toInstall[i].id] = await installMap(savesDir, toInstall[i])
     } catch {
     }
   }
-  writeFileSync(join(savesDir, SENTINEL), JSON.stringify({ maps: DEFAULT_MAPS.map((m) => m.name) }, null, 2))
-  onProgress?.(total, total, 'done')
+
+  writeManifest(savesDir, manifest)
+  onProgress?.(toInstall.length, toInstall.length, 'done')
 }

@@ -1,3 +1,5 @@
+import { ALL_MAP_IDS } from './maps'
+
 export type InstanceId = 'ranked' | 'rsg' | 'zsg'
 
 export interface Profile {
@@ -42,6 +44,7 @@ export interface TrackerStatus {
 export interface AppConfig {
   ram: Record<InstanceId, number>
   java: Record<InstanceId, string | null>
+  maps: Record<InstanceId, string[]>
   seedQueueOverride: string | null
   pacemanName: string | null
 }
@@ -49,6 +52,7 @@ export interface AppConfig {
 export const DEFAULT_CONFIG: AppConfig = {
   ram: { ranked: 3072, rsg: 3072, zsg: 3072 },
   java: { ranked: null, rsg: null, zsg: null },
+  maps: { ranked: [...ALL_MAP_IDS], rsg: [...ALL_MAP_IDS], zsg: [...ALL_MAP_IDS] },
   seedQueueOverride: null,
   pacemanName: null
 }

@@ -27,6 +27,7 @@ export const IPC = {
   instLaunch: 'inst:launch',
   instVerify: 'inst:verify',
   instDelete: 'inst:delete',
+  instSyncMaps: 'inst:syncMaps',
   instProgress: 'inst:progress',
   instStateChanged: 'inst:stateChanged',
   instMods: 'inst:mods',
@@ -67,6 +68,7 @@ export interface McsrApi {
     launch(id: InstanceId): Promise<void>
     verify(id: InstanceId): Promise<void>
     delete(id: InstanceId): Promise<void>
+    syncMaps(id: InstanceId): Promise<void>
     onProgress(cb: (e: ProgressEvent) => void): () => void
     onStateChanged(cb: (s: InstanceStatus) => void): () => void
     mods(id: InstanceId): Promise<ModInfo[]>
