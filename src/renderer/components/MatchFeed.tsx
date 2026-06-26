@@ -5,6 +5,7 @@ import type { MatchInfo } from '@services/mcsr-ranked'
 import { msToTime, signedElo, epochToAgo } from '@core/format'
 
 const TYPE_LABEL: Record<number, string> = { 1: 'Casual', 2: 'Ranked', 3: 'Private', 4: 'Event' }
+const PREVIEW = 5
 
 type Outcome = 'win' | 'loss' | 'draw'
 
@@ -14,23 +15,53 @@ function outcomeOf(m: MatchInfo, uuid: string): Outcome {
 }
 
 export function MatchFeed({ uuid }: { uuid: string }) {
+  const [expanded, setExpanded] = useState(false)
   const { data: matches, isLoading } = useQuery({
     queryKey: ['matches', uuid],
     queryFn: () => mcsr.getMatches(uuid, { type: 2, count: 15 })
   })
 
+  const all = matches ?? []
+  const shown = expanded ? all : all.slice(0, PREVIEW)
+  const hidden = all.length - PREVIEW
+
   return (
-    <section className="surface flex min-h-0 flex-col p-5 animate-fade-up" style={{ animationDelay: '110ms' }}>
+    <section className="surface flex flex-col p-5 animate-fade-up" style={{ animationDelay: '110ms' }}>
       <header className="mb-3 flex items-center justify-between">
         <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Recent matches</h2>
+        {all.length > 0 && <span className="tnum text-xs text-faint">{all.length} ranked</span>}
       </header>
-      <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+      <div className="space-y-1.5">
         {isLoading
           ? [0, 1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-12" />)
-          : !matches?.length
+          : !all.length
             ? <div className="grid h-24 place-items-center text-sm text-muted">No ranked matches yet.</div>
-            : matches.map((m) => <Row key={m.id} m={m} uuid={uuid} />)}
+            : shown.map((m) => <Row key={m.id} m={m} uuid={uuid} />)}
       </div>
+      {hidden > 0 && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] py-2 text-xs text-muted transition-colors hover:bg-white/[0.03] hover:text-text"
+        >
+          {expanded ? 'Show less' : `Show ${hidden} more`}
+          <svg
+            width="11"
+            height="11"
+            viewBox="0 0 12 12"
+            aria-hidden
+            className={`transition-transform ${expanded ? 'rotate-180' : ''}`}
+          >
+            <path
+              d="M2.5 4.5L6 8l3.5-3.5"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      )}
     </section>
   )
 }
