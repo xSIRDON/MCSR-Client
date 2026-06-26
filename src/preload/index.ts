@@ -35,8 +35,10 @@ const api: McsrApi = {
   instances: {
     status: (id: InstanceId) => ipcRenderer.invoke(IPC.instStatus, id),
     install: (id: InstanceId) => ipcRenderer.invoke(IPC.instInstall, id),
-    launch: (id: InstanceId, opts?: { importFrom?: InstanceId | null }) =>
-      ipcRenderer.invoke(IPC.instLaunch, id, opts),
+    launch: (
+      id: InstanceId,
+      opts?: { importFrom?: InstanceId | null; importFolder?: string | null; importWorlds?: string[] }
+    ) => ipcRenderer.invoke(IPC.instLaunch, id, opts),
     verify: (id: InstanceId) => ipcRenderer.invoke(IPC.instVerify, id),
     delete: (id: InstanceId) => ipcRenderer.invoke(IPC.instDelete, id),
     syncMaps: (id: InstanceId) => ipcRenderer.invoke(IPC.instSyncMaps, id),
@@ -52,8 +54,12 @@ const api: McsrApi = {
       ipcRenderer.invoke(IPC.instStdSet, id, patch),
     importSettings: (id: InstanceId) => ipcRenderer.invoke(IPC.instImportSettings, id),
     installedIds: () => ipcRenderer.invoke(IPC.instInstalledIds),
-    importFromInstance: (target: InstanceId, source: InstanceId) =>
-      ipcRenderer.invoke(IPC.instImportFromInstance, target, source)
+    importFromInstance: (target: InstanceId, source: InstanceId, opts?: { worlds?: string[] }) =>
+      ipcRenderer.invoke(IPC.instImportFromInstance, target, source, opts),
+    importFromFolderPath: (target: InstanceId, folder: string, opts?: { worlds?: string[] }) =>
+      ipcRenderer.invoke(IPC.instImportFromFolderPath, target, folder, opts),
+    listWorlds: (id: InstanceId) => ipcRenderer.invoke(IPC.instListWorlds, id),
+    listWorldsInFolder: (folder: string) => ipcRenderer.invoke(IPC.instListWorldsInFolder, folder)
   },
   system: {
     java: () => ipcRenderer.invoke(IPC.sysJava)
@@ -80,7 +86,12 @@ const api: McsrApi = {
     get: () => ipcRenderer.invoke(IPC.cfgGet),
     set: (patch: Partial<AppConfig>) => ipcRenderer.invoke(IPC.cfgSet, patch),
     pickJar: () => ipcRenderer.invoke(IPC.cfgPickJar),
-    pickJava: () => ipcRenderer.invoke(IPC.cfgPickJava)
+    pickJava: () => ipcRenderer.invoke(IPC.cfgPickJava),
+    pickFolder: () => ipcRenderer.invoke(IPC.cfgPickFolder)
+  },
+  skins: {
+    get: (idOrUuid: string, size: number, kind: 'avatar' | 'body') =>
+      ipcRenderer.invoke(IPC.skinGet, idOrUuid, size, kind)
   }
 }
 

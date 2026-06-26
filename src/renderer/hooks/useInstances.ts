@@ -14,7 +14,10 @@ interface InstancesState {
   select: (id: InstanceId) => void
   init: () => void
   launch: (id: InstanceId) => Promise<void>
-  proceedLaunch: (id: InstanceId, opts?: { importFrom?: InstanceId | null }) => Promise<void>
+  proceedLaunch: (
+    id: InstanceId,
+    opts?: { importFrom?: InstanceId | null; importFolder?: string | null; importWorlds?: string[] }
+  ) => Promise<void>
   cancelInstall: () => void
   verify: (id: InstanceId) => Promise<void>
 }

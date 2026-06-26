@@ -1,85 +1,79 @@
-import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 interface Props {
   /** username or dashless uuid */
   id: string
-  /** dashed-or-dashless uuid for the fallback provider, if available */
+  /** dashed-or-dashless uuid for the resolver, if available */
   uuid?: string
   size?: number
   render?: 'avatar' | 'body'
   className?: string
 }
 
-type Source = { url: string; tall: boolean }
+/** Resolve a head/body via the main-process skin proxy (cached, multi-host, concurrency-limited). */
+function useSkin(raw: string, size: number, kind: 'avatar' | 'body', enabled: boolean) {
+  return useQuery({
+    queryKey: ['skin', kind, raw, size],
+    queryFn: async () => {
+      const u = await window.mcsr.skins.get(raw, size, kind)
+      if (!u) throw new Error('skin unavailable')
+      return u
+    },
+    enabled: enabled && raw.length > 0,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    retry: 2,
+    retryDelay: (n) => 600 * (n + 1)
+  })
+}
 
 /**
- * Player head/body across multiple independent hosts. mc-heads is preferred, with
- * minotar as a fully separate backup (different infra) so one host being blocked or
- * down — a VPN/network filter, a 5xx, crafatar's outage — can't take skins out. Body
- * renders fall back to the always-reliable face before the letter block. The cascade
- * resets synchronously when the player changes, and the <img> is keyed by player+stage
- * so a stale load from the previous player can't advance the next player's stage.
+ * Player head/body. Skins are resolved and cached by the main process (multi-host fallback,
+ * concurrency-limited, disk-cached) so a whole leaderboard loads without bursting the hosts.
+ * A body render falls back to the (square) face if the body hosts fail, and to a letter block
+ * only if even the face is unavailable.
  */
 export function PlayerHead({ id, uuid, size = 64, render = 'avatar', className }: Props) {
-  const playerKey = `${id}|${uuid ?? ''}`
-  const [prevKey, setPrevKey] = useState(playerKey)
-  const [stage, setStage] = useState(0)
-  if (playerKey !== prevKey) {
-    setPrevKey(playerKey)
-    setStage(0)
-  }
-
   const raw = (uuid ?? id).replace(/-/g, '')
-  // crafatar wants a dashed uuid; build one when we actually have a 32-char hex.
-  const dashed = /^[0-9a-fA-F]{32}$/.test(raw)
-    ? raw.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5')
-    : uuid ?? id
-  const isBody = render === 'body'
+  const wantBody = render === 'body'
 
-  const sources: Source[] = isBody
-    ? [
-        { url: `https://mc-heads.net/body/${raw}/${size}`, tall: true },
-        { url: `https://minotar.net/armor/body/${raw}/${size}`, tall: true },
-        { url: `https://mc-heads.net/avatar/${raw}/${size}`, tall: false },
-        { url: `https://minotar.net/avatar/${raw}/${size}`, tall: false }
-      ]
-    : [
-        { url: `https://mc-heads.net/avatar/${raw}/${size}`, tall: false },
-        { url: `https://minotar.net/avatar/${raw}/${size}`, tall: false },
-        { url: `https://crafatar.com/avatars/${dashed}?size=${size}&overlay`, tall: false }
-      ]
+  const body = useSkin(raw, size, 'body', wantBody)
+  // The face doubles as the body's fallback; only fetched for an avatar render or a failed body.
+  const face = useSkin(raw, size, 'avatar', !wantBody || body.isError)
 
-  const cur = sources[stage]
+  const bodyUrl = wantBody ? body.data : undefined
+  const url = bodyUrl ?? face.data
+  const tall = !!bodyUrl // a real body render is 2x tall; a face fallback stays square
 
-  if (!cur) {
+  if (url) {
     return (
-      <div
-        className={`pixelated grid place-items-center rounded-md ${className ?? ''}`}
-        style={{
-          width: size,
-          height: isBody ? size * 2 : size,
-          background: '#1a1a28',
-          border: '1px solid var(--line)'
-        }}
-      >
-        <span className="font-display text-muted" style={{ fontSize: size * 0.4 }}>
-          {id.slice(0, 1).toUpperCase()}
-        </span>
-      </div>
+      <img
+        src={url}
+        alt={id}
+        width={size}
+        height={tall ? size * 2 : size}
+        className={`pixelated ${className ?? ''}`}
+        style={{ imageRendering: 'pixelated' }}
+        draggable={false}
+      />
     )
   }
 
   return (
-    <img
-      key={`${playerKey}-${stage}`}
-      src={cur.url}
-      alt={id}
-      width={size}
-      height={cur.tall ? size * 2 : size}
-      className={`pixelated ${className ?? ''}`}
-      style={{ imageRendering: 'pixelated' }}
-      onError={() => setStage((s) => Math.min(s + 1, sources.length))}
-      draggable={false}
-    />
+    <div
+      className={`pixelated grid place-items-center rounded-md ${className ?? ''}`}
+      style={{
+        width: size,
+        height: wantBody ? size * 2 : size,
+        background: '#1a1a28',
+        border: '1px solid var(--line)'
+      }}
+    >
+      <span className="font-display text-muted" style={{ fontSize: size * 0.4 }}>
+        {id.slice(0, 1).toUpperCase()}
+      </span>
+    </div>
   )
 }

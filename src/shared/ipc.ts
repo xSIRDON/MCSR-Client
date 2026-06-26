@@ -42,7 +42,10 @@ export const IPC = {
   instStdSet: 'inst:stdSet',
   instImportSettings: 'inst:importSettings',
   instImportFromInstance: 'inst:importFromInstance',
+  instImportFromFolderPath: 'inst:importFromFolderPath',
   instInstalledIds: 'inst:installedIds',
+  instListWorlds: 'inst:listWorlds',
+  instListWorldsInFolder: 'inst:listWorldsInFolder',
   // system
   sysJava: 'sys:java',
   // app updates
@@ -62,7 +65,10 @@ export const IPC = {
   cfgGet: 'cfg:get',
   cfgSet: 'cfg:set',
   cfgPickJar: 'cfg:pickJar',
-  cfgPickJava: 'cfg:pickJava'
+  cfgPickJava: 'cfg:pickJava',
+  cfgPickFolder: 'cfg:pickFolder',
+  // skins (resolved + cached in the main process)
+  skinGet: 'skin:get'
 } as const
 
 /** The bridge surface available to the renderer as window.mcsr. */
@@ -83,7 +89,14 @@ export interface McsrApi {
   instances: {
     status(id: InstanceId): Promise<InstanceStatus>
     install(id: InstanceId): Promise<void>
-    launch(id: InstanceId, opts?: { importFrom?: InstanceId | null }): Promise<void>
+    launch(
+      id: InstanceId,
+      opts?: {
+        importFrom?: InstanceId | null
+        importFolder?: string | null
+        importWorlds?: string[]
+      }
+    ): Promise<void>
     verify(id: InstanceId): Promise<void>
     delete(id: InstanceId): Promise<void>
     syncMaps(id: InstanceId): Promise<void>
@@ -101,7 +114,21 @@ export interface McsrApi {
     installedIds(): Promise<InstanceId[]>
     /** Copy options.txt, hotbar.nbt, and the whole config/ folder from `source`
      *  into `target`. Resolves the list of items copied. */
-    importFromInstance(target: InstanceId, source: InstanceId): Promise<{ copied: string[] }>
+    importFromInstance(
+      target: InstanceId,
+      source: InstanceId,
+      opts?: { worlds?: string[] }
+    ): Promise<{ copied: string[] }>
+    /** Copy settings (and any chosen worlds) from an arbitrary folder into `target`. */
+    importFromFolderPath(
+      target: InstanceId,
+      folder: string,
+      opts?: { worlds?: string[] }
+    ): Promise<{ copied: string[] }>
+    /** World folder names available in an installed instance. */
+    listWorlds(id: InstanceId): Promise<string[]>
+    /** World folder names available in an arbitrary folder (resolving its game dir). */
+    listWorldsInFolder(folder: string): Promise<string[]>
   }
   system: {
     java(): Promise<JavaInfo>
@@ -127,6 +154,12 @@ export interface McsrApi {
     set(patch: Partial<AppConfig>): Promise<AppConfig>
     pickJar(): Promise<string | null>
     pickJava(): Promise<string | null>
+    /** Open a folder picker; resolves the chosen path, or null if cancelled. */
+    pickFolder(): Promise<string | null>
+  }
+  skins: {
+    /** Resolve a head/body as a cached data: URL, or null if every host failed. */
+    get(idOrUuid: string, size: number, kind: 'avatar' | 'body'): Promise<string | null>
   }
 }
 

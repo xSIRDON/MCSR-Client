@@ -3,6 +3,7 @@
 // can launch it.
 
 import { app, shell } from 'electron'
+import { spawn, execFile, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { paths } from '../paths'
@@ -46,4 +47,63 @@ export function createDesktopShortcut(): void {
 export async function setupNinjabrain(): Promise<void> {
   if (!existsSync(jarPath())) await downloadJar()
   createDesktopShortcut()
+}
+
+/**
+ * True if a Ninjabrain Bot process is already running. Filtered to java/javaw so the query's own
+ * powershell process can't match itself (the bug that made earlier "already running" checks
+ * misfire). Best-effort and fails open (false), so we never refuse to open the tool.
+ */
+function isRunning(): Promise<boolean> {
+  if (process.platform !== 'win32') return Promise.resolve(false)
+  return new Promise((resolve) => {
+    execFile(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-Command',
+        "@(Get-CimInstance Win32_Process -Filter \"Name='javaw.exe' OR Name='java.exe'\" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*Ninjabrain-Bot*' }).Count"
+      ],
+      { windowsHide: true, timeout: 5000 },
+      (err, stdout) => resolve(!err && parseInt(String(stdout).trim(), 10) > 0)
+    )
+  })
+}
+
+/**
+ * Open Ninjabrain Bot alongside the game, unless it's already running. Spawned detached with a
+ * Java 17+ launcher. Best-effort — never blocks or breaks the game launch.
+ */
+export async function launchNinjabrain(javaw = 'javaw'): Promise<ChildProcess | null> {
+  if (!existsSync(jarPath())) await downloadJar()
+  if (await isRunning()) return null
+  const child = spawn(javaw, ['-jar', jarPath()], {
+    cwd: paths.tools(),
+    detached: true,
+    stdio: 'ignore'
+  })
+  child.on('error', () => {
+    /* javaw missing/blocked — the desktop shortcut still works as a fallback */
+  })
+  child.unref()
+  return child
+}
+
+/**
+ * Close Ninjabrain Bot — kills any java/javaw process running the Ninjabrain jar (more reliable
+ * than tracking the one child, which misses an instance left open by an earlier launch). Filtered
+ * to java processes so the query can't match its own powershell. Best-effort, Windows-only.
+ */
+export function killNinjabrain(): void {
+  if (process.platform !== 'win32') return
+  execFile(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-Command',
+      "Get-CimInstance Win32_Process -Filter \"Name='javaw.exe' OR Name='java.exe'\" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*Ninjabrain-Bot*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+    ],
+    { windowsHide: true, timeout: 5000 },
+    () => {}
+  )
 }

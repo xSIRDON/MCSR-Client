@@ -26,9 +26,10 @@ import { writeRankedConfigs, writeRsgConfigs } from './instances/configs'
 import { syncMaps } from './instances/maps'
 import { listMods, setModEnabled } from './instances/mods'
 import { readStandardSettings, writeStandardSettings, importOptionsFile } from './instances/standard-settings'
-import { copyInstanceSettings } from './instances/copy-instance'
+import { copyInstanceSettings, resolveGameDir, listWorlds } from './instances/copy-instance'
+import { getSkin } from './skins'
 import { checkForUpdates, currentUpdateStatus, quitAndInstall } from './updater'
-import { setupNinjabrain } from './tools/ninjabrain'
+import { setupNinjabrain, launchNinjabrain, killNinjabrain } from './tools/ninjabrain'
 import { ensureToolscreenJar, spawnToolscreenWatcher } from './tools/toolscreen'
 import { detectJava } from './system/java'
 import { removeLinkIfPresent } from './launcher/links'
@@ -160,7 +161,12 @@ async function installFsgMod(gameDir: string, id: InstanceId): Promise<void> {
   writeFileSync(dest, Buffer.from(await res.arrayBuffer()))
 }
 
-async function installInstance(id: InstanceId, importFrom: InstanceId | null = null): Promise<void> {
+async function installInstance(
+  id: InstanceId,
+  importFrom: InstanceId | null = null,
+  importFolder: string | null = null,
+  importWorlds: string[] = []
+): Promise<void> {
   setState(id, { state: 'installing', error: undefined })
   try {
     const index = await getIndex()
@@ -172,7 +178,7 @@ async function installInstance(id: InstanceId, importFrom: InstanceId | null = n
     try {
       if (store.getConfig().toolscreen) {
         sendProgress({ instance: id, phase: 'configs', fraction: null, message: 'Downloading Toolscreen…' })
-        await ensureToolscreenJar()
+        await ensureToolscreenJar(gameDir)
       }
     } catch (e) {
       pushLog('system', `Toolscreen download skipped: ${e instanceof Error ? e.message : e}`)
@@ -210,13 +216,21 @@ async function installInstance(id: InstanceId, importFrom: InstanceId | null = n
 
     await ensureInstanceExtras(id, gameDir)
 
-    // First-install import: copy a chosen instance's options.txt, hotbar.nbt, and config/.
+    // First-install import: copy options.txt, hotbar.nbt, and config/ from a chosen instance,
+    // or from any folder the player pointed at (we resolve its game dir).
     if (importFrom && importFrom !== id) {
       try {
-        const copied = copyInstanceSettings(gmll.gameDir(importFrom), gameDir)
-        pushLog('system', `Imported settings from ${importFrom}: ${copied.join(', ') || 'nothing found'}.`)
+        const copied = copyInstanceSettings(gmll.gameDir(importFrom), gameDir, { worlds: importWorlds })
+        pushLog('system', `Imported from ${importFrom}: ${copied.join(', ') || 'nothing found'}.`)
       } catch (e) {
-        pushLog('system', `Settings import skipped: ${e instanceof Error ? e.message : e}`)
+        pushLog('system', `Import skipped: ${e instanceof Error ? e.message : e}`)
+      }
+    } else if (importFolder) {
+      try {
+        const copied = copyInstanceSettings(resolveGameDir(importFolder), gameDir, { worlds: importWorlds })
+        pushLog('system', `Imported from ${importFolder}: ${copied.join(', ') || 'nothing found'}.`)
+      } catch (e) {
+        pushLog('system', `Import skipped: ${e instanceof Error ? e.message : e}`)
       }
     }
 
@@ -238,7 +252,7 @@ async function installInstance(id: InstanceId, importFrom: InstanceId | null = n
 
 async function launchInstance(
   id: InstanceId,
-  opts?: { importFrom?: InstanceId | null }
+  opts?: { importFrom?: InstanceId | null; importFolder?: string | null; importWorlds?: string[] }
 ): Promise<void> {
   const token = auth.getLaunchToken()
   if (!token) throw new Error('Sign in with Microsoft before launching.')
@@ -260,7 +274,12 @@ async function launchInstance(
       sendProgress({ instance: id, phase: 'mods', fraction: null, message: `Updating MCSR pack to ${latest}…` })
     }
     // Only honor a settings import on a genuine first install, not a stale-pack reinstall.
-    await installInstance(id, wasFresh ? (opts?.importFrom ?? null) : null)
+    await installInstance(
+      id,
+      wasFresh ? (opts?.importFrom ?? null) : null,
+      wasFresh ? (opts?.importFolder ?? null) : null,
+      wasFresh ? (opts?.importWorlds ?? []) : []
+    )
   }
 
   const index = await getIndex()
@@ -268,20 +287,31 @@ async function launchInstance(
   await ensureInstanceExtras(id, gmll.gameDir(id))
   setState(id, { state: 'launching' })
 
-  // Toolscreen injects its overlay into the running game via a watcher. Since we're the launcher,
-  // start it now (before the game) so it catches this instance. Needs Java 17+ on PATH; skipped
-  // quietly otherwise. Best-effort — never blocks the launch.
-  if (store.getConfig().toolscreen) {
-    try {
-      const java = await detectJava()
-      if (java.ok) {
-        await spawnToolscreenWatcher()
-        pushLog('system', 'Toolscreen watcher started — it will inject once the game window opens.')
-      } else {
-        pushLog('system', 'Toolscreen needs Java 17+ on PATH; skipping its overlay this launch.')
+  // Companion tools that run alongside the game (both need a Java 17+ runtime). Spawn them now,
+  // before the game, so Toolscreen's watcher catches the window and Ninjabrain is ready. All
+  // best-effort — never block the launch.
+  const cfg = store.getConfig()
+  if (cfg.toolscreen || cfg.ninjabrain) {
+    const java = await detectJava()
+    if (java.ok) {
+      if (cfg.toolscreen) {
+        try {
+          await spawnToolscreenWatcher(gmll.gameDir(id))
+          pushLog('system', 'Toolscreen watcher started — it will inject once the game window opens.')
+        } catch (e) {
+          pushLog('system', `Toolscreen skipped: ${e instanceof Error ? e.message : e}`)
+        }
       }
-    } catch (e) {
-      pushLog('system', `Toolscreen skipped: ${e instanceof Error ? e.message : e}`)
+      if (cfg.ninjabrain) {
+        try {
+          const opened = await launchNinjabrain()
+          if (opened) pushLog('system', 'Ninjabrain Bot opened.')
+        } catch (e) {
+          pushLog('system', `Ninjabrain Bot skipped: ${e instanceof Error ? e.message : e}`)
+        }
+      }
+    } else {
+      pushLog('system', 'Companion tools (Toolscreen / Ninjabrain) need Java 17+ on PATH; skipped this launch.')
     }
   }
 
@@ -295,6 +325,8 @@ async function launchInstance(
 
   child.on('close', () => {
     if (id === 'rsg') tracker.stop()
+    // Close the Ninjabrain Bot we run alongside the game.
+    if (store.getConfig().ninjabrain) killNinjabrain()
     pushLog('system', `${id} closed.`)
     setState(id, { state: 'ready' })
   })
@@ -332,8 +364,13 @@ export function registerIpc(): void {
 
   ipcMain.handle(IPC.instStatus, (_e, id: InstanceId) => states[id])
   ipcMain.handle(IPC.instInstall, (_e, id: InstanceId) => installInstance(id))
-  ipcMain.handle(IPC.instLaunch, (_e, id: InstanceId, opts?: { importFrom?: InstanceId | null }) =>
-    launchInstance(id, opts)
+  ipcMain.handle(
+    IPC.instLaunch,
+    (
+      _e,
+      id: InstanceId,
+      opts?: { importFrom?: InstanceId | null; importFolder?: string | null; importWorlds?: string[] }
+    ) => launchInstance(id, opts)
   )
   ipcMain.handle(IPC.instVerify, (_e, id: InstanceId) => installInstance(id))
   ipcMain.handle(IPC.instDelete, (_e, id: InstanceId) => deleteInstance(id))
@@ -375,11 +412,31 @@ export function registerIpc(): void {
       ['ready', 'running', 'launching'].includes(states[i].state)
     )
   )
-  ipcMain.handle(IPC.instImportFromInstance, (_e, target: InstanceId, source: InstanceId) => {
-    const copied = copyInstanceSettings(gmll.gameDir(source), gmll.gameDir(target))
-    pushLog('system', `Imported settings from ${source} into ${target}: ${copied.join(', ') || 'nothing found'}.`)
-    return { copied }
-  })
+  ipcMain.handle(
+    IPC.instImportFromInstance,
+    (_e, target: InstanceId, source: InstanceId, opts?: { worlds?: string[] }) => {
+      const copied = copyInstanceSettings(gmll.gameDir(source), gmll.gameDir(target), {
+        worlds: opts?.worlds ?? []
+      })
+      pushLog('system', `Imported from ${source} into ${target}: ${copied.join(', ') || 'nothing found'}.`)
+      return { copied }
+    }
+  )
+  ipcMain.handle(
+    IPC.instImportFromFolderPath,
+    (_e, target: InstanceId, folder: string, opts?: { worlds?: string[] }) => {
+      const copied = copyInstanceSettings(resolveGameDir(folder), gmll.gameDir(target), {
+        worlds: opts?.worlds ?? []
+      })
+      pushLog('system', `Imported from ${folder} into ${target}: ${copied.join(', ') || 'nothing found'}.`)
+      return { copied }
+    }
+  )
+  ipcMain.handle(IPC.instListWorlds, (_e, id: InstanceId) => listWorlds(gmll.gameDir(id)))
+  ipcMain.handle(IPC.instListWorldsInFolder, (_e, folder: string) => listWorlds(resolveGameDir(folder)))
+  ipcMain.handle(IPC.skinGet, (_e, idOrUuid: string, size: number, kind: 'avatar' | 'body') =>
+    getSkin(idOrUuid, size, kind)
+  )
   ipcMain.handle(IPC.sysJava, () => detectJava())
 
   ipcMain.handle(IPC.updCheck, () => checkForUpdates())
@@ -409,6 +466,14 @@ export function registerIpc(): void {
       title: 'Choose a Java executable',
       filters: process.platform === 'win32' ? [{ name: 'Java', extensions: ['exe'] }] : [],
       properties: ['openFile']
+    })
+    if (res.canceled || res.filePaths.length === 0) return null
+    return res.filePaths[0]
+  })
+  ipcMain.handle(IPC.cfgPickFolder, async () => {
+    const res = await dialog.showOpenDialog({
+      title: 'Choose an instance or .minecraft folder',
+      properties: ['openDirectory']
     })
     if (res.canceled || res.filePaths.length === 0) return null
     return res.filePaths[0]

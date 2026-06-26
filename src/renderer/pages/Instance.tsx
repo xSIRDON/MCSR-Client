@@ -283,6 +283,25 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
     }
   }
 
+  async function importFolder() {
+    const folder = await window.mcsr.config.pickFolder()
+    if (!folder) return
+    setBusy(true)
+    setResult(null)
+    try {
+      const { copied } = await window.mcsr.instances.importFromFolderPath(id, folder)
+      setResult(
+        copied.length > 0
+          ? { ok: true, msg: `Imported ${copied.join(', ')} from the chosen folder.` }
+          : { ok: false, msg: 'No options.txt / hotbar.nbt / config found in that folder.' }
+      )
+    } catch (e) {
+      setResult({ ok: false, msg: e instanceof Error ? e.message : 'Could not import from that folder.' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function importFile() {
     setBusy(true)
     setResult(null)
@@ -334,6 +353,21 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
             Import
           </button>
         </div>
+      </div>
+
+      {/* From any folder */}
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
+        <div className="min-w-0 text-sm text-muted">
+          …or import from <span className="text-text">any folder</span> — another launcher’s instance,
+          an old <code>.minecraft</code>, anywhere. We find the settings inside it.
+        </div>
+        <button
+          onClick={importFolder}
+          disabled={busy}
+          className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted transition-colors hover:text-text disabled:opacity-50"
+        >
+          Choose folder…
+        </button>
       </div>
 
       {/* From an external options.txt */}
