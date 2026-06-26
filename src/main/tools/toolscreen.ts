@@ -1,43 +1,33 @@
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { InstanceId } from '../../shared/types'
 import { paths } from '../paths'
 
-const TOOLSCREEN_EXE = 'Toolscreen-1.4.4-double-click-me.exe'
-const DOWNLOAD =
-  'https://github.com/jojoe77777/Toolscreen/releases/download/v1.4.4/Toolscreen-1.4.4-double-click-me.exe'
+const TOOLSCREEN_JAR = 'Toolscreen.jar'
+const JAR_URL =
+  'https://github.com/jojoe77777/Toolscreen/releases/download/v1.4.4/Toolscreen-1.4.4-double-click-me.jar'
 
-function markerPath(id: InstanceId): string {
-  return join(paths.instanceDir(id), '.toolscreen-installed')
+function jarPath(): string {
+  return join(paths.tools(), TOOLSCREEN_JAR)
 }
 
-export function isSetUp(id: InstanceId): boolean {
-  return existsSync(markerPath(id))
+export async function ensureToolscreenJar(): Promise<void> {
+  if (existsSync(jarPath())) return
+  mkdirSync(paths.tools(), { recursive: true })
+  const res = await fetch(JAR_URL, { redirect: 'follow' })
+  if (!res.ok) throw new Error(`Toolscreen download failed (${res.status})`)
+  writeFileSync(jarPath(), Buffer.from(await res.arrayBuffer()))
 }
 
-export async function setupToolscreen(id: InstanceId): Promise<void> {
+export async function spawnToolscreenWatcher(javaw = 'javaw'): Promise<void> {
   if (process.platform !== 'win32') return
-  if (isSetUp(id)) return
-
-  const instanceDir = paths.instanceDir(id)
-  mkdirSync(instanceDir, { recursive: true })
-  const exePath = join(instanceDir, TOOLSCREEN_EXE)
-
-  if (!existsSync(exePath)) {
-    const res = await fetch(DOWNLOAD, { redirect: 'follow' })
-    if (!res.ok) throw new Error(`Toolscreen download failed (${res.status})`)
-    writeFileSync(exePath, Buffer.from(await res.arrayBuffer()))
-  }
-
-  await new Promise<void>((resolve) => {
-    const child = spawn(exePath, [], { cwd: instanceDir, detached: false, stdio: 'ignore' })
-    child.on('exit', () => resolve())
-    child.on('error', () => resolve())
+  await ensureToolscreenJar()
+  const child = spawn(javaw, ['-jar', jarPath(), '--prelaunch'], {
+    cwd: paths.tools(),
+    detached: true,
+    stdio: 'ignore'
   })
-
-  try {
-    writeFileSync(markerPath(id), 'installed\n')
-  } catch {
-  }
+  child.on('error', () => {
+  })
+  child.unref()
 }
