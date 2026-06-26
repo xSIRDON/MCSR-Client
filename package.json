@@ -1,6 +1,6 @@
 {
   "name": "mcsr-client",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Launcher and stats client for Minecraft 1.16.1 speedrunning.",
   "author": "xSIRDON <nsrdawn@gmail.com>",
   "license": "MIT",
