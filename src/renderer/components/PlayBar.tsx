@@ -106,12 +106,6 @@ export function PlayBar() {
           </svg>
         </button>
         <button
-          onClick={() => navigate('/play')}
-          className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs text-muted transition-colors hover:text-text"
-        >
-          Details
-        </button>
-        <button
           onClick={() => launch(selected)}
           disabled={busy}
           className="font-display group relative flex min-w-[190px] items-center justify-center gap-2.5 rounded-xl px-6 py-3 text-base tracking-wide transition-all disabled:cursor-not-allowed"
