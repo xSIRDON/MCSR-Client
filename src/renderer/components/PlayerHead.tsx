@@ -10,11 +10,12 @@ interface Props {
 
 export function PlayerHead({ id, uuid, size = 64, render = 'avatar', className }: Props) {
   const [stage, setStage] = useState<0 | 1 | 2>(0)
+  const dashless = (uuid ?? id).replace(/-/g, '')
   const dashed = uuid ?? id
 
   const src =
     stage === 0
-      ? `https://mc-heads.net/${render === 'body' ? 'body' : 'avatar'}/${encodeURIComponent(id)}/${size}`
+      ? `https://mc-heads.net/${render === 'body' ? 'body' : 'avatar'}/${encodeURIComponent(dashless)}/${size}`
       : `https://crafatar.com/${render === 'body' ? 'renders/body' : 'avatars'}/${encodeURIComponent(
           dashed
         )}?size=${size}&overlay`

@@ -4,6 +4,7 @@ import { EloChart } from '../components/EloChart'
 import { MatchFeed } from '../components/MatchFeed'
 import { Leaderboard } from '../components/Leaderboard'
 import { LivePacePanel } from '../components/LivePacePanel'
+import { ChokeLine } from '../components/ChokeLine'
 
 export function Home() {
   const profile = useUi((s) => s.profile)
@@ -17,6 +18,7 @@ export function Home() {
       <div className="grid gap-4 lg:grid-cols-[1.45fr_1fr]">
         <div className="space-y-4">
           <EloChart uuid={profile.uuid} />
+          <ChokeLine name={pacemanName} />
           <Leaderboard limit={8} />
         </div>
         <div className="flex flex-col gap-4">
