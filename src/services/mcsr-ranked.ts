@@ -22,18 +22,21 @@ export class McsrApiError extends Error {
   }
 }
 
-export interface SeasonRanked {
-  wins: number
-  loses: number
-  playedMatches?: number
+/** MCSR stat values are broken down by mode. */
+export interface StatBreakdown {
+  ranked: number
+  casual: number
+  total?: number
 }
-export interface SeasonStats {
-  wins: number
-  loses: number
-  playedMatches: number
-  currentWinStreak?: number
-  highestWinStreak?: number
-  bestTime?: { ranked?: number | null; casual?: number | null }
+/** The season/total statistics object is keyed by stat name. */
+export interface Statistics {
+  bestTime?: { ranked: number | null; casual: number | null }
+  highestWinStreak?: StatBreakdown
+  currentWinStreak?: StatBreakdown
+  playedMatches?: StatBreakdown
+  playtime?: StatBreakdown
+  wins?: StatBreakdown
+  loses?: StatBreakdown
 }
 
 export interface McsrUser {
@@ -50,10 +53,30 @@ export interface McsrUser {
     nextDecay?: number | null
   }
   statistics?: {
-    season?: Record<string, SeasonStats>
-    total?: Record<string, SeasonStats>
+    season?: Statistics
+    total?: Statistics
   }
   seasonResult?: { eloRate: number | null; eloRank: number | null; phasePoint?: number }
+}
+
+/** Pull the ranked-mode season stats into a flat, render-friendly shape. */
+export function seasonRanked(user: McsrUser | undefined): {
+  wins: number
+  loses: number
+  played: number
+  currentStreak: number
+  bestStreak: number
+  bestTime: number | null
+} {
+  const s = user?.statistics?.season
+  return {
+    wins: s?.wins?.ranked ?? 0,
+    loses: s?.loses?.ranked ?? 0,
+    played: s?.playedMatches?.ranked ?? 0,
+    currentStreak: s?.currentWinStreak?.ranked ?? 0,
+    bestStreak: s?.highestWinStreak?.ranked ?? 0,
+    bestTime: s?.bestTime?.ranked ?? null
+  }
 }
 
 export interface MatchPlayer {
