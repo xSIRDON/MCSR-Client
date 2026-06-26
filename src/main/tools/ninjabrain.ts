@@ -1,4 +1,5 @@
 import { app, shell } from 'electron'
+import { spawn, execFile, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { paths } from '../paths'
@@ -34,4 +35,48 @@ export function createDesktopShortcut(): void {
 export async function setupNinjabrain(): Promise<void> {
   if (!existsSync(jarPath())) await downloadJar()
   createDesktopShortcut()
+}
+
+function isRunning(): Promise<boolean> {
+  if (process.platform !== 'win32') return Promise.resolve(false)
+  return new Promise((resolve) => {
+    execFile(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-Command',
+        "@(Get-CimInstance Win32_Process -Filter \"Name='javaw.exe' OR Name='java.exe'\" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*Ninjabrain-Bot*' }).Count"
+      ],
+      { windowsHide: true, timeout: 5000 },
+      (err, stdout) => resolve(!err && parseInt(String(stdout).trim(), 10) > 0)
+    )
+  })
+}
+
+export async function launchNinjabrain(javaw = 'javaw'): Promise<ChildProcess | null> {
+  if (!existsSync(jarPath())) await downloadJar()
+  if (await isRunning()) return null
+  const child = spawn(javaw, ['-jar', jarPath()], {
+    cwd: paths.tools(),
+    detached: true,
+    stdio: 'ignore'
+  })
+  child.on('error', () => {
+  })
+  child.unref()
+  return child
+}
+
+export function killNinjabrain(): void {
+  if (process.platform !== 'win32') return
+  execFile(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-Command',
+      "Get-CimInstance Win32_Process -Filter \"Name='javaw.exe' OR Name='java.exe'\" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*Ninjabrain-Bot*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+    ],
+    { windowsHide: true, timeout: 5000 },
+    () => {}
+  )
 }

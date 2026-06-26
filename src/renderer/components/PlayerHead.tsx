@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 interface Props {
   id: string
@@ -8,67 +8,62 @@ interface Props {
   className?: string
 }
 
-type Source = { url: string; tall: boolean }
+function useSkin(raw: string, size: number, kind: 'avatar' | 'body', enabled: boolean) {
+  return useQuery({
+    queryKey: ['skin', kind, raw, size],
+    queryFn: async () => {
+      const u = await window.mcsr.skins.get(raw, size, kind)
+      if (!u) throw new Error('skin unavailable')
+      return u
+    },
+    enabled: enabled && raw.length > 0,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    retry: 2,
+    retryDelay: (n) => 600 * (n + 1)
+  })
+}
 
 export function PlayerHead({ id, uuid, size = 64, render = 'avatar', className }: Props) {
-  const playerKey = `${id}|${uuid ?? ''}`
-  const [prevKey, setPrevKey] = useState(playerKey)
-  const [stage, setStage] = useState(0)
-  if (playerKey !== prevKey) {
-    setPrevKey(playerKey)
-    setStage(0)
-  }
-
   const raw = (uuid ?? id).replace(/-/g, '')
-  const dashed = /^[0-9a-fA-F]{32}$/.test(raw)
-    ? raw.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5')
-    : uuid ?? id
-  const isBody = render === 'body'
+  const wantBody = render === 'body'
 
-  const sources: Source[] = isBody
-    ? [
-        { url: `https://mc-heads.net/body/${raw}/${size}`, tall: true },
-        { url: `https://minotar.net/armor/body/${raw}/${size}`, tall: true },
-        { url: `https://mc-heads.net/avatar/${raw}/${size}`, tall: false },
-        { url: `https://minotar.net/avatar/${raw}/${size}`, tall: false }
-      ]
-    : [
-        { url: `https://mc-heads.net/avatar/${raw}/${size}`, tall: false },
-        { url: `https://minotar.net/avatar/${raw}/${size}`, tall: false },
-        { url: `https://crafatar.com/avatars/${dashed}?size=${size}&overlay`, tall: false }
-      ]
+  const body = useSkin(raw, size, 'body', wantBody)
+  const face = useSkin(raw, size, 'avatar', !wantBody || body.isError)
 
-  const cur = sources[stage]
+  const bodyUrl = wantBody ? body.data : undefined
+  const url = bodyUrl ?? face.data
+  const tall = !!bodyUrl
 
-  if (!cur) {
+  if (url) {
     return (
-      <div
-        className={`pixelated grid place-items-center rounded-md ${className ?? ''}`}
-        style={{
-          width: size,
-          height: isBody ? size * 2 : size,
-          background: '#1a1a28',
-          border: '1px solid var(--line)'
-        }}
-      >
-        <span className="font-display text-muted" style={{ fontSize: size * 0.4 }}>
-          {id.slice(0, 1).toUpperCase()}
-        </span>
-      </div>
+      <img
+        src={url}
+        alt={id}
+        width={size}
+        height={tall ? size * 2 : size}
+        className={`pixelated ${className ?? ''}`}
+        style={{ imageRendering: 'pixelated' }}
+        draggable={false}
+      />
     )
   }
 
   return (
-    <img
-      key={`${playerKey}-${stage}`}
-      src={cur.url}
-      alt={id}
-      width={size}
-      height={cur.tall ? size * 2 : size}
-      className={`pixelated ${className ?? ''}`}
-      style={{ imageRendering: 'pixelated' }}
-      onError={() => setStage((s) => Math.min(s + 1, sources.length))}
-      draggable={false}
-    />
+    <div
+      className={`pixelated grid place-items-center rounded-md ${className ?? ''}`}
+      style={{
+        width: size,
+        height: wantBody ? size * 2 : size,
+        background: '#1a1a28',
+        border: '1px solid var(--line)'
+      }}
+    >
+      <span className="font-display text-muted" style={{ fontSize: size * 0.4 }}>
+        {id.slice(0, 1).toUpperCase()}
+      </span>
+    </div>
   )
 }
