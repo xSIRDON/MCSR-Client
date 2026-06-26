@@ -1,56 +1,51 @@
-// Bundled Toolscreen (screen-mirror / window-resize injector). On an instance's first
-// install we drop its installer into that instance's folder and run it there — Toolscreen
-// stages itself into the instance and self-updates on later launches. Windows-only.
+// Toolscreen (screen-mirror / overlay tool). Toolscreen doesn't "install into a folder" — it
+// injects an overlay DLL into the *running* Minecraft process via a background watcher
+// (EasyInject). Launchers like Prism/MultiMC/Modrinth wire that watcher in as a pre-launch
+// command; our client launches the game directly, so we play the launcher's role and spawn the
+// watcher ourselves right before we start the game. It then waits for our Minecraft window and
+// injects. Windows-only; the watcher jar needs a Java 17+ runtime (same one the other tools use).
 
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { InstanceId } from '../../shared/types'
 import { paths } from '../paths'
 
-const TOOLSCREEN_EXE = 'Toolscreen-1.4.4-double-click-me.exe'
-const DOWNLOAD =
-  'https://github.com/jojoe77777/Toolscreen/releases/download/v1.4.4/Toolscreen-1.4.4-double-click-me.exe'
+const TOOLSCREEN_JAR = 'Toolscreen.jar'
+const JAR_URL =
+  'https://github.com/jojoe77777/Toolscreen/releases/download/v1.4.4/Toolscreen-1.4.4-double-click-me.jar'
 
-function markerPath(id: InstanceId): string {
-  return join(paths.instanceDir(id), '.toolscreen-installed')
+function jarPath(): string {
+  return join(paths.tools(), TOOLSCREEN_JAR)
 }
 
-export function isSetUp(id: InstanceId): boolean {
-  return existsSync(markerPath(id))
+/** Download the Toolscreen injector jar once into data/tools (idempotent). */
+export async function ensureToolscreenJar(): Promise<void> {
+  if (existsSync(jarPath())) return
+  mkdirSync(paths.tools(), { recursive: true })
+  const res = await fetch(JAR_URL, { redirect: 'follow' })
+  if (!res.ok) throw new Error(`Toolscreen download failed (${res.status})`)
+  writeFileSync(jarPath(), Buffer.from(await res.arrayBuffer()))
 }
 
 /**
- * First-install step for Toolscreen: download its installer into the instance folder and
- * run it from there so it targets this instance. Marks the instance afterwards so it never
- * re-runs (Toolscreen self-updates from then on). Windows-only and interactive — the player
- * clicks through and accepts the Defender prompt. Idempotent.
+ * Spawn the Toolscreen watcher in pre-launch mode so it injects the overlay DLL into the
+ * Minecraft process we're about to start. Detached and best-effort — it must never block or
+ * break the game launch. On its first run Toolscreen prompts (UAC) to add the Windows Defender
+ * exclusions its injected, unsigned DLLs need.
+ *
+ * @param javaw a Java 17+ launcher; defaults to `javaw` on PATH.
  */
-export async function setupToolscreen(id: InstanceId): Promise<void> {
+export async function spawnToolscreenWatcher(javaw = 'javaw'): Promise<void> {
   if (process.platform !== 'win32') return
-  if (isSetUp(id)) return
-
-  const instanceDir = paths.instanceDir(id)
-  mkdirSync(instanceDir, { recursive: true })
-  const exePath = join(instanceDir, TOOLSCREEN_EXE)
-
-  if (!existsSync(exePath)) {
-    const res = await fetch(DOWNLOAD, { redirect: 'follow' })
-    if (!res.ok) throw new Error(`Toolscreen download failed (${res.status})`)
-    writeFileSync(exePath, Buffer.from(await res.arrayBuffer()))
-  }
-
-  // Run the installer from inside the instance folder so it installs into this instance.
-  await new Promise<void>((resolve) => {
-    const child = spawn(exePath, [], { cwd: instanceDir, detached: false, stdio: 'ignore' })
-    child.on('exit', () => resolve())
-    child.on('error', () => resolve())
+  await ensureToolscreenJar()
+  // `--prelaunch` -> runLauncherMode: spawns a hidden watcher that waits for the game and injects.
+  const child = spawn(javaw, ['-jar', jarPath(), '--prelaunch'], {
+    cwd: paths.tools(),
+    detached: true,
+    stdio: 'ignore'
   })
-
-  // The GUI installer gives no success signal, so mark after it exits (best effort).
-  try {
-    writeFileSync(markerPath(id), 'installed\n')
-  } catch {
-    /* non-fatal */
-  }
+  child.on('error', () => {
+    /* javaw missing/blocked — Toolscreen just won't load this session */
+  })
+  child.unref()
 }

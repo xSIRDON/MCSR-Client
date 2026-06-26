@@ -29,7 +29,7 @@ import { readStandardSettings, writeStandardSettings, importOptionsFile } from '
 import { copyInstanceSettings } from './instances/copy-instance'
 import { checkForUpdates, currentUpdateStatus, quitAndInstall } from './updater'
 import { setupNinjabrain } from './tools/ninjabrain'
-import { setupToolscreen } from './tools/toolscreen'
+import { ensureToolscreenJar, spawnToolscreenWatcher } from './tools/toolscreen'
 import { detectJava } from './system/java'
 import { removeLinkIfPresent } from './launcher/links'
 import { pushLog, onLog, logHistory, clearLog } from './log'
@@ -167,14 +167,15 @@ async function installInstance(id: InstanceId, importFrom: InstanceId | null = n
     const fabric = fabricVersionString(index)
     const gameDir = await gmll.installBase(id, fabric, sendProgress)
 
-    // First step: drop Toolscreen into the instance folder and run its installer there.
+    // Toolscreen: fetch its injector jar now so launching is fast. We don't "install" it into
+    // the instance — at launch we spawn its watcher, which injects the overlay into the game.
     try {
       if (store.getConfig().toolscreen) {
-        sendProgress({ instance: id, phase: 'configs', fraction: null, message: 'Setting up Toolscreen…' })
-        await setupToolscreen(id)
+        sendProgress({ instance: id, phase: 'configs', fraction: null, message: 'Downloading Toolscreen…' })
+        await ensureToolscreenJar()
       }
     } catch (e) {
-      pushLog('system', `Toolscreen setup skipped: ${e instanceof Error ? e.message : e}`)
+      pushLog('system', `Toolscreen download skipped: ${e instanceof Error ? e.message : e}`)
     }
 
     sendProgress({ instance: id, phase: 'mods', fraction: 0, message: 'Installing mods…' })
@@ -266,6 +267,24 @@ async function launchInstance(
   const fabric = fabricVersionString(index)
   await ensureInstanceExtras(id, gmll.gameDir(id))
   setState(id, { state: 'launching' })
+
+  // Toolscreen injects its overlay into the running game via a watcher. Since we're the launcher,
+  // start it now (before the game) so it catches this instance. Needs Java 17+ on PATH; skipped
+  // quietly otherwise. Best-effort — never blocks the launch.
+  if (store.getConfig().toolscreen) {
+    try {
+      const java = await detectJava()
+      if (java.ok) {
+        await spawnToolscreenWatcher()
+        pushLog('system', 'Toolscreen watcher started — it will inject once the game window opens.')
+      } else {
+        pushLog('system', 'Toolscreen needs Java 17+ on PATH; skipping its overlay this launch.')
+      }
+    } catch (e) {
+      pushLog('system', `Toolscreen skipped: ${e instanceof Error ? e.message : e}`)
+    }
+  }
+
   pushLog('system', `Launching ${id}…`)
   const child = await gmll.launch(id, token, fabric, sendProgress)
   setState(id, { state: 'running' })
