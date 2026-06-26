@@ -1,32 +1,42 @@
 import { app } from 'electron'
 import { existsSync, renameSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import type { InstanceId } from '../shared/types'
 
-const DIR_NAME = 'MCSR-Client'
-const LEGACY_DIR_NAME = 'Obsidian'
+const DATA_DIR = 'data'
 
-// All MCSR Client data lives under %APPDATA%/MCSR-Client (or the platform equivalent).
+/** Where the client itself lives: the project root in dev, beside the exe when packaged. */
+function installBase(): string {
+  return app.isPackaged ? dirname(app.getPath('exe')) : app.getAppPath()
+}
+
+// All data lives in a `data/` folder next to the client install — easy to find,
+// and portable for the eventual installer.
 function rootDir(): string {
-  // app.getPath('appData') -> %APPDATA% on Windows.
-  return join(app.getPath('appData'), DIR_NAME)
+  return join(installBase(), DATA_DIR)
 }
 
 /**
- * One-time move of the legacy %APPDATA%/Obsidian data folder to the new name so
- * existing installs (game files, config, saved login) survive the rename instead
- * of re-downloading. Run before anything touches the data root. The shared
- * libraries/assets junctions inside instances are absolute and are rebuilt on the
- * next launch (see clearSharedLinks in the launcher).
+ * One-time move of an older data location (the legacy %APPDATA% folders) into the
+ * new next-to-install `data/` dir, so existing installs aren't re-downloaded. Run
+ * before anything touches the data root. The shared libraries/assets junctions
+ * inside instances are absolute and are rebuilt on next launch (clearSharedLinks).
  */
 export function migrateDataDir(): void {
-  const legacy = join(app.getPath('appData'), LEGACY_DIR_NAME)
   const current = rootDir()
-  if (existsSync(legacy) && !existsSync(current)) {
-    try {
-      renameSync(legacy, current)
-    } catch {
-      // Best effort: if the move fails, the app re-provisions into the new dir.
+  if (existsSync(current)) return
+  const legacy = [
+    join(app.getPath('appData'), 'MCSR-Client'),
+    join(app.getPath('appData'), 'Obsidian')
+  ]
+  for (const old of legacy) {
+    if (existsSync(old)) {
+      try {
+        renameSync(old, current)
+        return
+      } catch {
+        // cross-volume / locked — fall through; the app re-provisions cleanly.
+      }
     }
   }
 }

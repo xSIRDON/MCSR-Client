@@ -10,6 +10,9 @@ out/
 release/
 *.tsbuildinfo
 
+# Client data (game files, instances, config, secrets) — lives next to the install
+data/
+
 # Electron / packaging
 *.exe
 *.nsis
