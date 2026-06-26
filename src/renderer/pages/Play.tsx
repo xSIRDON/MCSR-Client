@@ -10,9 +10,10 @@ export function Play() {
         </p>
       </header>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <InstanceCard id="ranked" />
         <InstanceCard id="rsg" />
+        <InstanceCard id="zsg" />
       </div>
 
       <p className="mt-4 text-xs text-faint">

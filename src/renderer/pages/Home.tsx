@@ -6,7 +6,7 @@ import { mcsr } from '../lib/clients'
 import { eloToRank } from '@core/rank'
 import { PlayerHead } from '../components/PlayerHead'
 import { RankBadge } from '../components/RankBadge'
-import { RankedCard, RsgCard } from '../components/ModeCards'
+import { RankedCard, RsgCard, ZsgCard } from '../components/ModeCards'
 import { EloChart } from '../components/EloChart'
 import { MatchFeed } from '../components/MatchFeed'
 import { Leaderboard } from '../components/Leaderboard'
@@ -24,9 +24,10 @@ export function Home() {
     <div className="mx-auto max-w-[1120px] space-y-4 px-5 py-4">
       <HomeHero uuid={profile.uuid} name={profile.name} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
         <RankedCard uuid={profile.uuid} delay={40} />
         <RsgCard name={pacemanName} delay={110} />
+        <ZsgCard delay={180} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">

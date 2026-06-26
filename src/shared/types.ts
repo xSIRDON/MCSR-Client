@@ -1,4 +1,4 @@
-export type InstanceId = 'ranked' | 'rsg'
+export type InstanceId = 'ranked' | 'rsg' | 'zsg'
 
 export interface Profile {
   uuid: string
@@ -47,8 +47,8 @@ export interface AppConfig {
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
-  ram: { ranked: 3072, rsg: 3072 },
-  java: { ranked: null, rsg: null },
+  ram: { ranked: 3072, rsg: 3072, zsg: 3072 },
+  java: { ranked: null, rsg: null, zsg: null },
   seedQueueOverride: null,
   pacemanName: null
 }

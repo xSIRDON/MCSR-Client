@@ -28,6 +28,13 @@ const META: Record<InstanceId, Meta> = {
     accent: 'var(--portal)',
     mods: 'SeedQueue · SpeedRunIGT · paceman',
     icon: () => <PortalBlock size={20} />
+  },
+  zsg: {
+    title: 'ZSG',
+    tagline: 'RSG set + the FSG (filtered-seed) mod. No ranked mod.',
+    accent: '#4fd6b0',
+    mods: 'SeedQueue · SpeedRunIGT · FSG',
+    icon: () => <PortalBlock size={20} />
   }
 }
 
