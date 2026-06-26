@@ -36,6 +36,7 @@ const api: ObsidianApi = {
     install: (id: InstanceId) => ipcRenderer.invoke(IPC.instInstall, id),
     launch: (id: InstanceId) => ipcRenderer.invoke(IPC.instLaunch, id),
     verify: (id: InstanceId) => ipcRenderer.invoke(IPC.instVerify, id),
+    delete: (id: InstanceId) => ipcRenderer.invoke(IPC.instDelete, id),
     onProgress: (cb: (e: ProgressEvent) => void) => subscribe<ProgressEvent>(IPC.instProgress, cb),
     onStateChanged: (cb: (s: InstanceStatus) => void) =>
       subscribe<InstanceStatus>(IPC.instStateChanged, cb),
