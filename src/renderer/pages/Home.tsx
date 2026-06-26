@@ -11,17 +11,17 @@ export function Home() {
   if (!profile) return null
 
   return (
-    <div className="mx-auto max-w-[1100px] space-y-5 px-7 py-6">
+    <div className="mx-auto max-w-[1080px] space-y-4 px-5 py-4">
       <ProfileHero identifier={profile.uuid} />
 
-      <div className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
-        <div className="space-y-5">
+      <div className="grid gap-4 lg:grid-cols-[1.45fr_1fr]">
+        <div className="space-y-4">
           <EloChart uuid={profile.uuid} />
-          <Leaderboard limit={10} />
+          <Leaderboard limit={8} />
         </div>
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4">
           <LivePacePanel name={pacemanName} />
-          <div className="flex min-h-[260px] flex-col">
+          <div className="flex min-h-[240px] flex-col">
             <MatchFeed uuid={profile.uuid} />
           </div>
         </div>

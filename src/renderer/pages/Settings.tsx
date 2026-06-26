@@ -46,8 +46,8 @@ export function Settings() {
   }
 
   return (
-    <div className="mx-auto max-w-[760px] space-y-5 px-7 py-7">
-      <h1 className="font-display text-2xl tracking-wide text-text">Settings</h1>
+    <div className="mx-auto max-w-[740px] space-y-4 px-5 py-5">
+      <h1 className="font-display text-xl tracking-wide text-text">Settings</h1>
 
       {/* Account */}
       <Card title="Account">

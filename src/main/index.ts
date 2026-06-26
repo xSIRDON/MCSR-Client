@@ -24,10 +24,10 @@ function enablePacemanCors(): void {
 
 function createWindow(): void {
   const win = new BrowserWindow({
-    width: 1180,
-    height: 760,
-    minWidth: 980,
-    minHeight: 640,
+    width: 1040,
+    height: 640,
+    minWidth: 900,
+    minHeight: 580,
     show: false,
     frame: false,
     backgroundColor: '#0d0d0f',

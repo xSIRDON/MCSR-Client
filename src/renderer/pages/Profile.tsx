@@ -22,12 +22,12 @@ export function Profile() {
   const uuid = user?.uuid ?? (queried ? '' : profile?.uuid ?? '')
 
   return (
-    <div className="mx-auto max-w-[1000px] space-y-5 px-7 py-6">
+    <div className="mx-auto max-w-[980px] space-y-4 px-5 py-4">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-lg uppercase tracking-[0.2em] text-muted">
+        <h1 className="font-display text-base uppercase tracking-[0.2em] text-muted">
           {queried ? 'Player' : 'Your profile'}
         </h1>
-        <div className="w-64">
+        <div className="w-60">
           <PlayerSearch />
         </div>
       </div>
@@ -36,9 +36,9 @@ export function Profile() {
         <>
           <ProfileHero identifier={identifier} />
           {uuid && (
-            <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+            <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
               <EloChart uuid={uuid} />
-              <div className="flex min-h-[300px] flex-col">
+              <div className="flex min-h-[280px] flex-col">
                 <MatchFeed uuid={uuid} />
               </div>
             </div>
