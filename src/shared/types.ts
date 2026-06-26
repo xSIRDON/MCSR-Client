@@ -73,6 +73,14 @@ export interface JavaInfo {
 
 export type StandardSettings = Record<string, string>
 
+export interface UpdateStatus {
+  state: 'idle' | 'checking' | 'up-to-date' | 'downloading' | 'ready' | 'error'
+  version?: string
+  progress?: number
+  error?: string
+  note?: string
+}
+
 export interface LogLine {
   source: 'game' | 'system'
   text: string

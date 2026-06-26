@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useUi } from '../store/uiStore'
-import { NetheriteBlock, PortalBlock } from '../components/BlockArt'
+import { McsrLogo } from '../components/Logo'
 
 export function Login() {
   const { setProfile, setPacemanName } = useUi()
@@ -29,9 +29,8 @@ export function Login() {
       </div>
 
       <div className="relative w-[380px] text-center animate-fade-up">
-        <div className="mb-5 flex items-center justify-center gap-2">
-          <NetheriteBlock size={34} />
-          <PortalBlock size={34} />
+        <div className="mb-5 flex items-center justify-center">
+          <McsrLogo size={68} />
         </div>
         <h1 className="font-display text-4xl tracking-[0.14em] text-text">MCSR CLIENT</h1>
         <p className="mt-2 text-sm text-muted">The clean MCSR client — Ranked &amp; RSG, one place.</p>

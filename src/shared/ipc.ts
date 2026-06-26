@@ -9,7 +9,8 @@ import type {
   Profile,
   ProgressEvent,
   StandardSettings,
-  TrackerStatus
+  TrackerStatus,
+  UpdateStatus
 } from './types'
 
 export const IPC = {
@@ -35,7 +36,12 @@ export const IPC = {
   instOpenFolder: 'inst:openFolder',
   instStdGet: 'inst:stdGet',
   instStdSet: 'inst:stdSet',
+  instImportSettings: 'inst:importSettings',
   sysJava: 'sys:java',
+  updCheck: 'upd:check',
+  updStatus: 'upd:status',
+  updInstall: 'upd:install',
+  updStatusChanged: 'upd:statusChanged',
   logLine: 'log:line',
   logHistory: 'log:history',
   logClear: 'log:clear',
@@ -76,9 +82,16 @@ export interface McsrApi {
     openFolder(id: InstanceId): Promise<void>
     getStandardSettings(id: InstanceId): Promise<StandardSettings>
     setStandardSettings(id: InstanceId, patch: StandardSettings): Promise<StandardSettings>
+    importSettings(id: InstanceId): Promise<{ imported: number } | null>
   }
   system: {
     java(): Promise<JavaInfo>
+  }
+  updater: {
+    check(): Promise<UpdateStatus>
+    status(): Promise<UpdateStatus>
+    install(): Promise<void>
+    onStatusChanged(cb: (s: UpdateStatus) => void): () => void
   }
   logs: {
     history(): Promise<LogLine[]>
