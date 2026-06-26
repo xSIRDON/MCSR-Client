@@ -37,6 +37,7 @@ const api: McsrApi = {
     launch: (id: InstanceId) => ipcRenderer.invoke(IPC.instLaunch, id),
     verify: (id: InstanceId) => ipcRenderer.invoke(IPC.instVerify, id),
     delete: (id: InstanceId) => ipcRenderer.invoke(IPC.instDelete, id),
+    syncMaps: (id: InstanceId) => ipcRenderer.invoke(IPC.instSyncMaps, id),
     onProgress: (cb: (e: ProgressEvent) => void) => subscribe<ProgressEvent>(IPC.instProgress, cb),
     onStateChanged: (cb: (s: InstanceStatus) => void) =>
       subscribe<InstanceStatus>(IPC.instStateChanged, cb),

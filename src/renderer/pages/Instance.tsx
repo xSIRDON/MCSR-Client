@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { AppConfig, InstanceId, ModInfo } from '@shared/types'
+import { MAP_CATALOG } from '@shared/maps'
 
 const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
 
@@ -33,6 +34,7 @@ export function Instance() {
       <MemoryCard id={instanceId} />
       <JavaCard id={instanceId} />
       <FilesCard id={instanceId} />
+      <MapsCard id={instanceId} />
       <ModsCard id={instanceId} />
       <DangerCard id={instanceId} onDeleted={() => navigate('/play')} />
     </div>
@@ -243,6 +245,51 @@ function ModsCard({ id }: { id: InstanceId }) {
       <p className="mt-2 text-xs text-faint">
         Disabling a mod parks it as <code>.disabled</code>. Note: removing pack mods can make a run
         illegal or break Ranked.
+      </p>
+    </Card>
+  )
+}
+
+function MapsCard({ id }: { id: InstanceId }) {
+  const [config, setConfig] = useState<AppConfig | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  useEffect(() => {
+    void window.mcsr.config.get().then(setConfig)
+  }, [])
+  if (!config) return null
+
+  const selected = new Set(config.maps[id])
+
+  async function toggle(mapId: string, on: boolean) {
+    const next = on
+      ? [...config!.maps[id], mapId]
+      : config!.maps[id].filter((m) => m !== mapId)
+    const updated = await window.mcsr.config.set({ maps: { ...config!.maps, [id]: next } })
+    setConfig(updated)
+    setSyncing(true)
+    try {
+      await window.mcsr.instances.syncMaps(id)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  return (
+    <Card title={`Practice maps${syncing ? ' · syncing…' : ''}`}>
+      <div className="space-y-1.5">
+        {MAP_CATALOG.map((m) => (
+          <div
+            key={m.id}
+            className="flex items-center justify-between rounded-md border border-[var(--line)] px-3 py-2"
+          >
+            <span className="text-sm text-text">{m.name}</span>
+            <Toggle on={selected.has(m.id)} onChange={(v) => toggle(m.id, v)} />
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-faint">
+        Selected maps install into this instance’s <code>saves/</code> (now, and on next launch).
+        Turning one off removes that world.
       </p>
     </Card>
   )

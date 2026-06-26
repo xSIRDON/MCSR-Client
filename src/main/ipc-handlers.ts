@@ -22,7 +22,7 @@ import {
   type ModrinthIndex
 } from './instances/mrpack'
 import { writeRankedConfigs, writeRsgConfigs } from './instances/configs'
-import { installDefaultMaps } from './instances/maps'
+import { syncMaps } from './instances/maps'
 import { listMods, setModEnabled } from './instances/mods'
 import { readStandardSettings, writeStandardSettings } from './instances/standard-settings'
 import { detectJava } from './system/java'
@@ -96,7 +96,7 @@ async function ensureInstanceExtras(id: InstanceId, gameDir: string): Promise<vo
   } catch {
     // optional — not fatal if the bundled hotbar is missing
   }
-  await installDefaultMaps(join(gameDir, 'saves'), (done, total, label) =>
+  await syncMaps(join(gameDir, 'saves'), store.getConfig().maps[id], (done, total, label) =>
     sendProgress({
       instance: id,
       phase: 'configs',
@@ -236,6 +236,16 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.instLaunch, (_e, id: InstanceId) => launchInstance(id))
   ipcMain.handle(IPC.instVerify, (_e, id: InstanceId) => installInstance(id))
   ipcMain.handle(IPC.instDelete, (_e, id: InstanceId) => deleteInstance(id))
+  ipcMain.handle(IPC.instSyncMaps, (_e, id: InstanceId) =>
+    syncMaps(join(gmll.gameDir(id), 'saves'), store.getConfig().maps[id], (done, total, label) =>
+      sendProgress({
+        instance: id,
+        phase: 'configs',
+        fraction: total > 0 ? done / total : null,
+        message: `Maps: ${label} (${done}/${total})`
+      })
+    )
+  )
   ipcMain.handle(IPC.instMods, (_e, id: InstanceId) => listMods(join(gmll.gameDir(id), 'mods')))
   ipcMain.handle(IPC.instToggleMod, (_e, id: InstanceId, file: string, enabled: boolean) => {
     const dir = join(gmll.gameDir(id), 'mods')

@@ -1,5 +1,7 @@
 // Shared DTOs used across the main process, preload bridge, and renderer.
 
+import { ALL_MAP_IDS } from './maps'
+
 export type InstanceId = 'ranked' | 'rsg' | 'zsg'
 
 /** Minecraft account profile returned after Microsoft login. */
@@ -51,6 +53,8 @@ export interface AppConfig {
   ram: Record<InstanceId, number>
   /** Per-instance Java executable path override; null = use the bundled JRE. */
   java: Record<InstanceId, string | null>
+  /** Per-instance selected practice-map ids (from the shared MAP_CATALOG). */
+  maps: Record<InstanceId, string[]>
   /** Absolute path to a user-provided SeedQueue jar to override the pack's, or null. */
   seedQueueOverride: string | null
   /** Last seen MCSR username for the live-pace name match (defaults to profile name). */
@@ -60,6 +64,7 @@ export interface AppConfig {
 export const DEFAULT_CONFIG: AppConfig = {
   ram: { ranked: 3072, rsg: 3072, zsg: 3072 },
   java: { ranked: null, rsg: null, zsg: null },
+  maps: { ranked: [...ALL_MAP_IDS], rsg: [...ALL_MAP_IDS], zsg: [...ALL_MAP_IDS] },
   seedQueueOverride: null,
   pacemanName: null
 }
