@@ -84,7 +84,7 @@ Open **Edit instance** to fine-tune anything:
 
 <div align="center">
 
-<img src=".github/assets/home.svg" alt="MCSR Client home screen" width="90%" />
+<img src=".github/assets/home.png" alt="MCSR Client home screen" width="92%" />
 
 <br />
 <sub>The home screen — instances, live pace, and your Ranked stats at a glance.</sub>
