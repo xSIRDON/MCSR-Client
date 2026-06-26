@@ -36,6 +36,7 @@ export const paths = {
   instanceDir: (id: InstanceId) => join(rootDir(), 'instances', id),
   gameDir: (id: InstanceId) => join(rootDir(), 'instances', id, '.minecraft'),
   tracker: () => join(rootDir(), 'tracker'),
+  tools: () => join(rootDir(), 'tools'),
   configFile: () => join(rootDir(), 'config.json'),
   secretsFile: () => join(rootDir(), 'secrets.json'),
   resource: (name: string): string =>
