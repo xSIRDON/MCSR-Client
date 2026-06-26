@@ -109,12 +109,28 @@ async function getIndex(): Promise<ModrinthIndex> {
   return cachedIndex
 }
 
+function ensureWalls(gameDir: string): void {
+  try {
+    const wallsDir = paths.resource('walls')
+    if (!existsSync(wallsDir)) return
+    const dest = join(gameDir, 'resourcepacks')
+    mkdirSync(dest, { recursive: true })
+    for (const file of readdirSync(wallsDir)) {
+      if (!file.toLowerCase().endsWith('.zip')) continue
+      const target = join(dest, file)
+      if (!existsSync(target)) copyFileSync(join(wallsDir, file), target)
+    }
+  } catch {
+  }
+}
+
 async function ensureInstanceExtras(id: InstanceId, gameDir: string): Promise<void> {
   try {
     const hotbar = join(gameDir, 'hotbar.nbt')
     if (!existsSync(hotbar)) copyFileSync(paths.resource('hotbar.nbt'), hotbar)
   } catch {
   }
+  if (id === 'rsg' || id === 'zsg') ensureWalls(gameDir)
   await runSyncMaps(id, 'Practice maps')
 }
 
