@@ -1,22 +1,32 @@
 import { app } from 'electron'
 import { existsSync, renameSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import type { InstanceId } from '../shared/types'
 
-const DIR_NAME = 'MCSR-Client'
-const LEGACY_DIR_NAME = 'Obsidian'
+const DATA_DIR = 'data'
+
+function installBase(): string {
+  return app.isPackaged ? dirname(app.getPath('exe')) : app.getAppPath()
+}
 
 function rootDir(): string {
-  return join(app.getPath('appData'), DIR_NAME)
+  return join(installBase(), DATA_DIR)
 }
 
 export function migrateDataDir(): void {
-  const legacy = join(app.getPath('appData'), LEGACY_DIR_NAME)
   const current = rootDir()
-  if (existsSync(legacy) && !existsSync(current)) {
-    try {
-      renameSync(legacy, current)
-    } catch {
+  if (existsSync(current)) return
+  const legacy = [
+    join(app.getPath('appData'), 'MCSR-Client'),
+    join(app.getPath('appData'), 'Obsidian')
+  ]
+  for (const old of legacy) {
+    if (existsSync(old)) {
+      try {
+        renameSync(old, current)
+        return
+      } catch {
+      }
     }
   }
 }
