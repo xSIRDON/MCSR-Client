@@ -51,14 +51,14 @@ export function InstallMapPicker() {
           Choose which practice maps to download now. You can change these any time in Edit Instance.
         </p>
 
-        {sources.length > 0 && (
-          <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--bg-2)]/50 p-3">
-            <label className="block text-sm text-text">Import settings from another instance</label>
-            <p className="mt-1 text-xs text-faint">
-              Copy your <code>options.txt</code>, <code>hotbar.nbt</code>, and entire{' '}
-              <code>config/</code> folder (keybinds, sensitivity, and your StandardSettings / world
-              options) from an instance you’ve already set up. World saves aren’t touched.
-            </p>
+        <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--bg-2)]/50 p-3">
+          <label className="block text-sm text-text">Import settings from another instance</label>
+          <p className="mt-1 text-xs text-faint">
+            Copy your <code>options.txt</code>, <code>hotbar.nbt</code>, and entire{' '}
+            <code>config/</code> folder (keybinds, sensitivity, and your StandardSettings / world
+            options) from an instance you’ve already set up. World saves aren’t touched.
+          </p>
+          {sources.length > 0 ? (
             <select
               value={importFrom}
               onChange={(e) => setImportFrom(e.target.value as InstanceId | '')}
@@ -71,8 +71,13 @@ export function InstallMapPicker() {
                 </option>
               ))}
             </select>
-          </div>
-        )}
+          ) : (
+            <p className="mt-2 rounded-lg border border-dashed border-[var(--line)] px-3 py-2 text-xs text-faint">
+              This is your first instance — once you’ve set up another, you’ll be able to copy its
+              settings here.
+            </p>
+          )}
+        </div>
 
         <div className="mb-1 mt-3 text-xs uppercase tracking-wider text-faint">Practice maps</div>
         <div className="mb-2 flex gap-2">
