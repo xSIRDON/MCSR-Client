@@ -4,7 +4,7 @@ import type { InstanceId } from '@shared/types'
 import { useUi } from '../store/uiStore'
 import { useInstances, isBusy } from '../hooks/useInstances'
 import { ProgressBar } from './ProgressBar'
-import { ObsidianBlock, PortalBlock } from './BlockArt'
+import { NetheriteBlock, PortalBlock } from './BlockArt'
 
 interface Meta {
   title: string
@@ -20,7 +20,7 @@ const META: Record<InstanceId, Meta> = {
     tagline: '1v1 ladder — the full MCSR Ranked modpack.',
     accent: 'var(--gold)',
     mods: '22 mods · MCSR Ranked',
-    icon: () => <ObsidianBlock size={20} />
+    icon: () => <NetheriteBlock size={20} />
   },
   rsg: {
     title: 'RSG',
@@ -124,7 +124,7 @@ export function InstanceCard({ id }: { id: InstanceId }) {
 
       {id === 'rsg' && (
         <button
-          onClick={() => window.obsidian.config.pickJar()}
+          onClick={() => window.mcsr.config.pickJar()}
           className="relative mt-2.5 text-left text-xs text-faint underline-offset-2 hover:text-muted hover:underline"
         >
           Use my own SeedQueue jar (Discord beta)…

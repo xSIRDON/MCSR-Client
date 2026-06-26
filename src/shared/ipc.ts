@@ -47,7 +47,7 @@ export const IPC = {
   cfgPickJava: 'cfg:pickJava'
 } as const
 
-export interface ObsidianApi {
+export interface McsrApi {
   window: {
     minimize(): void
     close(): void
@@ -98,6 +98,6 @@ export interface ObsidianApi {
 
 declare global {
   interface Window {
-    obsidian: ObsidianApi
+    mcsr: McsrApi
   }
 }

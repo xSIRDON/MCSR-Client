@@ -50,12 +50,14 @@ function sendProgress(e: ProgressEvent): void {
 }
 
 function versionFile(id: InstanceId): string {
-  return join(paths.instanceDir(id), '.obsidian-version')
+  return join(paths.instanceDir(id), '.mcsr-version')
 }
 
 function installedVersion(id: InstanceId): string | undefined {
   try {
-    return existsSync(versionFile(id)) ? readFileSync(versionFile(id), 'utf8').trim() : undefined
+    if (existsSync(versionFile(id))) return readFileSync(versionFile(id), 'utf8').trim()
+    const legacy = join(paths.instanceDir(id), '.obsidian-version')
+    return existsSync(legacy) ? readFileSync(legacy, 'utf8').trim() : undefined
   } catch {
     return undefined
   }

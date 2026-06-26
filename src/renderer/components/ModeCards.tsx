@@ -7,7 +7,7 @@ import { msToTime, winRate } from '@core/format'
 import { useInstances, isBusy } from '../hooks/useInstances'
 import type { ProgressEvent } from '@shared/types'
 import { RankBadge } from './RankBadge'
-import { ObsidianBlock, PortalBlock } from './BlockArt'
+import { NetheriteBlock, PortalBlock } from './BlockArt'
 
 export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }) {
   const { data: user } = useQuery({ queryKey: ['user', uuid], queryFn: () => mcsr.getUser(uuid) })
@@ -24,7 +24,7 @@ export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }
     <ModeShell accent={rank.color} glow={rank.glow} delay={delay}>
       <header className="relative flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <ObsidianBlock size={22} />
+          <NetheriteBlock size={22} />
           <div>
             <div className="font-display text-lg leading-none tracking-wide text-[var(--gold)]">RANKED</div>
             <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-faint">1v1 Ladder</div>
@@ -61,7 +61,6 @@ export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }
       )}
 
       <PlayButton
-        accent="var(--gold)"
         busy={busy}
         progress={prog}
         label={launchLabel(status.state, 'PLAY RANKED')}
@@ -152,7 +151,6 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
       </div>
 
       <PlayButton
-        accent="var(--portal)"
         busy={busy}
         progress={prog}
         label={launchLabel(status.state, 'PLAY RSG')}
@@ -216,13 +214,11 @@ function Mini({ label, value }: { label: string; value: ReactNode }) {
 }
 
 function PlayButton({
-  accent,
   busy,
   progress,
   label,
   onClick
 }: {
-  accent: string
   busy: boolean
   progress: ProgressEvent | null
   label: string
@@ -234,11 +230,14 @@ function PlayButton({
       disabled={busy}
       className="font-display relative mt-4 w-full overflow-hidden rounded-xl px-5 py-3 text-base tracking-wide transition-all hover:brightness-110 disabled:cursor-not-allowed"
       style={{
-        color: '#0a0a10',
+        color: '#07140a',
         background: busy
-          ? `linear-gradient(180deg, ${accent}88, ${accent}55)`
-          : `linear-gradient(180deg, ${accent}, ${accent}cc)`,
-        boxShadow: busy ? 'none' : `0 8px 24px ${accent}44, inset 0 1px 0 rgba(255,255,255,.3)`
+          ? 'linear-gradient(180deg,#3a4a36,#2c3a2a)'
+          : 'linear-gradient(180deg,#6fcf57,#4ea73e)',
+        boxShadow: busy
+          ? 'none'
+          : '0 8px 24px rgba(94,167,62,.4), inset 0 1px 0 rgba(255,255,255,.25)',
+        opacity: busy ? 0.85 : 1
       }}
     >
       {busy && progress?.fraction != null && (

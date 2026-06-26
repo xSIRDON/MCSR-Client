@@ -14,16 +14,16 @@ export function Settings() {
   const [accounts, setAccounts] = useState<Account[]>([])
 
   useEffect(() => {
-    void window.obsidian.config.get().then(setConfig)
-    void window.obsidian.paceman.status().then(setTracker)
-    void window.obsidian.system.java().then(setJava)
-    void window.obsidian.auth.accounts().then(setAccounts)
-    const off = window.obsidian.paceman.onStatusChanged(setTracker)
+    void window.mcsr.config.get().then(setConfig)
+    void window.mcsr.paceman.status().then(setTracker)
+    void window.mcsr.system.java().then(setJava)
+    void window.mcsr.auth.accounts().then(setAccounts)
+    const off = window.mcsr.paceman.onStatusChanged(setTracker)
     return off
   }, [])
 
   function patch(p: Partial<AppConfig>) {
-    void window.obsidian.config.set(p).then(setConfig)
+    void window.mcsr.config.set(p).then(setConfig)
   }
   function flash(msg: string) {
     setSaved(msg)
@@ -32,25 +32,25 @@ export function Settings() {
 
   async function saveKey() {
     if (!keyInput.trim()) return
-    await window.obsidian.paceman.setKey(keyInput.trim())
+    await window.mcsr.paceman.setKey(keyInput.trim())
     setKeyInput('')
     flash('Paceman key saved')
   }
 
   async function pickJar() {
-    const f = await window.obsidian.config.pickJar()
+    const f = await window.mcsr.config.pickJar()
     if (f) {
       flash('SeedQueue override set')
-      void window.obsidian.config.get().then(setConfig)
+      void window.mcsr.config.get().then(setConfig)
     }
   }
 
   async function refreshAccounts() {
-    setAccounts(await window.obsidian.auth.accounts())
+    setAccounts(await window.mcsr.auth.accounts())
   }
   async function addAccount() {
     try {
-      const p = await window.obsidian.auth.login()
+      const p = await window.mcsr.auth.login()
       setProfile(p)
       setPacemanName(p.name)
       await refreshAccounts()
@@ -60,7 +60,7 @@ export function Settings() {
     }
   }
   async function switchTo(uuid: string) {
-    const p = await window.obsidian.auth.switch(uuid)
+    const p = await window.mcsr.auth.switch(uuid)
     if (p) {
       setProfile(p)
       setPacemanName(p.name)
@@ -68,13 +68,13 @@ export function Settings() {
     await refreshAccounts()
   }
   async function removeAccount(uuid: string) {
-    const list = await window.obsidian.auth.remove(uuid)
+    const list = await window.mcsr.auth.remove(uuid)
     setAccounts(list)
     const active = list.find((a) => a.active)
     if (!active) {
       setProfile(null)
     } else {
-      const p = await window.obsidian.auth.switch(active.uuid)
+      const p = await window.mcsr.auth.switch(active.uuid)
       if (p) {
         setProfile(p)
         setPacemanName(p.name)
