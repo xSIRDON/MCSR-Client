@@ -2,7 +2,7 @@
 
 Launcher and stats client for Minecraft 1.16.1 speedrunning (Ranked, RSG, ZSG).
 
-Download: https://github.com/xSIRDON/MCSR-Client/releases/latest (v0.3.0)
+Download: https://github.com/xSIRDON/MCSR-Client/releases/latest (v0.4.0)
 
 ## Building
 
