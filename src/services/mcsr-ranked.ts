@@ -79,6 +79,11 @@ export interface MatchChange {
   change: number | null
   eloRate: number | null
 }
+export interface TimelineEvent {
+  uuid: string
+  time: number
+  type: string
+}
 export interface MatchInfo {
   id: number
   type: number
@@ -88,8 +93,12 @@ export interface MatchInfo {
   result?: { uuid: string | null; time: number | null }
   forfeited?: boolean
   decayed?: boolean
-  seed?: { id?: string | null; overworld?: string | null }
+  seed?: { id?: string | null; overworld?: string | null; nether?: string | null }
+  seedType?: string | null
+  bastionType?: string | null
   changes?: MatchChange[]
+  timelines?: TimelineEvent[]
+  completions?: { uuid: string; time: number }[]
   date?: number
 }
 
@@ -104,6 +113,7 @@ export interface LeaderboardEntry {
   nickname: string
   eloRate: number | null
   eloRank: number | null
+  country?: string | null
   seasonResult?: { eloRate: number | null; eloRank: number | null }
 }
 
