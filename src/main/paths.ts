@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { existsSync, renameSync } from 'node:fs'
+import { existsSync, renameSync, mkdirSync, copyFileSync, unlinkSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { InstanceId } from '../shared/types'
 
@@ -10,10 +10,17 @@ function installBase(): string {
   return app.isPackaged ? dirname(app.getPath('exe')) : app.getAppPath()
 }
 
-// All data lives in a `data/` folder next to the client install — easy to find,
-// and portable for the eventual installer.
+// Bulk game data (instances/runtime/shared/tools) lives in a `data/` folder next to the
+// client install — easy to find, and re-provisioned on demand.
 function rootDir(): string {
   return join(installBase(), DATA_DIR)
+}
+
+// Session state (auth token + config) lives in userData instead. The NSIS updater wipes the
+// whole install dir on every update (RMDir /r $INSTDIR), so anything under the install-dir
+// `data/` is lost on update; userData is the one location the updater never touches.
+function sessionDir(): string {
+  return app.getPath('userData')
 }
 
 /**
@@ -38,6 +45,33 @@ export function migrateDataDir(): void {
   }
 }
 
+/**
+ * One-time move of session state (auth token + config) out of the install-dir `data/` folder
+ * and into userData. The NSIS auto-updater deletes the whole install dir on update, so a token
+ * stored there was lost on every update — signing the user out. userData survives updates.
+ * Safe to call on every launch; only acts when an old file exists and the new one doesn't.
+ */
+export function migrateSessionState(): void {
+  const dest = sessionDir()
+  for (const name of ['secrets.json', 'config.json']) {
+    const from = join(installBase(), DATA_DIR, name)
+    const to = join(dest, name)
+    if (!existsSync(from) || existsSync(to)) continue
+    try {
+      mkdirSync(dest, { recursive: true })
+      renameSync(from, to)
+    } catch {
+      // Cross-volume (userData on C:, install elsewhere) — copy then remove the original.
+      try {
+        copyFileSync(from, to)
+        unlinkSync(from)
+      } catch {
+        // Leave the original in place; the user re-signs-in / reconfigures once.
+      }
+    }
+  }
+}
+
 export const paths = {
   root: rootDir,
   runtime: () => join(rootDir(), 'runtime'),
@@ -49,8 +83,9 @@ export const paths = {
   tracker: () => join(rootDir(), 'tracker'),
   /** Bundled standalone tools (Ninjabrain Bot, etc.). */
   tools: () => join(rootDir(), 'tools'),
-  configFile: () => join(rootDir(), 'config.json'),
-  secretsFile: () => join(rootDir(), 'secrets.json'),
+  // Session state in userData so it survives auto-updates (the install dir is wiped on update).
+  configFile: () => join(sessionDir(), 'config.json'),
+  secretsFile: () => join(sessionDir(), 'secrets.json'),
   /** A bundled resource (resources/ in dev, process.resourcesPath when packaged). */
   resource: (name: string): string =>
     app.isPackaged ? join(process.resourcesPath, name) : join(app.getAppPath(), 'resources', name)

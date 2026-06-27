@@ -2,7 +2,7 @@ import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc-handlers'
 import { setupUpdater } from './updater'
-import { migrateDataDir, paths } from './paths'
+import { migrateDataDir, migrateSessionState, paths } from './paths'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
 
@@ -61,20 +61,37 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
-  // Bind the Windows taskbar/notification identity to the app (and its icon).
-  if (process.platform === 'win32') app.setAppUserModelId('gg.mcsrclient.app')
-  migrateDataDir()
-  enablePacemanCors()
-  registerIpc()
-  createWindow()
-  setupUpdater()
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+// Only one instance may run. Two processes would each call auth.restore() and refresh the
+// SAME single-use msmc token from the shared secrets file, tripping reuse-detection and
+// signing the user out — realistic during an update relaunch or an accidental double-launch.
+// The first instance wins; a second hands off (focusing the existing window) and quits.
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    const w = BrowserWindow.getAllWindows()[0]
+    if (w) {
+      if (w.isMinimized()) w.restore()
+      w.focus()
+    }
   })
-})
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+  app.whenReady().then(() => {
+    // Bind the Windows taskbar/notification identity to the app (and its icon).
+    if (process.platform === 'win32') app.setAppUserModelId('gg.mcsrclient.app')
+    migrateDataDir()
+    migrateSessionState()
+    enablePacemanCors()
+    registerIpc()
+    createWindow()
+    setupUpdater()
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+  })
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit()
+  })
+}
