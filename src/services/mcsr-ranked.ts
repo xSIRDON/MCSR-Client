@@ -88,6 +88,12 @@ export interface MatchChange {
   change: number | null
   eloRate: number | null
 }
+/** A split/milestone event from a match's timeline (present on the match-detail endpoint). */
+export interface TimelineEvent {
+  uuid: string
+  time: number // ms from match start
+  type: string // e.g. 'story.enter_the_nether', 'nether.find_bastion', 'projectelo.timeline.blind_travel'
+}
 export interface MatchInfo {
   id: number
   type: number // 1 Casual, 2 Ranked, 3 Private, 4 Event
@@ -98,8 +104,16 @@ export interface MatchInfo {
   result?: { uuid: string | null; time: number | null }
   forfeited?: boolean
   decayed?: boolean
-  seed?: { id?: string | null; overworld?: string | null }
+  seed?: { id?: string | null; overworld?: string | null; nether?: string | null }
+  /** Overworld structure type: VILLAGE | SHIPWRECK | RUINED_PORTAL | DESERT_TEMPLE | BURIED_TREASURE (mirrors seed.overworld). */
+  seedType?: string | null
+  /** Bastion remnant type: HOUSING | TREASURE | STABLES | BRIDGE (mirrors seed.nether). */
+  bastionType?: string | null
   changes?: MatchChange[]
+  /** Per-player split events. Only populated by the match-detail endpoint (getMatch). */
+  timelines?: TimelineEvent[]
+  /** Per-player finish times (ms). Present on the match-detail endpoint. */
+  completions?: { uuid: string; time: number }[]
   date?: number // epoch seconds
 }
 
@@ -114,6 +128,7 @@ export interface LeaderboardEntry {
   nickname: string
   eloRate: number | null
   eloRank: number | null
+  country?: string | null
   seasonResult?: { eloRate: number | null; eloRank: number | null }
 }
 

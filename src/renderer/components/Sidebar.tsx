@@ -8,6 +8,8 @@ import { AccountMenu } from './AccountMenu'
 const NAV = [
   { to: '/', label: 'Home', icon: HomeIcon, end: true },
   { to: '/play', label: 'Play', icon: PlayIcon, end: false },
+  { to: '/leaderboard', label: 'Leaders', icon: LeaderboardIcon, end: false },
+  { to: '/review', label: 'Review', icon: ReviewIcon, end: false },
   { to: '/console', label: 'Console', icon: ConsoleIcon, end: false },
   { to: '/profile', label: 'Profile', icon: UserIcon, end: false },
   { to: '/settings', label: 'Settings', icon: GearIcon, end: false }
@@ -116,6 +118,23 @@ function GearIcon() {
         stroke="currentColor"
         strokeWidth="1.3"
       />
+    </svg>
+  )
+}
+function LeaderboardIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
+      <rect x="2.5" y="9" width="3.4" height="6" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <rect x="7.3" y="4" width="3.4" height="11" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <rect x="12.1" y="11" width="3.4" height="4" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function ReviewIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
+      <path d="M3 3v12h12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5.5 11l3-3 2.4 2L15 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
