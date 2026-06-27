@@ -28,8 +28,10 @@ interface AccountsState {
 let activeToken: GmllUser | null = null
 
 function toProfile(name: string, id: string): Profile {
-  // msmc returns a dashed or dashless uuid depending on source; normalise to dashless.
-  return { name, uuid: id.replace(/-/g, '') }
+  // msmc returns a dashed/dashless, mixed-case uuid depending on source. The MCSR Ranked
+  // API uses lowercase dashless uuids, so normalise to that or every `result.uuid === uuid`
+  // comparison (win counts, elo changes, splits) silently fails on case.
+  return { name, uuid: id.replace(/-/g, '').toLowerCase() }
 }
 
 function readState(): AccountsState {

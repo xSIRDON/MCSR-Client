@@ -211,6 +211,16 @@ describe('analyzeRanked', () => {
     expect(a.decided).toBe(0)
     expect(a.netElo).toBe(0)
   })
+
+  it('matches uuids case-insensitively (a profile uuid may be upper-case)', () => {
+    const a = analyzeRanked(ME.toUpperCase(), [
+      match({ winner: ME, time: 400_000 }),
+      match({ winner: OPP })
+    ])
+    expect(a.wins).toBe(1)
+    expect(a.losses).toBe(1)
+    expect(a.best).toBe(400_000)
+  })
 })
 
 describe('analyzeSplits', () => {
