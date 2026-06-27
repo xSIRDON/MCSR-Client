@@ -13,6 +13,8 @@ import { Profile } from './pages/Profile'
 import { Settings } from './pages/Settings'
 import { Instance } from './pages/Instance'
 import { Console } from './pages/Console'
+import { Leaderboard } from './pages/Leaderboard'
+import { SelfReview } from './pages/SelfReview'
 import { McsrLogo } from './components/Logo'
 
 export function App() {
@@ -54,6 +56,8 @@ export function App() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/play" element={<Play />} />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/review" element={<SelfReview />} />
                 <Route path="/console" element={<Console />} />
                 <Route path="/instance/:id" element={<Instance />} />
                 <Route path="/profile" element={<Profile />} />
