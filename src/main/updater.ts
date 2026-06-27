@@ -64,5 +64,8 @@ export async function checkForUpdates(): Promise<UpdateStatus> {
 }
 
 export function quitAndInstall(): void {
-  if (status.state === 'ready') autoUpdater.quitAndInstall()
+  // isSilent=true → pass NSIS `/S` so the update installs in the background with no installer
+  // window. isForceRunAfter=true → relaunch the app afterwards (the silent path skips the
+  // Finish-page "run app" action that would otherwise restart it).
+  if (status.state === 'ready') autoUpdater.quitAndInstall(true, true)
 }
