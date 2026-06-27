@@ -2,7 +2,7 @@ import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc-handlers'
 import { setupUpdater } from './updater'
-import { migrateDataDir, paths } from './paths'
+import { migrateDataDir, migrateSessionState, paths } from './paths'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
 
@@ -53,19 +53,32 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
-  if (process.platform === 'win32') app.setAppUserModelId('gg.mcsrclient.app')
-  migrateDataDir()
-  enablePacemanCors()
-  registerIpc()
-  createWindow()
-  setupUpdater()
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    const w = BrowserWindow.getAllWindows()[0]
+    if (w) {
+      if (w.isMinimized()) w.restore()
+      w.focus()
+    }
   })
-})
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+  app.whenReady().then(() => {
+    if (process.platform === 'win32') app.setAppUserModelId('gg.mcsrclient.app')
+    migrateDataDir()
+    migrateSessionState()
+    enablePacemanCors()
+    registerIpc()
+    createWindow()
+    setupUpdater()
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+  })
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit()
+  })
+}

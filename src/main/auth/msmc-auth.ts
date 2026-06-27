@@ -22,7 +22,7 @@ interface AccountsState {
 let activeToken: GmllUser | null = null
 
 function toProfile(name: string, id: string): Profile {
-  return { name, uuid: id.replace(/-/g, '') }
+  return { name, uuid: id.replace(/-/g, '').toLowerCase() }
 }
 
 function readState(): AccountsState {

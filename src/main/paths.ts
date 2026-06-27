@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { existsSync, renameSync } from 'node:fs'
+import { existsSync, renameSync, mkdirSync, copyFileSync, unlinkSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { InstanceId } from '../shared/types'
 
@@ -11,6 +11,10 @@ function installBase(): string {
 
 function rootDir(): string {
   return join(installBase(), DATA_DIR)
+}
+
+function sessionDir(): string {
+  return app.getPath('userData')
 }
 
 export function migrateDataDir(): void {
@@ -28,6 +32,25 @@ export function migrateDataDir(): void {
   }
 }
 
+export function migrateSessionState(): void {
+  const dest = sessionDir()
+  for (const name of ['secrets.json', 'config.json']) {
+    const from = join(installBase(), DATA_DIR, name)
+    const to = join(dest, name)
+    if (!existsSync(from) || existsSync(to)) continue
+    try {
+      mkdirSync(dest, { recursive: true })
+      renameSync(from, to)
+    } catch {
+      try {
+        copyFileSync(from, to)
+        unlinkSync(from)
+      } catch {
+      }
+    }
+  }
+}
+
 export const paths = {
   root: rootDir,
   runtime: () => join(rootDir(), 'runtime'),
@@ -37,8 +60,8 @@ export const paths = {
   gameDir: (id: InstanceId) => join(rootDir(), 'instances', id, '.minecraft'),
   tracker: () => join(rootDir(), 'tracker'),
   tools: () => join(rootDir(), 'tools'),
-  configFile: () => join(rootDir(), 'config.json'),
-  secretsFile: () => join(rootDir(), 'secrets.json'),
+  configFile: () => join(sessionDir(), 'config.json'),
+  secretsFile: () => join(sessionDir(), 'secrets.json'),
   resource: (name: string): string =>
     app.isPackaged ? join(process.resourcesPath, name) : join(app.getAppPath(), 'resources', name)
 }

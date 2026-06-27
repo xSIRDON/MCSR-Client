@@ -55,5 +55,5 @@ export async function checkForUpdates(): Promise<UpdateStatus> {
 }
 
 export function quitAndInstall(): void {
-  if (status.state === 'ready') autoUpdater.quitAndInstall()
+  if (status.state === 'ready') autoUpdater.quitAndInstall(true, true)
 }

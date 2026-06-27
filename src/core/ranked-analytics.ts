@@ -56,6 +56,7 @@ function outcomeFor(uuid: string, m: MatchInfo): Outcome {
 }
 
 export function analyzeRanked(uuid: string, matches: MatchInfo[]): RankedAnalytics {
+  uuid = uuid.toLowerCase()
   const list = Array.isArray(matches) ? matches.filter((m) => m && m.type === 2) : []
 
   let wins = 0
@@ -362,6 +363,7 @@ function splitStat(key: string, label: string, times: number[]): SplitStat {
 }
 
 export function analyzeSplits(uuid: string, details: MatchInfo[]): SplitStat[] {
+  uuid = uuid.toLowerCase()
   const list = Array.isArray(details) ? details.filter((m) => m && m.type === 2) : []
 
   const buckets: Record<string, number[]> = {}
@@ -537,6 +539,7 @@ export function analyzeTypeBreakdowns(
   matches: MatchInfo[],
   details: MatchInfo[]
 ): { overworld: TypeBreakdown; bastion: TypeBreakdown } {
+  uuid = uuid.toLowerCase()
   return {
     overworld: buildBreakdown(
       uuid,
