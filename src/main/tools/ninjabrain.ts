@@ -1,10 +1,9 @@
-// Bundled Ninjabrain Bot (stronghold calculator). On instance install we download the
-// jar into data/tools and drop a "Ninjabrain Bot" shortcut on the desktop so the player
-// can launch it.
+// Bundled Ninjabrain Bot (stronghold calculator). On instance install we download the jar into
+// the data dir; the bot opens automatically alongside the game, so there's no desktop shortcut.
 
-import { app, shell } from 'electron'
+import { app } from 'electron'
 import { spawn, execFile, type ChildProcess } from 'node:child_process'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { paths } from '../paths'
 
@@ -23,36 +22,21 @@ async function downloadJar(): Promise<void> {
   writeFileSync(jarPath(), Buffer.from(await res.arrayBuffer()))
 }
 
-/** Create/refresh a "Ninjabrain Bot" desktop shortcut. Windows-only, best effort. */
-export function createDesktopShortcut(): void {
+/** Download Ninjabrain Bot (once). It opens automatically with the game — no shortcut needed. */
+export async function setupNinjabrain(): Promise<void> {
+  if (!existsSync(jarPath())) await downloadJar()
+}
+
+/** Remove the old "Ninjabrain Bot" desktop shortcut if present — earlier versions created one,
+ *  and it went stale (showing Windows' "this shortcut has moved" prompt) when the jar relocated. */
+export function removeDesktopShortcut(): void {
   if (process.platform !== 'win32') return
   try {
     const lnk = join(app.getPath('desktop'), 'Ninjabrain Bot.lnk')
-    // Targeting the jar opens it with the Java (.jar) association the player already
-    // has — Ninjabrain needs Java to run, so it's present.
-    shell.writeShortcutLink(lnk, {
-      target: jarPath(),
-      cwd: paths.tools(),
-      description: 'Ninjabrain Bot — stronghold calculator'
-    })
+    if (existsSync(lnk)) rmSync(lnk)
   } catch {
-    // a missing .jar association or a locked desktop must never break an install
+    // a locked/read-only desktop must never break startup
   }
-}
-
-/**
- * Download Ninjabrain Bot (once) and add a desktop shortcut. Idempotent: a present jar
- * just refreshes the shortcut.
- */
-export async function setupNinjabrain(): Promise<void> {
-  if (!existsSync(jarPath())) await downloadJar()
-  createDesktopShortcut()
-}
-
-/** Re-point the desktop shortcut if the jar is present — e.g. after the data dir relocates,
- *  so the old shortcut doesn't end up showing Windows' "this shortcut has moved" prompt. */
-export function refreshNinjabrainShortcut(): void {
-  if (existsSync(jarPath())) createDesktopShortcut()
 }
 
 /**

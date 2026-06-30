@@ -70,7 +70,7 @@ A dedicated review tab that turns your ranked history into insight:
 - A **paceman tracker** runs alongside RSG automatically and surfaces your live pace on the home screen.
 
 ### Bundled tools, set up on install
-- **Ninjabrain Bot** — the stronghold calculator, with a desktop shortcut created for you.
+- **Ninjabrain Bot** — the stronghold calculator, opened automatically alongside the game.
 - **Toolscreen** — ready to go out of the box.
 
 ### Per-instance control

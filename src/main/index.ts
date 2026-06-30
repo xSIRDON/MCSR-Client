@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { registerIpc, isGameRunning } from './ipc-handlers'
 import { setupUpdater } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
-import { refreshNinjabrainShortcut } from './tools/ninjabrain'
+import { removeDesktopShortcut } from './tools/ninjabrain'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
 
@@ -109,8 +109,8 @@ if (!app.requestSingleInstanceLock()) {
     // Extract auth/config from the old install-dir data first, then move the bulk data dir.
     migrateSessionState()
     migrateDataDir()
-    // The bundled-tool jar may have just relocated — keep its desktop shortcut valid.
-    refreshNinjabrainShortcut()
+    // Earlier versions dropped a Ninjabrain desktop shortcut; it opens with the game now, so clear it.
+    removeDesktopShortcut()
     enablePacemanCors()
     registerIpc()
     createWindow()
