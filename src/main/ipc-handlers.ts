@@ -318,6 +318,8 @@ async function launchInstance(
   pushLog('system', `Launching ${id}…`)
   const child = await gmll.launch(id, token, fabric, sendProgress)
   setState(id, { state: 'running' })
+  // The game opens its own window — step the launcher aside so the game is the focus.
+  BrowserWindow.getAllWindows()[0]?.minimize()
   child.stdout.on('data', (d: Buffer) => pushLog('game', d.toString()))
   child.stderr.on('data', (d: Buffer) => pushLog('game', d.toString()))
 
@@ -329,7 +331,23 @@ async function launchInstance(
     if (store.getConfig().ninjabrain) killNinjabrain()
     pushLog('system', `${id} closed.`)
     setState(id, { state: 'ready' })
+    // Game's done — bring the launcher back to the front.
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win?.isMinimized()) {
+      win.restore()
+      win.focus()
+    }
   })
+
+  // Don't keep the launcher's event loop waiting on the game; it runs in its own window.
+  child.unref()
+}
+
+/** True while any instance is launching or running — used to guard the launcher window close. */
+export function isGameRunning(): boolean {
+  return (['ranked', 'rsg', 'zsg'] as InstanceId[]).some(
+    (id) => states[id]?.state === 'running' || states[id]?.state === 'launching'
+  )
 }
 
 const BUSY_STATES = ['installing', 'launching', 'running']

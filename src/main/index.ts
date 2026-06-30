@@ -1,6 +1,6 @@
-import { app, BrowserWindow, session, shell } from 'electron'
+import { app, BrowserWindow, dialog, session, shell } from 'electron'
 import { join } from 'node:path'
-import { registerIpc } from './ipc-handlers'
+import { registerIpc, isGameRunning } from './ipc-handlers'
 import { setupUpdater } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
 
@@ -52,6 +52,32 @@ function createWindow(): void {
   win.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url)
     return { action: 'deny' }
+  })
+
+  // Minecraft runs in its own window; don't yank it away if the user hits X on the launcher.
+  // Offer to minimize and keep playing instead.
+  let confirmedQuit = false
+  win.on('close', (e) => {
+    if (confirmedQuit || !isGameRunning()) return
+    e.preventDefault()
+    void dialog
+      .showMessageBox(win, {
+        type: 'question',
+        title: 'Minecraft is running',
+        message: 'Minecraft is still running.',
+        detail: 'Minimize MCSR Client and keep playing, or quit the launcher?',
+        buttons: ['Minimize', 'Quit', 'Cancel'],
+        defaultId: 0,
+        cancelId: 2,
+        noLink: true
+      })
+      .then(({ response }) => {
+        if (response === 0) win.minimize()
+        else if (response === 1) {
+          confirmedQuit = true
+          win.close()
+        }
+      })
   })
 
   if (isDev) {
