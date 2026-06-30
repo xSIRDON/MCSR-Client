@@ -19,18 +19,24 @@ function rootDir(): string {
 
 export function migrateDataDir(): void {
   const current = rootDir()
-  if (existsSync(current)) return
-  const legacy = [
+  const sources = [
     join(installBase(), DATA_DIR),
     join(app.getPath('appData'), 'MCSR-Client')
   ]
-  for (const old of legacy) {
+  for (const old of sources) {
     if (old === current || !existsSync(old)) continue
-    try {
-      renameSync(old, current)
-      return
-    } catch {
+    mkdirSync(current, { recursive: true })
+    for (const sub of ['instances', 'shared', 'tools', 'tracker', 'runtime']) {
+      const from = join(old, sub)
+      const to = join(current, sub)
+      if (existsSync(from) && !existsSync(to)) {
+        try {
+          renameSync(from, to)
+        } catch {
+        }
+      }
     }
+    return
   }
 }
 
