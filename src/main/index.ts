@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { registerIpc, isGameRunning } from './ipc-handlers'
 import { setupUpdater } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
+import { refreshNinjabrainShortcut } from './tools/ninjabrain'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
 
@@ -105,8 +106,11 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     // Bind the Windows taskbar/notification identity to the app (and its icon).
     if (process.platform === 'win32') app.setAppUserModelId('gg.mcsrclient.app')
-    migrateDataDir()
+    // Extract auth/config from the old install-dir data first, then move the bulk data dir.
     migrateSessionState()
+    migrateDataDir()
+    // The bundled-tool jar may have just relocated — keep its desktop shortcut valid.
+    refreshNinjabrainShortcut()
     enablePacemanCors()
     registerIpc()
     createWindow()

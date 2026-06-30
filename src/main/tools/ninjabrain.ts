@@ -49,6 +49,12 @@ export async function setupNinjabrain(): Promise<void> {
   createDesktopShortcut()
 }
 
+/** Re-point the desktop shortcut if the jar is present — e.g. after the data dir relocates,
+ *  so the old shortcut doesn't end up showing Windows' "this shortcut has moved" prompt. */
+export function refreshNinjabrainShortcut(): void {
+  if (existsSync(jarPath())) createDesktopShortcut()
+}
+
 /**
  * True if a Ninjabrain Bot process is already running. Filtered to java/javaw so the query's own
  * powershell process can't match itself (the bug that made earlier "already running" checks

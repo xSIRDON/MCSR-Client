@@ -10,37 +10,38 @@ function installBase(): string {
   return app.isPackaged ? dirname(app.getPath('exe')) : app.getAppPath()
 }
 
-// Bulk game data (instances/runtime/shared/tools) lives in a `data/` folder next to the
-// client install — easy to find, and re-provisioned on demand.
-function rootDir(): string {
-  return join(installBase(), DATA_DIR)
-}
-
-// Session state (auth token + config) lives in userData instead. The NSIS updater wipes the
-// whole install dir on every update (RMDir /r $INSTDIR), so anything under the install-dir
-// `data/` is lost on update; userData is the one location the updater never touches.
+// All app data — instances, runtime, shared libs, bundled tools, skins — lives under userData.
+// The NSIS updater wipes the whole install dir on every update (RMDir /r $INSTDIR), so anything
+// kept next to the exe is deleted on update; userData is the one location it never touches.
 function sessionDir(): string {
   return app.getPath('userData')
 }
 
+function rootDir(): string {
+  return join(sessionDir(), DATA_DIR)
+}
+
 /**
- * One-time move of an older data location (the legacy %APPDATA% folders) into the
- * new next-to-install `data/` dir, so existing installs aren't re-downloaded. Run
- * before anything touches the data root. The shared libraries/assets junctions
- * inside instances are absolute and are rebuilt on next launch (clearSharedLinks).
+ * One-time move of an older data location into the userData `data/` dir, so existing installs
+ * aren't re-downloaded. Sources, newest first: the v0.x–1.0 next-to-install `data/` (which the
+ * updater wipes — only survives a manual move), then the legacy %APPDATA% folder. Run before
+ * anything touches the data root. The shared libraries/assets junctions inside instances are
+ * absolute and are rebuilt on next launch (clearSharedLinks).
  */
 export function migrateDataDir(): void {
   const current = rootDir()
   if (existsSync(current)) return
-  const legacy = [join(app.getPath('appData'), 'MCSR-Client')]
+  const legacy = [
+    join(installBase(), DATA_DIR), // v0.x–1.0: next to the exe
+    join(app.getPath('appData'), 'MCSR-Client') // pre-0.x
+  ]
   for (const old of legacy) {
-    if (existsSync(old)) {
-      try {
-        renameSync(old, current)
-        return
-      } catch {
-        // cross-volume / locked — fall through; the app re-provisions cleanly.
-      }
+    if (old === current || !existsSync(old)) continue
+    try {
+      renameSync(old, current)
+      return
+    } catch {
+      // cross-volume / locked — fall through; the app re-provisions cleanly.
     }
   }
 }
