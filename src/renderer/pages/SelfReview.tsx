@@ -207,12 +207,12 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
           )}
           <SplitsCard splits={splits} loading={detailsLoading && !details} />
           <div className="grid gap-4 lg:grid-cols-2">
-            <TypeBarChart
+            <TypeBars
               title="Overworld by seed type"
               breakdown={breakdowns.overworld}
               loadingTimes={detailsLoading && !details}
             />
-            <TypeBarChart
+            <TypeBars
               title="Bastion by type"
               breakdown={breakdowns.bastion}
               loadingTimes={detailsLoading && !details}
@@ -427,29 +427,9 @@ function SplitsCard({ splits, loading }: { splits: SplitStat[]; loading: boolean
   )
 }
 
-function TypeTimeTooltip({
-  active,
-  payload
-}: {
-  active?: boolean
-  payload?: Array<{ payload: { label: string; ms: number; best: number | null; count: number } }>
-}) {
-  if (!active || !payload?.length) return null
-  const p = payload[0].payload
-  return (
-    <div className="surface-2 px-3 py-2 text-xs">
-      <div className="font-display text-text">{p.label}</div>
-      <div className="text-muted">
-        avg {msToTime(p.ms)}
-        {p.best != null ? ` · best ${msToTime(p.best)}` : ''} · {p.count} run
-        {p.count === 1 ? '' : 's'}
-      </div>
-    </div>
-  )
-}
-
-/** Horizontal bar chart of average split time per seed/bastion type — shorter = faster. */
-function TypeBarChart({
+/** Average split time per seed/bastion type as a horizontal bar. Every canonical type is listed
+ *  (so e.g. Housing shows even with no games yet) — longer bar = slower, "—" when there's no data. */
+function TypeBars({
   title,
   breakdown,
   loadingTimes
@@ -458,10 +438,11 @@ function TypeBarChart({
   breakdown: TypeBreakdown
   loadingTimes: boolean
 }) {
-  const data = breakdown.rows
-    .filter((r) => r.average != null)
-    .map((r) => ({ label: r.label, ms: r.average as number, best: r.best, count: r.count }))
-    .sort((a, b) => a.ms - b.ms)
+  const rows = [...breakdown.rows].sort(
+    (a, b) => (a.average ?? Infinity) - (b.average ?? Infinity) || a.label.localeCompare(b.label)
+  )
+  const withData = rows.filter((r) => r.average != null)
+  const maxMs = withData.length ? Math.max(...withData.map((r) => r.average as number)) : 1
   const split = breakdown.splitLabel.toLowerCase()
   return (
     <section className="surface p-5 animate-fade-up" style={{ animationDelay: '140ms' }}>
@@ -469,49 +450,36 @@ function TypeBarChart({
         <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">{title}</h2>
         <span className="text-xs text-faint">avg {split} · fastest first</span>
       </header>
-      {data.length === 0 ? (
-        <div className="grid h-[180px] place-items-center text-center text-sm text-muted">
-          {loadingTimes
-            ? 'Loading split times…'
-            : `No ${breakdown.dimension === 'bastion' ? 'bastion' : 'seed'}-type split data in your recent matches yet.`}
-        </div>
+      {rows.length === 0 ? (
+        <div className="grid h-24 place-items-center text-sm text-muted">No matches yet.</div>
       ) : (
-        <div style={{ height: Math.max(150, data.length * 38 + 30) }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical" margin={{ top: 4, right: 54, left: 6, bottom: 0 }}>
-              <CartesianGrid stroke="rgba(255,255,255,0.05)" horizontal={false} />
-              <XAxis
-                type="number"
-                dataKey="ms"
-                tickFormatter={(v) => msToTime(v)}
-                tick={{ fill: '#8b8b9e', fontSize: 10 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                type="category"
-                dataKey="label"
-                width={96}
-                tick={{ fill: '#cdcdd8', fontSize: 12 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip content={<TypeTimeTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-              <Bar
-                dataKey="ms"
-                fill="#f5c842"
-                radius={[0, 4, 4, 0]}
-                isAnimationActive
-                animationDuration={600}
-                label={{
-                  position: 'right',
-                  formatter: (v: number) => msToTime(v),
-                  fill: '#8b8b9e',
-                  fontSize: 11
-                }}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="space-y-2">
+          {rows.map((r) => (
+            <div
+              key={r.key}
+              className="flex items-center gap-3"
+              title={r.count ? `${r.count} run${r.count === 1 ? '' : 's'}` : 'no runs yet'}
+            >
+              <span className="w-[5.5rem] shrink-0 truncate text-sm text-text">{r.label}</span>
+              <div className="relative h-5 flex-1 overflow-hidden rounded bg-white/[0.03]">
+                {r.average != null && (
+                  <div
+                    className="absolute inset-y-0 left-0 rounded transition-[width] duration-500"
+                    style={{
+                      width: `${Math.max(6, Math.round((r.average / maxMs) * 100))}%`,
+                      background: 'linear-gradient(90deg, var(--gold), #d9a52c)'
+                    }}
+                  />
+                )}
+              </div>
+              <span
+                className="tnum w-[4.5rem] shrink-0 text-right text-sm"
+                style={{ color: r.average != null ? 'var(--gold)' : 'var(--faint)' }}
+              >
+                {r.average != null ? msToTime(r.average) : loadingTimes ? '···' : '—'}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </section>

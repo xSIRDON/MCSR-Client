@@ -562,9 +562,10 @@ function buildBreakdown(
     if (t != null) (times[key] ??= []).push(t)
   }
 
-  // Rows from the union of both samples: a type may be classified only in the detail
-  // (timeline) data even when its list entry was unclassified, and vice-versa.
-  const keys = new Set<string>([...Object.keys(agg), ...Object.keys(times)])
+  // Always include every canonical type (so e.g. Housing shows even with no games yet), plus
+  // any extra type seen in the data — a type can be classified only in the detail timelines
+  // even when its list entry was unclassified, and vice-versa.
+  const keys = new Set<string>([...types.map((t) => t.key), ...Object.keys(agg), ...Object.keys(times)])
   const rows: TypeStat[] = [...keys].map((key) => {
     const a = agg[key] ?? { count: 0, decided: 0, wins: 0 }
     const ts = times[key] ?? []

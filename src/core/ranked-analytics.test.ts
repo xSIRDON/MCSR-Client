@@ -389,8 +389,21 @@ describe('analyzeTypeBreakdowns', () => {
       ],
       []
     )
-    expect(overworld.rows.map((r) => r.key)).toEqual(['VILLAGE'])
+    // Only VILLAGE was actually played; the other canonical types still appear with count 0.
+    expect(overworld.rows.filter((r) => r.count > 0).map((r) => r.key)).toEqual(['VILLAGE'])
+    expect(row(overworld, 'SHIPWRECK')).toMatchObject({ count: 0 })
     expect(row(overworld, 'VILLAGE')).toMatchObject({ count: 1, decided: 0, winRate: null })
+  })
+
+  it('always lists every type, even ones not played (e.g. Housing)', () => {
+    const { bastion } = analyzeTypeBreakdowns(ME, [m({ bastionType: 'TREASURE', winner: ME })], [])
+    expect(bastion.rows.map((r) => r.key).sort()).toEqual([
+      'BRIDGE',
+      'HOUSING',
+      'STABLES',
+      'TREASURE'
+    ])
+    expect(row(bastion, 'HOUSING')).toMatchObject({ count: 0, best: null })
   })
 
   it('falls back to seed.overworld / seed.nether and title-cases unknown keys', () => {
@@ -430,7 +443,7 @@ describe('analyzeTypeBreakdowns', () => {
       ],
       []
     )
-    expect(overworld.rows.map((r) => r.key)).toEqual(['VILLAGE'])
+    expect(overworld.rows.filter((r) => r.count > 0).map((r) => r.key)).toEqual(['VILLAGE'])
     expect(row(overworld, 'VILLAGE')).toMatchObject({ count: 1 })
   })
 })
