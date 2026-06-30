@@ -5,7 +5,7 @@
 <br />
 <br />
 
-[![Version](https://img.shields.io/badge/version-v0.2.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![Version](https://img.shields.io/badge/version-v1.0.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-3b82f6?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&labelColor=15151c)](LICENSE)
 
@@ -19,7 +19,7 @@ One app to sign in, install your instances, launch the game, and watch your rank
 
 ### [⬇  Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 
-<sub>Windows installer · auto-updates · v0.2.0</sub>
+<sub>Windows installer · auto-updates · v1.0.0</sub>
 
 </div>
 
@@ -56,7 +56,15 @@ Your stats, front and center:
 
 - ELO, tier (**Coal → Netherite**), peak rating, win rate, win streak, best time, and total matches.
 - An **ELO-over-time chart** and a feed of your recent matches.
-- The **global leaderboard** plus full **player search** — with skins.
+- The **global leaderboard** plus full **player search** — with skins and **donor-tier badges** (Stone / Iron / Diamond).
+
+### Self-review & analytics
+A dedicated review tab that turns your ranked history into insight:
+
+- **Strengths & weaknesses** and **split-pace** radars at a glance.
+- **Per-split timing** — Overworld, Bastion, Fortress, Blind, Stronghold, End, Finish, and Fort → Finish.
+- **Seed-type breakdowns** — your pace by overworld structure and bastion type.
+- Win rate, recent form, finishing, deaths, and personal-best insights drawn from your real season record.
 
 ### Built-in pace tracking
 - A **paceman tracker** runs alongside RSG automatically and surfaces your live pace on the home screen.
