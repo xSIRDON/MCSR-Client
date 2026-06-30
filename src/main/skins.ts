@@ -1,10 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { paths } from './paths'
 
 export type SkinKind = 'avatar' | 'body'
 
-const memCache = new Map<string, string>()
+const TTL_MS = 6 * 60 * 60 * 1000
+const memCache = new Map<string, { url: string; ts: number }>()
 const inflight = new Map<string, Promise<string | null>>()
 
 const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47])
@@ -65,14 +66,14 @@ function hosts(raw: string, size: number, kind: SkinKind): string[] {
   const d = dashed(raw)
   return kind === 'body'
     ? [
-        `https://mc-heads.net/body/${raw}/${size}`,
         `https://minotar.net/armor/body/${raw}/${size}`,
+        `https://mc-heads.net/body/${raw}/${size}`,
         `https://crafatar.com/renders/body/${d}?size=${size}&overlay`,
         `https://visage.surgeplay.com/full/${size}/${raw}`
       ]
     : [
+        `https://minotar.net/helm/${raw}/${size}`,
         `https://mc-heads.net/avatar/${raw}/${size}`,
-        `https://minotar.net/avatar/${raw}/${size}`,
         `https://crafatar.com/avatars/${d}?size=${size}&overlay`,
         `https://visage.surgeplay.com/face/${size}/${raw}`
       ]
@@ -83,16 +84,20 @@ export async function getSkin(idOrUuid: string, size: number, kind: SkinKind): P
   if (!raw) return null
   const key = `${kind}-${raw}-${size}`
 
+  const now = Date.now()
   const mem = memCache.get(key)
-  if (mem) return mem
+  if (mem && now - mem.ts < TTL_MS) return mem.url
 
   try {
     if (existsSync(cacheFile(key))) {
-      const buf = readFileSync(cacheFile(key))
-      if (isPng(buf)) {
-        const url = `data:image/png;base64,${buf.toString('base64')}`
-        memCache.set(key, url)
-        return url
+      const stat = statSync(cacheFile(key))
+      if (now - stat.mtimeMs < TTL_MS) {
+        const buf = readFileSync(cacheFile(key))
+        if (isPng(buf)) {
+          const url = `data:image/png;base64,${buf.toString('base64')}`
+          memCache.set(key, { url, ts: stat.mtimeMs })
+          return url
+        }
       }
     }
   } catch {
@@ -113,7 +118,7 @@ export async function getSkin(idOrUuid: string, size: number, kind: SkinKind): P
     } catch {
     }
     const url = `data:image/png;base64,${buf.toString('base64')}`
-    memCache.set(key, url)
+    memCache.set(key, { url, ts: Date.now() })
     return url
   }).finally(() => inflight.delete(key))
 
