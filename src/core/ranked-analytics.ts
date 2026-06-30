@@ -514,7 +514,7 @@ function buildBreakdown(
     if (t != null) (times[key] ??= []).push(t)
   }
 
-  const keys = new Set<string>([...Object.keys(agg), ...Object.keys(times)])
+  const keys = new Set<string>([...types.map((t) => t.key), ...Object.keys(agg), ...Object.keys(times)])
   const rows: TypeStat[] = [...keys].map((key) => {
     const a = agg[key] ?? { count: 0, decided: 0, wins: 0 }
     const ts = times[key] ?? []
