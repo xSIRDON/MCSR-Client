@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { registerIpc, isGameRunning } from './ipc-handlers'
 import { setupUpdater } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
-import { refreshNinjabrainShortcut } from './tools/ninjabrain'
+import { removeDesktopShortcut } from './tools/ninjabrain'
 
 const isDev = !!process.env['ELECTRON_RENDERER_URL']
 
@@ -93,7 +93,7 @@ if (!app.requestSingleInstanceLock()) {
     if (process.platform === 'win32') app.setAppUserModelId('gg.mcsrclient.app')
     migrateSessionState()
     migrateDataDir()
-    refreshNinjabrainShortcut()
+    removeDesktopShortcut()
     enablePacemanCors()
     registerIpc()
     createWindow()

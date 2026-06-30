@@ -1,6 +1,6 @@
-import { app, shell } from 'electron'
+import { app } from 'electron'
 import { spawn, execFile, type ChildProcess } from 'node:child_process'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { paths } from '../paths'
 
@@ -19,26 +19,17 @@ async function downloadJar(): Promise<void> {
   writeFileSync(jarPath(), Buffer.from(await res.arrayBuffer()))
 }
 
-export function createDesktopShortcut(): void {
+export async function setupNinjabrain(): Promise<void> {
+  if (!existsSync(jarPath())) await downloadJar()
+}
+
+export function removeDesktopShortcut(): void {
   if (process.platform !== 'win32') return
   try {
     const lnk = join(app.getPath('desktop'), 'Ninjabrain Bot.lnk')
-    shell.writeShortcutLink(lnk, {
-      target: jarPath(),
-      cwd: paths.tools(),
-      description: 'Ninjabrain Bot — stronghold calculator'
-    })
+    if (existsSync(lnk)) rmSync(lnk)
   } catch {
   }
-}
-
-export async function setupNinjabrain(): Promise<void> {
-  if (!existsSync(jarPath())) await downloadJar()
-  createDesktopShortcut()
-}
-
-export function refreshNinjabrainShortcut(): void {
-  if (existsSync(jarPath())) createDesktopShortcut()
 }
 
 function isRunning(): Promise<boolean> {
