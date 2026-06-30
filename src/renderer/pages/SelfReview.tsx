@@ -1,10 +1,39 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts'
 import { useUi } from '../store/uiStore'
 import { mcsr } from '../lib/clients'
-import { analyzeRanked, analyzeSplits, analyzeTypeBreakdowns } from '@core/ranked-analytics'
-import type { RankedInsight, SplitStat, TypeBreakdown } from '@core/ranked-analytics'
+import {
+  analyzeRanked,
+  analyzeSplits,
+  analyzeTypeBreakdowns,
+  buildScorecard,
+  buildSplitRadar,
+  countDeaths,
+  scorecardInsights
+} from '@core/ranked-analytics'
+import type {
+  RankedInsight,
+  ScoreDim,
+  SplitRadarDim,
+  SplitStat,
+  TypeBreakdown
+} from '@core/ranked-analytics'
+import { seasonRanked } from '@services/mcsr-ranked'
 import type { MatchInfo } from '@services/mcsr-ranked'
 import { eloToRank } from '@core/rank'
 import { msToTime, signedElo } from '@core/format'
@@ -88,6 +117,49 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
 
   const rank = eloToRank(user?.eloRate)
 
+  // Headline totals come from the authoritative season statistics (getUser). The matches
+  // endpoint only returns a recent window, so counting wins from it under-reports a player's
+  // record (e.g. a recent losing streak reads as "0 wins"). The match list still drives the
+  // recent-detail analytics below.
+  const season = seasonRanked(user)
+  const useSeason = season.played > 0
+  const head = {
+    wins: useSeason ? season.wins : analytics.wins,
+    losses: useSeason ? season.loses : analytics.losses,
+    played: useSeason ? season.played : analytics.played,
+    bestTime: (useSeason && season.bestTime) || analytics.best,
+    currentStreak: useSeason ? season.currentStreak : Math.max(0, analytics.currentStreak),
+    bestStreak: useSeason ? season.bestStreak : analytics.bestWinStreak,
+    elo: user?.eloRate ?? null,
+    netElo: analytics.netElo
+  }
+  const hasData = head.played > 0 || analytics.played > 0
+  const recentN = (matches ?? []).filter((m) => m.type === 2).length
+
+  const seasonDecided = season.wins + season.loses
+  const seasonWinRate =
+    seasonDecided > 0 ? Math.round((season.wins / seasonDecided) * 1000) / 10 : null
+  const deaths = useMemo(() => countDeaths(uuid, details ?? []), [uuid, details])
+  const scorecard = useMemo(
+    () => buildScorecard(analytics, seasonWinRate, season.played, deaths),
+    [analytics, seasonWinRate, season.played, deaths]
+  )
+  const splitRadar = useMemo(() => buildSplitRadar(splits), [splits])
+  const insights = useMemo(
+    () =>
+      scorecardInsights(
+        scorecard,
+        {
+          winRate: seasonWinRate,
+          played: season.played,
+          bestTime: season.bestTime,
+          bestStreak: season.bestStreak
+        },
+        deaths
+      ),
+    [scorecard, deaths, seasonWinRate, season.played, season.bestTime, season.bestStreak]
+  )
+
   const loading = matchesLoading && !matches
 
   return (
@@ -112,29 +184,39 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
 
       {loading ? (
         <ReviewSkeleton />
-      ) : analytics.played === 0 ? (
+      ) : !hasData ? (
         <div className="surface grid h-40 place-items-center text-muted">
           Not enough ranked matches yet.
         </div>
       ) : (
         <>
-          <StatRow analytics={analytics} />
+          <StatRow head={head} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <PlayStyleRadar dims={scorecard} />
+            <SplitsRadar dims={splitRadar} />
+          </div>
+          <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+            <InsightsCard insights={insights} />
+            <WinRateBars analytics={analytics} />
+          </div>
+          {recentN > 0 && (
+            <div className="px-1 text-[11px] uppercase tracking-[0.16em] text-faint">
+              Split detail below from your last {recentN} ranked{' '}
+              {recentN === 1 ? 'match' : 'matches'}
+            </div>
+          )}
           <SplitsCard splits={splits} loading={detailsLoading && !details} />
           <div className="grid gap-4 lg:grid-cols-2">
-            <TypeBreakdownCard
+            <TypeBarChart
               title="Overworld by seed type"
               breakdown={breakdowns.overworld}
               loadingTimes={detailsLoading && !details}
             />
-            <TypeBreakdownCard
+            <TypeBarChart
               title="Bastion by type"
               breakdown={breakdowns.bastion}
               loadingTimes={detailsLoading && !details}
             />
-          </div>
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
-            <InsightsCard insights={analytics.insights} />
-            <OpponentSplit analytics={analytics} />
           </div>
           <CompletionHistogram times={analytics.completionTimes} />
         </>
@@ -143,51 +225,159 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
   )
 }
 
-function StatRow({ analytics }: { analytics: ReturnType<typeof analyzeRanked> }) {
-  const netColor =
-    analytics.netElo > 0 ? 'var(--win)' : analytics.netElo < 0 ? 'var(--loss)' : undefined
-  const streak = analytics.currentStreak
-  const streakColor = streak > 0 ? 'var(--win)' : streak < 0 ? 'var(--loss)' : undefined
-  const streakValue =
-    streak === 0 ? '—' : `${Math.abs(streak)}${streak > 0 ? 'W' : 'L'}`
+interface HeadStats {
+  wins: number
+  losses: number
+  played: number
+  bestTime: number | null
+  currentStreak: number
+  bestStreak: number
+  elo: number | null
+  netElo: number
+}
+
+function StatRow({ head }: { head: HeadStats }) {
+  const decided = head.wins + head.losses
+  const winRate = decided > 0 ? Math.round((head.wins / decided) * 1000) / 10 : 0
+  const netColor = head.netElo > 0 ? 'var(--win)' : head.netElo < 0 ? 'var(--loss)' : undefined
+  const streakColor = head.currentStreak > 0 ? 'var(--win)' : undefined
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
       <StatTile
         label="Win Rate"
-        value={`${analytics.winRate}%`}
-        hint={`${analytics.wins}W · ${analytics.losses}L`}
+        value={`${winRate}%`}
+        hint={`${head.wins}W · ${head.losses}L`}
         accent="var(--gold)"
         delay={20}
       />
       <StatTile
         label="Record"
-        value={`${analytics.wins}–${analytics.losses}`}
-        hint={`${analytics.played} played${analytics.draws ? ` · ${analytics.draws} draw` : ''}`}
+        value={`${head.wins}–${head.losses}`}
+        hint={`${head.played} played`}
         delay={60}
       />
       <StatTile
-        label="Net Elo"
-        value={signedElo(analytics.netElo)}
-        hint={`▲${analytics.biggestGain} · ▼${Math.abs(analytics.biggestLoss)}`}
+        label="Elo"
+        value={head.elo != null ? String(head.elo) : '—'}
+        hint={`${signedElo(head.netElo)} recent`}
         accent={netColor}
         delay={100}
       />
       <StatTile
-        label="Best / Avg Win"
-        value={msToTime(analytics.best)}
-        hint={`avg ${msToTime(analytics.averageWin)}`}
+        label="Best Time"
+        value={msToTime(head.bestTime)}
+        hint="season best"
         accent="var(--portal)"
         delay={140}
       />
       <StatTile
-        label="Current Streak"
-        value={streakValue}
-        hint={`best ${analytics.bestWinStreak}W`}
+        label="Win Streak"
+        value={head.currentStreak > 0 ? `${head.currentStreak}W` : '—'}
+        hint={`best ${head.bestStreak}W`}
         accent={streakColor}
         delay={180}
       />
     </div>
+  )
+}
+
+function RadarTooltip({
+  active,
+  payload
+}: {
+  active?: boolean
+  payload?: Array<{ payload: { axis: string; score: number; detail: string } }>
+}) {
+  if (!active || !payload?.length) return null
+  const p = payload[0].payload
+  return (
+    <div className="surface-2 px-3 py-2 text-xs">
+      <div className="font-display text-text">
+        {p.axis} · {p.score}
+      </div>
+      <div className="text-muted">{p.detail}</div>
+    </div>
+  )
+}
+
+function PlayStyleRadar({ dims }: { dims: ScoreDim[] }) {
+  const data = dims.map((d) => ({ axis: d.label, score: d.score, detail: d.detail }))
+  return (
+    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '70ms' }}>
+      <header className="mb-2 flex items-center justify-between">
+        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">
+          Strengths &amp; weaknesses
+        </h2>
+        <span className="text-xs text-faint">0–100</span>
+      </header>
+      {data.length < 3 ? (
+        <div className="grid h-[240px] place-items-center text-center text-sm text-muted">
+          Play more ranked games to build your profile.
+        </div>
+      ) : (
+        <div className="h-[240px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={data} outerRadius="70%">
+              <PolarGrid stroke="rgba(255,255,255,0.08)" />
+              <PolarAngleAxis dataKey="axis" tick={{ fill: '#8b8b9e', fontSize: 11 }} />
+              <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+              <Radar
+                dataKey="score"
+                stroke="#f5c842"
+                fill="#f5c842"
+                fillOpacity={0.28}
+                isAnimationActive
+                animationDuration={600}
+              />
+              <Tooltip content={<RadarTooltip />} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function SplitsRadar({ dims }: { dims: SplitRadarDim[] }) {
+  const data = dims
+    .filter((d) => d.score != null)
+    .map((d) => ({
+      axis: d.label,
+      score: d.score as number,
+      detail: d.avgMs != null ? `avg ${msToTime(d.avgMs)} · pace ${msToTime(d.refMs)}` : '—'
+    }))
+  return (
+    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '90ms' }}>
+      <header className="mb-2 flex items-center justify-between">
+        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Split pace</h2>
+        <span className="text-xs text-faint">vs typical pace</span>
+      </header>
+      {data.length < 3 ? (
+        <div className="grid h-[240px] place-items-center text-center text-sm text-muted">
+          Not enough split data in your recent matches yet.
+        </div>
+      ) : (
+        <div className="h-[240px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={data} outerRadius="70%">
+              <PolarGrid stroke="rgba(255,255,255,0.08)" />
+              <PolarAngleAxis dataKey="axis" tick={{ fill: '#8b8b9e', fontSize: 11 }} />
+              <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+              <Radar
+                dataKey="score"
+                stroke="#7aa2f7"
+                fill="#7aa2f7"
+                fillOpacity={0.28}
+                isAnimationActive
+                animationDuration={600}
+              />
+              <Tooltip content={<RadarTooltip />} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -237,15 +427,29 @@ function SplitsCard({ splits, loading }: { splits: SplitStat[]; loading: boolean
   )
 }
 
-/** Win-rate color: green above 55%, red below 40%, muted in between. */
-function winColor(rate: number | null): string {
-  if (rate == null) return 'var(--faint)'
-  if (rate >= 55) return 'var(--win)'
-  if (rate <= 40) return 'var(--loss)'
-  return 'var(--muted)'
+function TypeTimeTooltip({
+  active,
+  payload
+}: {
+  active?: boolean
+  payload?: Array<{ payload: { label: string; ms: number; best: number | null; count: number } }>
+}) {
+  if (!active || !payload?.length) return null
+  const p = payload[0].payload
+  return (
+    <div className="surface-2 px-3 py-2 text-xs">
+      <div className="font-display text-text">{p.label}</div>
+      <div className="text-muted">
+        avg {msToTime(p.ms)}
+        {p.best != null ? ` · best ${msToTime(p.best)}` : ''} · {p.count} run
+        {p.count === 1 ? '' : 's'}
+      </div>
+    </div>
+  )
 }
 
-function TypeBreakdownCard({
+/** Horizontal bar chart of average split time per seed/bastion type — shorter = faster. */
+function TypeBarChart({
   title,
   breakdown,
   loadingTimes
@@ -254,56 +458,60 @@ function TypeBreakdownCard({
   breakdown: TypeBreakdown
   loadingTimes: boolean
 }) {
-  const rows = breakdown.rows
+  const data = breakdown.rows
+    .filter((r) => r.average != null)
+    .map((r) => ({ label: r.label, ms: r.average as number, best: r.best, count: r.count }))
+    .sort((a, b) => a.ms - b.ms)
   const split = breakdown.splitLabel.toLowerCase()
   return (
     <section className="surface p-5 animate-fade-up" style={{ animationDelay: '140ms' }}>
       <header className="mb-3 flex items-center justify-between">
         <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">{title}</h2>
-        <span className="text-xs text-faint">win% · best {split}</span>
+        <span className="text-xs text-faint">avg {split} · fastest first</span>
       </header>
-      {rows.length === 0 ? (
-        <div className="grid h-24 place-items-center text-sm text-muted">
-          No {breakdown.dimension === 'bastion' ? 'bastion' : 'seed'}-type data in your recent matches
-          yet.
+      {data.length === 0 ? (
+        <div className="grid h-[180px] place-items-center text-center text-sm text-muted">
+          {loadingTimes
+            ? 'Loading split times…'
+            : `No ${breakdown.dimension === 'bastion' ? 'bastion' : 'seed'}-type split data in your recent matches yet.`}
         </div>
       ) : (
-        <div className="space-y-0.5">
-          <div className="grid grid-cols-[1fr_auto] gap-3 px-3 pb-1">
-            <span className="text-[10px] uppercase tracking-[0.14em] text-faint">Type</span>
-            <div className="flex items-center gap-4 text-[10px] uppercase tracking-[0.14em] text-faint">
-              <span className="w-8 text-right">runs</span>
-              <span className="w-11 text-right">win%</span>
-              <span className="w-[4.5rem] text-right">best</span>
-              <span className="w-[4.5rem] text-right">avg</span>
-            </div>
-          </div>
-          {rows.map((r) => (
-            <div
-              key={r.key}
-              className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg px-3 py-2 odd:bg-white/[0.02]"
-            >
-              <span className="truncate text-sm text-text">{r.label}</span>
-              <div className="flex items-center gap-4">
-                <span className="tnum w-8 text-right text-xs text-muted">{r.count}</span>
-                <span
-                  className="tnum w-11 text-right text-xs font-medium"
-                  style={{ color: winColor(r.winRate) }}
-                >
-                  {r.winRate != null ? `${r.winRate}%` : '—'}
-                </span>
-                <span
-                  className="tnum font-display w-[4.5rem] text-right text-sm"
-                  style={{ color: r.best != null ? 'var(--gold)' : 'var(--faint)' }}
-                >
-                  {r.best != null ? msToTime(r.best) : loadingTimes ? '···' : '—'}
-                </span>
-                <span className="tnum w-[4.5rem] text-right text-xs text-faint">
-                  {r.average != null ? msToTime(r.average) : loadingTimes ? '···' : '—'}
-                </span>
-              </div>
-            </div>
-          ))}
+        <div style={{ height: Math.max(150, data.length * 38 + 30) }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} layout="vertical" margin={{ top: 4, right: 54, left: 6, bottom: 0 }}>
+              <CartesianGrid stroke="rgba(255,255,255,0.05)" horizontal={false} />
+              <XAxis
+                type="number"
+                dataKey="ms"
+                tickFormatter={(v) => msToTime(v)}
+                tick={{ fill: '#8b8b9e', fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                type="category"
+                dataKey="label"
+                width={96}
+                tick={{ fill: '#cdcdd8', fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip content={<TypeTimeTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+              <Bar
+                dataKey="ms"
+                fill="#f5c842"
+                radius={[0, 4, 4, 0]}
+                isAnimationActive
+                animationDuration={600}
+                label={{
+                  position: 'right',
+                  formatter: (v: number) => msToTime(v),
+                  fill: '#8b8b9e',
+                  fontSize: 11
+                }}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
     </section>
@@ -347,66 +555,87 @@ function InsightsCard({ insights }: { insights: RankedInsight[] }) {
   )
 }
 
-function OpponentSplit({ analytics }: { analytics: ReturnType<typeof analyzeRanked> }) {
+/** Bar color by win rate: green strong, red weak, gold in between. */
+function winFill(rate: number): string {
+  if (rate >= 55) return '#5fd38d'
+  if (rate <= 40) return '#e2706e'
+  return '#caa94a'
+}
+
+function WinRateTooltip({
+  active,
+  payload
+}: {
+  active?: boolean
+  payload?: Array<{ payload: { label: string; rate: number; n: number } }>
+}) {
+  if (!active || !payload?.length) return null
+  const p = payload[0].payload
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '160ms' }}>
-      <h2 className="mb-3 font-display text-sm uppercase tracking-[0.16em] text-muted">
-        By opponent strength
-      </h2>
-      <div className="grid grid-cols-2 gap-3">
-        <SplitTile
-          title="vs Stronger"
-          subtitle="higher elo"
-          winRate={analytics.vsHigher.winRate}
-          decided={analytics.vsHigher.decided}
-          accent="var(--loss)"
-        />
-        <SplitTile
-          title="vs Weaker"
-          subtitle="lower elo"
-          winRate={analytics.vsLower.winRate}
-          decided={analytics.vsLower.decided}
-          accent="var(--win)"
-        />
+    <div className="surface-2 px-3 py-2 text-xs">
+      <div className="font-display text-text">
+        {p.label} · {p.rate}%
       </div>
-      <div className="mt-3 flex items-center justify-between text-xs text-faint">
-        <span>Recent form (last {analytics.recentSample})</span>
-        <span className="tnum text-muted">{analytics.recentWinRate}%</span>
-      </div>
-    </section>
+      <div className="text-muted">{p.n} decided</div>
+    </div>
   )
 }
 
-function SplitTile({
-  title,
-  subtitle,
-  winRate,
-  decided,
-  accent
-}: {
-  title: string
-  subtitle: string
-  winRate: number
-  decided: number
-  accent: string
-}) {
+/** Recent win rate vs stronger / weaker opponents and overall recent form. */
+function WinRateBars({ analytics }: { analytics: ReturnType<typeof analyzeRanked> }) {
+  const data = [
+    { label: 'vs Stronger', rate: analytics.vsHigher.winRate, n: analytics.vsHigher.decided },
+    { label: 'vs Weaker', rate: analytics.vsLower.winRate, n: analytics.vsLower.decided },
+    { label: 'Recent', rate: analytics.recentWinRate, n: analytics.recentSample }
+  ].filter((d) => d.n > 0)
   return (
-    <div className="surface-2 px-4 py-3">
-      <div className="flex items-baseline justify-between">
-        <span className="font-display text-sm tracking-wide text-text">{title}</span>
-        <span className="text-[10px] uppercase tracking-[0.16em] text-faint">{subtitle}</span>
-      </div>
-      <div className="tnum mt-1 font-display text-2xl leading-none" style={{ color: accent }}>
-        {decided > 0 ? `${winRate}%` : '—'}
-      </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--bg-2)]">
-        <div
-          className="h-full rounded-full transition-[width] duration-500"
-          style={{ width: `${decided > 0 ? winRate : 0}%`, background: accent }}
-        />
-      </div>
-      <div className="mt-1.5 text-xs text-faint">{decided} decided</div>
-    </div>
+    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '160ms' }}>
+      <header className="mb-3 flex items-center justify-between">
+        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">
+          By opponent strength
+        </h2>
+        <span className="text-xs text-faint">recent win%</span>
+      </header>
+      {data.length === 0 ? (
+        <div className="grid h-[170px] place-items-center text-center text-sm text-muted">
+          Not enough decided games in your recent matches yet.
+        </div>
+      ) : (
+        <div className="h-[170px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} layout="vertical" margin={{ top: 4, right: 40, left: 6, bottom: 0 }}>
+              <CartesianGrid stroke="rgba(255,255,255,0.05)" horizontal={false} />
+              <XAxis type="number" domain={[0, 100]} hide />
+              <YAxis
+                type="category"
+                dataKey="label"
+                width={88}
+                tick={{ fill: '#cdcdd8', fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip content={<WinRateTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+              <Bar
+                dataKey="rate"
+                radius={[0, 4, 4, 0]}
+                isAnimationActive
+                animationDuration={600}
+                label={{
+                  position: 'right',
+                  formatter: (v: number) => `${v}%`,
+                  fill: '#8b8b9e',
+                  fontSize: 11
+                }}
+              >
+                {data.map((d) => (
+                  <Cell key={d.label} fill={winFill(d.rate)} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </section>
   )
 }
 

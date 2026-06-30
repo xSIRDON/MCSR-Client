@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { analyzeRanked, analyzeSplits, analyzeTypeBreakdowns } from './ranked-analytics'
+import {
+  analyzeRanked,
+  analyzeSplits,
+  analyzeTypeBreakdowns,
+  buildScorecard,
+  buildSplitRadar,
+  countDeaths,
+  scorecardInsights
+} from './ranked-analytics'
+import type { SplitStat } from './ranked-analytics'
 import type { MatchInfo } from '@services/mcsr-ranked'
 
 const ME = 'me-uuid'
@@ -423,5 +432,106 @@ describe('analyzeTypeBreakdowns', () => {
     )
     expect(overworld.rows.map((r) => r.key)).toEqual(['VILLAGE'])
     expect(row(overworld, 'VILLAGE')).toMatchObject({ count: 1 })
+  })
+})
+
+describe('buildScorecard / buildSplitRadar / scorecardInsights', () => {
+  it('uses the authoritative season win rate for the Win Rate dimension', () => {
+    // Recent window is all losses, but the season record is 6-5.
+    const recent = analyzeRanked(ME, [match({ winner: OPP }), match({ winner: OPP })])
+    const dims = buildScorecard(recent, 54.5, 12)
+    const wr = dims.find((d) => d.key === 'winrate')!
+    expect(wr.score).toBe(55) // 54.5 rounded/clamped
+    expect(wr.sample).toBe(12)
+  })
+
+  it('only includes dimensions that have data', () => {
+    expect(buildScorecard(analyzeRanked(ME, []), null, 0)).toEqual([])
+  })
+
+  it('scores a split faster than the reference above 50 and skips non-cumulative splits', () => {
+    const splits: SplitStat[] = [
+      { key: 'overworld', label: 'Overworld', best: 100_000, average: 105_000, count: 3 },
+      { key: 'finish', label: 'Finish', best: 600_000, average: 600_000, count: 1 }
+    ]
+    const radar = buildSplitRadar(splits)
+    const ow = radar.find((d) => d.key === 'overworld')!
+    expect(ow.refMs).toBe(210_000)
+    expect(ow.score).toBeGreaterThan(50)
+    expect(radar.find((d) => d.key === 'finish')).toBeUndefined()
+  })
+
+  it('anchors insights to the season record, not the recent losing window', () => {
+    const recent = analyzeRanked(ME, [match({ winner: OPP }), match({ winner: OPP })])
+    const dims = buildScorecard(recent, 54.5, 12)
+    const ins = scorecardInsights(dims, {
+      winRate: 54.5,
+      played: 12,
+      bestTime: 713_531,
+      bestStreak: 2
+    })
+    expect(ins.some((i) => i.label === 'Record' && i.detail.includes('54.5%'))).toBe(true)
+    expect(ins.some((i) => i.label === 'Personal best')).toBe(true)
+  })
+})
+
+describe('countDeaths + death insights', () => {
+  const tl = (events: Array<[string, string, number]>): MatchInfo['timelines'] =>
+    events.map(([uuid, type, time]) => ({ uuid, time, type }))
+
+  const withTimeline = (timelines: MatchInfo['timelines'], type = 2): MatchInfo => ({
+    id: nextId++,
+    type,
+    players: [
+      { uuid: ME, nickname: 'Me' },
+      { uuid: OPP, nickname: 'Opp' }
+    ],
+    result: { uuid: null, time: null },
+    timelines
+  })
+
+  it('counts only real deaths — strategic spawnpoint resets and opponents excluded', () => {
+    const stats = countDeaths(ME, [
+      withTimeline(
+        tl([
+          [ME, 'projectelo.timeline.death', 100],
+          [ME, 'projectelo.timeline.death_spawnpoint', 200], // strategic reset -> ignored
+          [OPP, 'projectelo.timeline.death', 300] // opponent -> ignored
+        ])
+      ),
+      withTimeline(tl([[ME, 'projectelo.timeline.death', 50]]))
+    ])
+    expect(stats).toMatchObject({ total: 2, matches: 2, perMatch: 1 })
+  })
+
+  it('ignores non-ranked matches when counting deaths', () => {
+    const stats = countDeaths(ME, [
+      withTimeline(tl([[ME, 'projectelo.timeline.death', 100]]), 1) // casual
+    ])
+    expect(stats).toMatchObject({ total: 0, matches: 0 })
+  })
+
+  it('adds a Survival dimension and a death weakness when deaths are frequent', () => {
+    const a = analyzeRanked(ME, [match({ winner: OPP })])
+    const deaths = { total: 3, matches: 4, perMatch: 0.75 }
+    const dims = buildScorecard(a, 50, 10, deaths)
+    expect(dims.find((x) => x.key === 'survival')).toBeTruthy()
+    const ins = scorecardInsights(
+      dims,
+      { winRate: 50, played: 10, bestTime: null, bestStreak: 0 },
+      deaths
+    )
+    expect(ins.some((i) => i.label === 'Dies too much' && i.kind === 'weakness')).toBe(true)
+  })
+
+  it('does not flag deaths when they are rare', () => {
+    const a = analyzeRanked(ME, [match({ winner: OPP })])
+    const deaths = { total: 0, matches: 6, perMatch: 0 }
+    const ins = scorecardInsights(
+      buildScorecard(a, 50, 10, deaths),
+      { winRate: 50, played: 10, bestTime: null, bestStreak: 0 },
+      deaths
+    )
+    expect(ins.some((i) => i.label === 'Dies too much')).toBe(false)
   })
 })

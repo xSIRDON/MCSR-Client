@@ -3,6 +3,7 @@
 // Matches are assumed to arrive newest-first (as the MCSR API returns them).
 
 import type { MatchInfo } from '@services/mcsr-ranked'
+import { msToTime } from './format'
 
 export interface RankedInsight {
   kind: 'strength' | 'weakness' | 'note'
@@ -617,4 +618,180 @@ export function analyzeTypeBreakdowns(
       (m) => pickType(m.bastionType, m.seed?.nether)
     )
   }
+}
+
+// ---- Deaths (from match-detail timelines) ----
+
+// Only a real, costly death counts. `projectelo.timeline.death_spawnpoint` is deliberately
+// EXCLUDED: that's a strategic reset death — dying on purpose with a bed/anchor spawn set to
+// refill health/hunger (e.g. before the end, or when blinding in the overworld), which is good
+// play. The bare `projectelo.timeline.death` is the mistake we want to flag.
+const REAL_DEATH_EVENT = 'projectelo.timeline.death'
+
+export interface DeathStats {
+  total: number // real (non-strategic) deaths
+  matches: number // ranked matches (with timelines) counted
+  perMatch: number
+}
+
+/** Count the player's real deaths across recent match-detail timelines (strategic resets excluded). */
+export function countDeaths(uuid: string, details: MatchInfo[]): DeathStats {
+  const me = uuid.toLowerCase()
+  const list = Array.isArray(details)
+    ? details.filter((m) => m && m.type === 2 && Array.isArray(m.timelines))
+    : []
+  let total = 0
+  for (const m of list) {
+    for (const e of m.timelines!) {
+      if (e && typeof e.uuid === 'string' && e.uuid.toLowerCase() === me && e.type === REAL_DEATH_EVENT) {
+        total++
+      }
+    }
+  }
+  return { total, matches: list.length, perMatch: list.length > 0 ? total / list.length : 0 }
+}
+
+// ---- Strengths & weaknesses (play-style scorecard + split radar) ----
+
+function clamp100(n: number): number {
+  return Math.max(0, Math.min(100, Math.round(n)))
+}
+
+export interface ScoreDim {
+  key: string
+  label: string
+  score: number // 0–100, higher = stronger
+  detail: string
+  sample: number // games backing this dimension
+}
+
+/**
+ * Play-style dimensions on a 0–100 scale (higher = stronger). Win Rate is authoritative
+ * (season stats); the rest derive from the recent match window. Only dimensions with data
+ * are returned, so a sparse history yields a smaller — but honest — radar.
+ */
+export function buildScorecard(
+  a: RankedAnalytics,
+  seasonWinRate: number | null,
+  seasonPlayed: number,
+  deaths?: DeathStats
+): ScoreDim[] {
+  const dims: ScoreDim[] = []
+
+  const wr = seasonPlayed > 0 && seasonWinRate != null ? seasonWinRate : a.decided > 0 ? a.winRate : null
+  const wrSample = seasonPlayed > 0 ? seasonPlayed : a.decided
+  if (wr != null) {
+    dims.push({ key: 'winrate', label: 'Win Rate', score: clamp100(wr), detail: `${wr}% over ${wrSample} games`, sample: wrSample })
+  }
+  if (a.vsHigher.decided > 0) {
+    dims.push({ key: 'clutch', label: 'Clutch', score: clamp100(a.vsHigher.winRate), detail: `${a.vsHigher.winRate}% vs stronger (${a.vsHigher.decided})`, sample: a.vsHigher.decided })
+  }
+  if (a.vsLower.decided > 0) {
+    dims.push({ key: 'closing', label: 'Closing', score: clamp100(a.vsLower.winRate), detail: `${a.vsLower.winRate}% vs weaker (${a.vsLower.decided})`, sample: a.vsLower.decided })
+  }
+  if (a.recentSample > 0) {
+    dims.push({ key: 'form', label: 'Recent Form', score: clamp100(a.recentWinRate), detail: `${a.recentWinRate}% over last ${a.recentSample}`, sample: a.recentSample })
+  }
+  if (a.decided > 0) {
+    const ff = Math.round((a.forfeits.yours / a.decided) * 100)
+    dims.push({ key: 'finishing', label: 'Finishing', score: clamp100(100 - ff), detail: `forfeited ${ff}% of games`, sample: a.decided })
+  }
+  if (a.best != null && a.averageWin != null && a.averageWin > 0) {
+    const spread = (a.averageWin - a.best) / a.averageWin
+    dims.push({ key: 'consistency', label: 'Consistency', score: clamp100(100 - spread * 250), detail: 'win pace vs your best', sample: a.completionTimes.length })
+  }
+  if (deaths && deaths.matches >= 1) {
+    dims.push({
+      key: 'survival',
+      label: 'Survival',
+      score: clamp100(100 - deaths.perMatch * 70),
+      detail: `${deaths.total} death${deaths.total === 1 ? '' : 's'} in ${deaths.matches} games`,
+      sample: deaths.matches
+    })
+  }
+  return dims
+}
+
+export interface SplitRadarDim {
+  key: string
+  label: string
+  avgMs: number | null
+  refMs: number
+  score: number | null // 0–100, higher = faster than the reference pace; null if no data
+  sample: number
+}
+
+/** Reference cumulative split times (ms from start) — a rough ~13:00 mid-tier pace baseline. */
+const REFERENCE_SPLITS: Record<string, number> = {
+  overworld: 210_000,
+  bastion: 270_000,
+  fortress: 345_000,
+  blind: 420_000,
+  stronghold: 540_000,
+  end: 660_000
+}
+
+/** Per-split speed vs a typical pace: 50 = on pace, higher = faster. Cumulative splits only. */
+export function buildSplitRadar(splits: SplitStat[]): SplitRadarDim[] {
+  const out: SplitRadarDim[] = []
+  for (const s of splits) {
+    const ref = REFERENCE_SPLITS[s.key]
+    if (ref == null) continue // skip finish / fortToFinish — not cumulative milestones
+    const avg = s.average
+    const score = avg != null && avg > 0 ? clamp100((ref / avg) * 50) : null
+    out.push({ key: s.key, label: s.label, avgMs: avg, refMs: ref, score, sample: s.count })
+  }
+  return out
+}
+
+/**
+ * Human-readable strengths/weaknesses, anchored to the authoritative season record so they
+ * stay meaningful even when the recent match window is a sparse losing streak.
+ */
+export function scorecardInsights(
+  dims: ScoreDim[],
+  season: { winRate: number | null; played: number; bestTime: number | null; bestStreak: number },
+  deaths?: DeathStats
+): RankedInsight[] {
+  const out: RankedInsight[] = []
+
+  if (season.played > 0 && season.winRate != null) {
+    out.push({
+      kind: season.winRate >= 55 ? 'strength' : season.winRate <= 40 ? 'weakness' : 'note',
+      label: 'Record',
+      detail: `${season.winRate}% win rate over ${season.played} games.`
+    })
+  }
+
+  // Survival is handled explicitly below, so keep it out of the generic best/worst pick.
+  const ranked = dims
+    .filter((d) => d.key !== 'winrate' && d.key !== 'survival' && d.sample >= 3)
+    .sort((x, y) => y.score - x.score)
+  const top = ranked[0]
+  const bottom = ranked[ranked.length - 1]
+  if (top && top.score >= 55) out.push({ kind: 'strength', label: top.label, detail: `${top.detail}.` })
+  if (bottom && bottom !== top && bottom.score <= 45) {
+    out.push({ kind: 'weakness', label: bottom.label, detail: `${bottom.detail}.` })
+  }
+
+  // Real deaths (strategic resets already excluded) are a costly, flaggable weakness.
+  if (deaths && deaths.matches >= 3 && deaths.total > 0 && deaths.perMatch >= 0.34) {
+    out.push({
+      kind: 'weakness',
+      label: 'Dies too much',
+      detail: `${deaths.total} death${deaths.total === 1 ? '' : 's'} in ${deaths.matches} games — each one costs time and runs.`
+    })
+  }
+
+  if (season.bestTime) {
+    out.push({ kind: 'note', label: 'Personal best', detail: `Fastest win ${msToTime(season.bestTime)}.` })
+  }
+  if (season.bestStreak >= 3) {
+    out.push({ kind: 'note', label: 'Peak streak', detail: `Best win streak: ${season.bestStreak} games.` })
+  }
+
+  if (out.length === 0) {
+    out.push({ kind: 'note', label: 'Getting started', detail: 'Play a few ranked games to build your profile.' })
+  }
+  return out.slice(0, 6)
 }
