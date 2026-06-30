@@ -24,13 +24,17 @@ export function App() {
     let active = true
     void (async () => {
       try {
-        const [p, cfg] = await Promise.all([
+        const [p, cfg, pace] = await Promise.all([
           window.mcsr.auth.restore(),
-          window.mcsr.config.get()
+          window.mcsr.config.get(),
+          window.mcsr.paceman.status()
         ])
         if (!active) return
         if (p) setProfile(p)
-        setPacemanName(cfg.pacemanName ?? p?.name ?? null)
+        // Paceman is connected when a name was explicitly saved, OR an access key exists (the user
+        // opted in) — in which case default stats lookups to their IGN. No key and no name => null,
+        // so an unconnected player never silently surfaces paceman runs that match their IGN.
+        setPacemanName(cfg.pacemanName ?? (pace.hasKey ? (p?.name ?? null) : null))
       } finally {
         if (active) setAuthReady(true)
       }
