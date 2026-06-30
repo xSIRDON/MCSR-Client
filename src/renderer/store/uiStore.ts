@@ -14,8 +14,7 @@ export const useUi = create<UiState>((set) => ({
   profile: null,
   authReady: false,
   pacemanName: null,
-  setProfile: (profile) =>
-    set((s) => ({ profile, pacemanName: s.pacemanName ?? profile?.name ?? null })),
+  setProfile: (profile) => set({ profile }),
   setAuthReady: (authReady) => set({ authReady }),
   setPacemanName: (pacemanName) => set({ pacemanName })
 }))

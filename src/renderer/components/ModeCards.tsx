@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { mcsr, paceman } from '../lib/clients'
 import { eloToRank } from '@core/rank'
 import { msToTime } from '@core/format'
@@ -43,6 +44,7 @@ export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }
 }
 
 export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: number }) {
+  const navigate = useNavigate()
   const { data: runs } = useQuery({
     queryKey: ['rsg-card', name],
     queryFn: () => paceman.getRecentRuns(name!, { limit: 50, hours: 24 * 365 }),
@@ -71,6 +73,20 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
   const finished = runs?.filter((r) => r.finish != null) ?? []
   const pb = finished.length ? Math.min(...finished.map((r) => r.finish as number)) : null
 
+  const pbValue: ReactNode =
+    name == null ? (
+      <button
+        onClick={() => navigate('/settings')}
+        className="font-display text-base font-normal tracking-wide text-faint transition-colors hover:text-[var(--portal)]"
+      >
+        Connect paceman →
+      </button>
+    ) : pb != null ? (
+      msToTime(pb)
+    ) : (
+      '—'
+    )
+
   return (
     <ModeShell accent="var(--portal)" glow="var(--portal)" delay={delay}>
       <header className="relative flex items-center justify-between gap-3">
@@ -84,7 +100,7 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
         <StatusPill live={isLive} />
       </header>
 
-      <Hero label="Personal best" value={pb != null ? msToTime(pb) : '—'} color="var(--portal)" glow="rgba(159,107,255,.5)" />
+      <Hero label="Personal best" value={pbValue} color="var(--portal)" glow="rgba(159,107,255,.5)" />
 
       <PlayButton
         busy={busy}
@@ -146,11 +162,13 @@ function launchLabel(state: string, ready: string): string {
 }
 
 function Hero({ label, value, color, glow }: { label: string; value: ReactNode; color: string; glow: string }) {
+  const len = typeof value === 'string' ? value.length : 0
+  const sizeClass = len > 9 ? 'text-[1.9rem]' : len > 6 ? 'text-4xl' : 'text-5xl'
   return (
     <div className="relative flex flex-1 flex-col justify-center py-3">
       <div className="text-[10px] uppercase tracking-[0.16em] text-muted">{label}</div>
       <div
-        className="font-display tnum whitespace-nowrap text-5xl leading-none"
+        className={`font-display tnum whitespace-nowrap leading-none ${sizeClass}`}
         style={{ color, textShadow: `0 0 34px ${glow}` }}
       >
         {value}

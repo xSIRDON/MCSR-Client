@@ -40,7 +40,8 @@ export function Settings() {
     if (!keyInput.trim()) return
     await window.mcsr.paceman.setKey(keyInput.trim())
     setKeyInput('')
-    flash('Paceman key saved')
+    if (!pacemanName && profile?.name) setPacemanName(profile.name)
+    flash('Paceman connected')
   }
 
   async function pickJar() {
@@ -58,7 +59,6 @@ export function Settings() {
     try {
       const p = await window.mcsr.auth.login()
       setProfile(p)
-      setPacemanName(p.name)
       await refreshAccounts()
       flash('Account added')
     } catch {
@@ -69,7 +69,6 @@ export function Settings() {
     const p = await window.mcsr.auth.switch(uuid)
     if (p) {
       setProfile(p)
-      setPacemanName(p.name)
     }
     await refreshAccounts()
   }
@@ -83,7 +82,6 @@ export function Settings() {
       const p = await window.mcsr.auth.switch(active.uuid)
       if (p) {
         setProfile(p)
-        setPacemanName(p.name)
       }
     }
   }
@@ -218,10 +216,10 @@ export function Settings() {
             />
             <button
               onClick={() => {
-                const v = nameInput.trim() || profile?.name || null
+                const v = nameInput.trim() || null
                 patch({ pacemanName: v })
                 setPacemanName(v)
-                flash('Saved')
+                flash(v ? 'Paceman connected' : 'Paceman disconnected')
               }}
               className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm text-muted hover:text-text"
             >
