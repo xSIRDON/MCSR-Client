@@ -47,7 +47,11 @@ export const useInstances = create<InstancesState>((set, get) => ({
 
     window.mcsr.instances.onStateChanged((s) =>
       set((prev) => {
-        const progress = isBusy(s.state) ? prev.progress : { ...prev.progress, [s.id]: null }
+        // Keep the progress line only while there's active work (installing / launching). Once the
+        // game is running (or back to ready), clear it so the button shows "Playing" / "Game is
+        // running" instead of the stale "Launching…" message.
+        const active = s.state === 'installing' || s.state === 'launching'
+        const progress = active ? prev.progress : { ...prev.progress, [s.id]: null }
         return { statuses: { ...prev.statuses, [s.id]: s }, progress }
       })
     )
