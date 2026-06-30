@@ -114,6 +114,7 @@ export interface LeaderboardEntry {
   eloRate: number | null
   eloRank: number | null
   country?: string | null
+  roleType?: number
   seasonResult?: { eloRate: number | null; eloRank: number | null }
 }
 
@@ -197,4 +198,21 @@ export type McsrClient = ReturnType<typeof createMcsrClient>
 
 export function avatarUrl(idOrUuid: string, size = 64): string {
   return `https://mc-heads.net/avatar/${encodeURIComponent(idOrUuid)}/${size}`
+}
+
+export type DonorTier = 'stone' | 'iron' | 'diamond'
+export interface DonorInfo {
+  tier: DonorTier
+  label: string
+  color: string
+}
+
+const DONOR_TIERS: Record<number, DonorInfo> = {
+  1: { tier: 'stone', label: 'Stone', color: '#9aa0a6' },
+  2: { tier: 'iron', label: 'Iron', color: '#d3d7db' },
+  3: { tier: 'diamond', label: 'Diamond', color: '#4fe3d7' }
+}
+
+export function donorInfo(roleType: number | null | undefined): DonorInfo | null {
+  return roleType ? DONOR_TIERS[roleType] ?? null : null
 }
