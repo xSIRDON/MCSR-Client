@@ -17,13 +17,15 @@ export function Profile() {
   const [tab, setTab] = useState<'ranked' | 'rsg'>('ranked')
 
   // Resolve a searched name to a uuid for the chart/feed; nickname drives paceman.
-  const { data: user } = useQuery({
+  const { data: user, isError: noRankedProfile } = useQuery({
     queryKey: ['user', identifier],
     queryFn: () => mcsr.getUser(identifier),
     enabled: !!identifier
   })
+  const displayName = queried || profile?.name || identifier
   const uuid = user?.uuid ?? (queried ? '' : profile?.uuid ?? '')
-  const rsgName = user?.nickname ?? null
+  // RSG stats look a player up by name; fall back to the IGN when there's no MCSR profile.
+  const rsgName = user?.nickname ?? queried ?? profile?.name ?? null
 
   return (
     <div className="mx-auto max-w-[980px] space-y-4 px-5 py-4">
@@ -38,7 +40,7 @@ export function Profile() {
 
       {identifier ? (
         <>
-          <ProfileHero identifier={identifier} />
+          <ProfileHero identifier={identifier} name={displayName} />
 
           <div className="flex w-fit gap-1 rounded-xl border border-[var(--line)] bg-[var(--bg-2)] p-1">
             <Tab active={tab === 'ranked'} onClick={() => setTab('ranked')} accent="var(--gold)">
@@ -50,7 +52,7 @@ export function Profile() {
           </div>
 
           {tab === 'ranked' ? (
-            uuid ? (
+            !noRankedProfile && uuid ? (
               <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
                 <EloChart uuid={uuid} />
                 <div className="flex min-h-[280px] flex-col">

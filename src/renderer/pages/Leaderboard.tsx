@@ -4,6 +4,7 @@ import { mcsr } from '../lib/clients'
 import { eloToRank } from '@core/rank'
 import { PlayerHead } from '../components/PlayerHead'
 import { PlayerSearch } from '../components/PlayerSearch'
+import { DonorBadge } from '../components/DonorBadge'
 
 export function Leaderboard() {
   const navigate = useNavigate()
@@ -57,12 +58,15 @@ export function Leaderboard() {
 
                   <PlayerHead id={u.uuid} uuid={u.uuid} size={30} className="rounded shrink-0" />
 
-                  <span
-                    className="min-w-0 flex-1 truncate text-sm"
-                    style={{ color: top3 ? 'var(--gold)' : 'var(--text)' }}
-                  >
-                    {u.nickname}
-                  </span>
+                  <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                    <span
+                      className="truncate text-sm"
+                      style={{ color: top3 ? 'var(--gold)' : 'var(--text)' }}
+                    >
+                      {u.nickname}
+                    </span>
+                    <DonorBadge roleType={u.roleType} size={14} />
+                  </div>
 
                   {u.country && (
                     <img

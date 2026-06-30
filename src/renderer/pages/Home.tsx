@@ -6,6 +6,7 @@ import { mcsr } from '../lib/clients'
 import { eloToRank } from '@core/rank'
 import { PlayerHead } from '../components/PlayerHead'
 import { RankBadge } from '../components/RankBadge'
+import { DonorBadge } from '../components/DonorBadge'
 import { RankedCard, RsgCard, ZsgCard } from '../components/ModeCards'
 import { EloChart } from '../components/EloChart'
 import { MatchFeed } from '../components/MatchFeed'
@@ -64,6 +65,7 @@ function HomeHero({ uuid, name }: { uuid: string; name: string }) {
         <div className="text-[11px] uppercase tracking-[0.22em] text-faint">Welcome back</div>
         <div className="flex items-center gap-2.5">
           <h1 className="font-display text-2xl tracking-wide text-text">{name}</h1>
+          <DonorBadge roleType={user?.roleType} withLabel />
           {user?.country && (
             <img
               src={`https://flagcdn.com/h20/${user.country.toLowerCase()}.png`}

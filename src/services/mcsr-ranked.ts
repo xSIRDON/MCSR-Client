@@ -129,6 +129,8 @@ export interface LeaderboardEntry {
   eloRate: number | null
   eloRank: number | null
   country?: string | null
+  /** MCSR donor tier badge: 1 Stone, 2 Iron, 3 Diamond, 0/absent = not a donor. */
+  roleType?: number
   seasonResult?: { eloRate: number | null; eloRank: number | null }
 }
 
@@ -213,4 +215,25 @@ export type McsrClient = ReturnType<typeof createMcsrClient>
 /** Avatar URL helper. mc-heads accepts username or dashless uuid. */
 export function avatarUrl(idOrUuid: string, size = 64): string {
   return `https://mc-heads.net/avatar/${encodeURIComponent(idOrUuid)}/${size}`
+}
+
+// ---- Donor tiers ----
+// MCSR supporters get a tier badge, exposed as `roleType` on the user/leaderboard objects.
+
+export type DonorTier = 'stone' | 'iron' | 'diamond'
+export interface DonorInfo {
+  tier: DonorTier
+  label: string
+  color: string
+}
+
+const DONOR_TIERS: Record<number, DonorInfo> = {
+  1: { tier: 'stone', label: 'Stone', color: '#9aa0a6' },
+  2: { tier: 'iron', label: 'Iron', color: '#d3d7db' },
+  3: { tier: 'diamond', label: 'Diamond', color: '#4fe3d7' }
+}
+
+/** Donor tier for a `roleType`, or null when the player isn't a supporter (0 / undefined). */
+export function donorInfo(roleType: number | null | undefined): DonorInfo | null {
+  return roleType ? DONOR_TIERS[roleType] ?? null : null
 }

@@ -6,19 +6,37 @@ import { msToTime, winRate } from '@core/format'
 import { PlayerHead } from './PlayerHead'
 import { RankBadge } from './RankBadge'
 import { StatTile } from './StatTile'
+import { DonorBadge } from './DonorBadge'
 
-export function ProfileHero({ identifier }: { identifier: string }) {
+export function ProfileHero({ identifier, name }: { identifier: string; name?: string }) {
   const { data: user, isLoading, isError } = useQuery({
     queryKey: ['user', identifier],
     queryFn: () => mcsr.getUser(identifier)
   })
 
   if (isLoading) return <HeroSkeleton />
+  // No MCSR Ranked profile (or the name doesn't resolve): show a friendly identity card rather
+  // than a raw error. RSG stats still work from the RSG tab.
   if (isError || !user)
     return (
-      <div className="surface grid h-[230px] place-items-center text-muted">
-        Couldn't load <span className="mx-1 text-text">{identifier}</span>. Check the name and try again.
-      </div>
+      <section className="surface flex flex-wrap items-center gap-5 p-5 animate-fade-up">
+        <PlayerHead
+          id={identifier}
+          uuid={identifier}
+          size={64}
+          render="body"
+          className="rounded-md opacity-90"
+        />
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold tracking-tight text-text">
+            {name || identifier}
+          </h1>
+          <p className="mt-1.5 text-sm text-muted">No MCSR Ranked profile yet.</p>
+          <p className="mt-0.5 text-xs text-faint">
+            Play a ranked match to start tracking ranked stats here.
+          </p>
+        </div>
+      </section>
     )
 
   const rank = eloToRank(user.eloRate)
@@ -47,6 +65,7 @@ export function ProfileHero({ identifier }: { identifier: string }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
             <h1 className="truncate text-2xl font-bold tracking-tight">{user.nickname}</h1>
+            <DonorBadge roleType={user.roleType} withLabel />
             {user.country && (
               <img
                 src={`https://flagcdn.com/h20/${user.country.toLowerCase()}.png`}

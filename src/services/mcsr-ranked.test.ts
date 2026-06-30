@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createMcsrClient, McsrApiError, avatarUrl, type FetchLike } from './mcsr-ranked'
+import { createMcsrClient, McsrApiError, avatarUrl, donorInfo, type FetchLike } from './mcsr-ranked'
 
 function stub(payload: unknown, ok = true, status = 200): FetchLike {
   return vi.fn(async () => ({
@@ -49,5 +49,21 @@ describe('createMcsrClient', () => {
 describe('avatarUrl', () => {
   it('builds an mc-heads url', () => {
     expect(avatarUrl('Feinberg', 128)).toBe('https://mc-heads.net/avatar/Feinberg/128')
+  })
+})
+
+describe('donorInfo', () => {
+  it('maps roleType to the Stone / Iron / Diamond donor tiers', () => {
+    expect(donorInfo(1)?.tier).toBe('stone')
+    expect(donorInfo(2)?.tier).toBe('iron')
+    expect(donorInfo(3)?.tier).toBe('diamond')
+    expect(donorInfo(3)?.label).toBe('Diamond')
+  })
+
+  it('returns null for non-donors and unknown role types', () => {
+    expect(donorInfo(0)).toBeNull()
+    expect(donorInfo(null)).toBeNull()
+    expect(donorInfo(undefined)).toBeNull()
+    expect(donorInfo(99)).toBeNull()
   })
 })
