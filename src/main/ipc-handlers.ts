@@ -296,6 +296,7 @@ async function launchInstance(
   pushLog('system', `Launching ${id}…`)
   const child = await gmll.launch(id, token, fabric, sendProgress)
   setState(id, { state: 'running' })
+  BrowserWindow.getAllWindows()[0]?.minimize()
   child.stdout.on('data', (d: Buffer) => pushLog('game', d.toString()))
   child.stderr.on('data', (d: Buffer) => pushLog('game', d.toString()))
 
@@ -306,7 +307,20 @@ async function launchInstance(
     if (store.getConfig().ninjabrain) killNinjabrain()
     pushLog('system', `${id} closed.`)
     setState(id, { state: 'ready' })
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win?.isMinimized()) {
+      win.restore()
+      win.focus()
+    }
   })
+
+  child.unref()
+}
+
+export function isGameRunning(): boolean {
+  return (['ranked', 'rsg', 'zsg'] as InstanceId[]).some(
+    (id) => states[id]?.state === 'running' || states[id]?.state === 'launching'
+  )
 }
 
 const BUSY_STATES = ['installing', 'launching', 'running']
