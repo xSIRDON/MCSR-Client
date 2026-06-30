@@ -46,7 +46,8 @@ export const useInstances = create<InstancesState>((set, get) => ({
 
     window.mcsr.instances.onStateChanged((s) =>
       set((prev) => {
-        const progress = isBusy(s.state) ? prev.progress : { ...prev.progress, [s.id]: null }
+        const active = s.state === 'installing' || s.state === 'launching'
+        const progress = active ? prev.progress : { ...prev.progress, [s.id]: null }
         return { statuses: { ...prev.statuses, [s.id]: s }, progress }
       })
     )
