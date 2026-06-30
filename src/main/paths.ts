@@ -9,25 +9,27 @@ function installBase(): string {
   return app.isPackaged ? dirname(app.getPath('exe')) : app.getAppPath()
 }
 
-function rootDir(): string {
-  return join(installBase(), DATA_DIR)
-}
-
 function sessionDir(): string {
   return app.getPath('userData')
+}
+
+function rootDir(): string {
+  return join(sessionDir(), DATA_DIR)
 }
 
 export function migrateDataDir(): void {
   const current = rootDir()
   if (existsSync(current)) return
-  const legacy = [join(app.getPath('appData'), 'MCSR-Client')]
+  const legacy = [
+    join(installBase(), DATA_DIR),
+    join(app.getPath('appData'), 'MCSR-Client')
+  ]
   for (const old of legacy) {
-    if (existsSync(old)) {
-      try {
-        renameSync(old, current)
-        return
-      } catch {
-      }
+    if (old === current || !existsSync(old)) continue
+    try {
+      renameSync(old, current)
+      return
+    } catch {
     }
   }
 }

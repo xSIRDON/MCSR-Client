@@ -30,8 +30,10 @@ describe('eloToRank', () => {
     expect(eloToRank(2100)).toMatchObject({ tier: 'Netherite', division: 0, color: '#c0a0ff' })
   })
 
-  it('treats null (unranked) as the Coal floor', () => {
-    expect(eloToRank(null).tier).toBe('Coal')
+  it('treats null/missing ELO as Unrated, not the Coal floor', () => {
+    expect(eloToRank(null)).toMatchObject({ tier: 'Unrated', name: 'Unrated' })
+    expect(eloToRank(undefined).name).toBe('Unrated')
+    expect(eloToRank(0).tier).toBe('Coal')
   })
 
   it('builds a contiguous ladder with no gaps', () => {

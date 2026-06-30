@@ -1,4 +1,4 @@
-export type TierName = 'Coal' | 'Iron' | 'Gold' | 'Emerald' | 'Diamond' | 'Netherite'
+export type TierName = 'Unrated' | 'Coal' | 'Iron' | 'Gold' | 'Emerald' | 'Diamond' | 'Netherite'
 
 export interface Rank {
   name: string
@@ -63,8 +63,18 @@ function buildRanks(): Rank[] {
 
 export const RANKS: Rank[] = buildRanks()
 
+export const UNRATED: Rank = {
+  name: 'Unrated',
+  tier: 'Unrated',
+  division: 0,
+  min: 0,
+  max: 0,
+  color: '#7c7c88',
+  glow: '#7c7c88'
+}
+
 export function eloToRank(elo: number | null | undefined): Rank {
-  if (elo == null || Number.isNaN(elo)) return RANKS[0]
+  if (elo == null || Number.isNaN(elo)) return UNRATED
   const found = RANKS.find((r) => elo >= r.min && elo <= r.max)
   return found ?? RANKS[RANKS.length - 1]
 }

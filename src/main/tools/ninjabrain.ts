@@ -37,6 +37,10 @@ export async function setupNinjabrain(): Promise<void> {
   createDesktopShortcut()
 }
 
+export function refreshNinjabrainShortcut(): void {
+  if (existsSync(jarPath())) createDesktopShortcut()
+}
+
 function isRunning(): Promise<boolean> {
   if (process.platform !== 'win32') return Promise.resolve(false)
   return new Promise((resolve) => {
