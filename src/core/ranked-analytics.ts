@@ -1,4 +1,5 @@
 import type { MatchInfo } from '@services/mcsr-ranked'
+import { msToTime } from './format'
 
 export interface RankedInsight {
   kind: 'strength' | 'weakness' | 'note'
@@ -562,4 +563,158 @@ export function analyzeTypeBreakdowns(
       (m) => pickType(m.bastionType, m.seed?.nether)
     )
   }
+}
+
+const REAL_DEATH_EVENT = 'projectelo.timeline.death'
+
+export interface DeathStats {
+  total: number
+  matches: number
+  perMatch: number
+}
+
+export function countDeaths(uuid: string, details: MatchInfo[]): DeathStats {
+  const me = uuid.toLowerCase()
+  const list = Array.isArray(details)
+    ? details.filter((m) => m && m.type === 2 && Array.isArray(m.timelines))
+    : []
+  let total = 0
+  for (const m of list) {
+    for (const e of m.timelines!) {
+      if (e && typeof e.uuid === 'string' && e.uuid.toLowerCase() === me && e.type === REAL_DEATH_EVENT) {
+        total++
+      }
+    }
+  }
+  return { total, matches: list.length, perMatch: list.length > 0 ? total / list.length : 0 }
+}
+
+function clamp100(n: number): number {
+  return Math.max(0, Math.min(100, Math.round(n)))
+}
+
+export interface ScoreDim {
+  key: string
+  label: string
+  score: number
+  detail: string
+  sample: number
+}
+
+export function buildScorecard(
+  a: RankedAnalytics,
+  seasonWinRate: number | null,
+  seasonPlayed: number,
+  deaths?: DeathStats
+): ScoreDim[] {
+  const dims: ScoreDim[] = []
+
+  const wr = seasonPlayed > 0 && seasonWinRate != null ? seasonWinRate : a.decided > 0 ? a.winRate : null
+  const wrSample = seasonPlayed > 0 ? seasonPlayed : a.decided
+  if (wr != null) {
+    dims.push({ key: 'winrate', label: 'Win Rate', score: clamp100(wr), detail: `${wr}% over ${wrSample} games`, sample: wrSample })
+  }
+  if (a.vsHigher.decided > 0) {
+    dims.push({ key: 'clutch', label: 'Clutch', score: clamp100(a.vsHigher.winRate), detail: `${a.vsHigher.winRate}% vs stronger (${a.vsHigher.decided})`, sample: a.vsHigher.decided })
+  }
+  if (a.vsLower.decided > 0) {
+    dims.push({ key: 'closing', label: 'Closing', score: clamp100(a.vsLower.winRate), detail: `${a.vsLower.winRate}% vs weaker (${a.vsLower.decided})`, sample: a.vsLower.decided })
+  }
+  if (a.recentSample > 0) {
+    dims.push({ key: 'form', label: 'Recent Form', score: clamp100(a.recentWinRate), detail: `${a.recentWinRate}% over last ${a.recentSample}`, sample: a.recentSample })
+  }
+  if (a.decided > 0) {
+    const ff = Math.round((a.forfeits.yours / a.decided) * 100)
+    dims.push({ key: 'finishing', label: 'Finishing', score: clamp100(100 - ff), detail: `forfeited ${ff}% of games`, sample: a.decided })
+  }
+  if (a.best != null && a.averageWin != null && a.averageWin > 0) {
+    const spread = (a.averageWin - a.best) / a.averageWin
+    dims.push({ key: 'consistency', label: 'Consistency', score: clamp100(100 - spread * 250), detail: 'win pace vs your best', sample: a.completionTimes.length })
+  }
+  if (deaths && deaths.matches >= 1) {
+    dims.push({
+      key: 'survival',
+      label: 'Survival',
+      score: clamp100(100 - deaths.perMatch * 70),
+      detail: `${deaths.total} death${deaths.total === 1 ? '' : 's'} in ${deaths.matches} games`,
+      sample: deaths.matches
+    })
+  }
+  return dims
+}
+
+export interface SplitRadarDim {
+  key: string
+  label: string
+  avgMs: number | null
+  refMs: number
+  score: number | null
+  sample: number
+}
+
+const REFERENCE_SPLITS: Record<string, number> = {
+  overworld: 210_000,
+  bastion: 270_000,
+  fortress: 345_000,
+  blind: 420_000,
+  stronghold: 540_000,
+  end: 660_000
+}
+
+export function buildSplitRadar(splits: SplitStat[]): SplitRadarDim[] {
+  const out: SplitRadarDim[] = []
+  for (const s of splits) {
+    const ref = REFERENCE_SPLITS[s.key]
+    if (ref == null) continue
+    const avg = s.average
+    const score = avg != null && avg > 0 ? clamp100((ref / avg) * 50) : null
+    out.push({ key: s.key, label: s.label, avgMs: avg, refMs: ref, score, sample: s.count })
+  }
+  return out
+}
+
+export function scorecardInsights(
+  dims: ScoreDim[],
+  season: { winRate: number | null; played: number; bestTime: number | null; bestStreak: number },
+  deaths?: DeathStats
+): RankedInsight[] {
+  const out: RankedInsight[] = []
+
+  if (season.played > 0 && season.winRate != null) {
+    out.push({
+      kind: season.winRate >= 55 ? 'strength' : season.winRate <= 40 ? 'weakness' : 'note',
+      label: 'Record',
+      detail: `${season.winRate}% win rate over ${season.played} games.`
+    })
+  }
+
+  const ranked = dims
+    .filter((d) => d.key !== 'winrate' && d.key !== 'survival' && d.sample >= 3)
+    .sort((x, y) => y.score - x.score)
+  const top = ranked[0]
+  const bottom = ranked[ranked.length - 1]
+  if (top && top.score >= 55) out.push({ kind: 'strength', label: top.label, detail: `${top.detail}.` })
+  if (bottom && bottom !== top && bottom.score <= 45) {
+    out.push({ kind: 'weakness', label: bottom.label, detail: `${bottom.detail}.` })
+  }
+
+  if (deaths && deaths.matches >= 3 && deaths.total > 0 && deaths.perMatch >= 0.34) {
+    out.push({
+      kind: 'weakness',
+      label: 'Dies too much',
+      detail: `${deaths.total} death${deaths.total === 1 ? '' : 's'} in ${deaths.matches} games — each one costs time and runs.`
+    })
+  }
+
+  if (season.bestTime) {
+    out.push({ kind: 'note', label: 'Personal best', detail: `Fastest win ${msToTime(season.bestTime)}.` })
+  }
+  if (season.bestStreak >= 3) {
+    out.push({ kind: 'note', label: 'Peak streak', detail: `Best win streak: ${season.bestStreak} games.` })
+  }
+
+  if (out.length === 0) {
+    out.push({ kind: 'note', label: 'Getting started', detail: 'Play a few ranked games to build your profile.' })
+  }
+  return out.slice(0, 6)
 }
