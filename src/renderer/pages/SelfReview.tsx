@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Bar,
@@ -22,17 +22,20 @@ import {
   analyzeSplits,
   analyzeTypeBreakdowns,
   buildScorecard,
-  buildSplitRadar,
   countDeaths,
-  scorecardInsights
+  playerSegments,
+  scorecardInsights,
+  splitCallouts,
+  splitPerformance
 } from '@core/ranked-analytics'
 import type {
   RankedInsight,
   ScoreDim,
-  SplitRadarDim,
+  SplitPerf,
   SplitStat,
   TypeBreakdown
 } from '@core/ranked-analytics'
+import splitBaseline from '@core/split-baseline.json'
 import { seasonRanked } from '@services/mcsr-ranked'
 import type { MatchInfo } from '@services/mcsr-ranked'
 import { eloToRank } from '@core/rank'
@@ -51,6 +54,19 @@ const KIND_LABEL: Record<RankedInsight['kind'], string> = {
   strength: 'Strength',
   weakness: 'Weakness',
   note: 'Note'
+}
+
+const TIER_ORDER = ['coal', 'iron', 'gold', 'emerald', 'diamond', 'netherite']
+
+/** The tier directly above the player's, with its baseline bucket — for the "to rank up" callout. */
+function nextTierAbove(
+  tierKey: string
+): { label: string; bucket: Record<string, number[]> } | undefined {
+  const i = TIER_ORDER.indexOf(tierKey)
+  if (i < 0 || i >= TIER_ORDER.length - 1) return undefined
+  const next = TIER_ORDER[i + 1]
+  const bucket = (splitBaseline.buckets as Record<string, Record<string, number[]>>)[next]
+  return bucket ? { label: next.charAt(0).toUpperCase() + next.slice(1), bucket } : undefined
 }
 
 export function SelfReview() {
@@ -144,20 +160,41 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
     () => buildScorecard(analytics, seasonWinRate, season.played, deaths),
     [analytics, seasonWinRate, season.played, deaths]
   )
-  const splitRadar = useMemo(() => buildSplitRadar(splits), [splits])
+  // Split callouts (best / weakest split, and the biggest gap to the next tier) rank each of
+  // your splits against the whole-world baseline and the tier above you.
+  const worldBucket = (splitBaseline.buckets as Record<string, Record<string, number[]>>).world
+  const perfWorld = useMemo(
+    () => splitPerformance(uuid, details ?? [], worldBucket),
+    [uuid, details, worldBucket]
+  )
+  const playerSegs = useMemo(() => playerSegments(uuid, details ?? []), [uuid, details])
+  const nextTier = useMemo(() => nextTierAbove(rank.tier.toLowerCase()), [rank.tier])
   const insights = useMemo(
     () =>
-      scorecardInsights(
-        scorecard,
-        {
-          winRate: seasonWinRate,
-          played: season.played,
-          bestTime: season.bestTime,
-          bestStreak: season.bestStreak
-        },
-        deaths
-      ),
-    [scorecard, deaths, seasonWinRate, season.played, season.bestTime, season.bestStreak]
+      [
+        ...splitCallouts(perfWorld, playerSegs, nextTier),
+        ...scorecardInsights(
+          scorecard,
+          {
+            winRate: seasonWinRate,
+            played: season.played,
+            bestTime: season.bestTime,
+            bestStreak: season.bestStreak
+          },
+          deaths
+        )
+      ].slice(0, 8),
+    [
+      perfWorld,
+      playerSegs,
+      nextTier,
+      scorecard,
+      deaths,
+      seasonWinRate,
+      season.played,
+      season.bestTime,
+      season.bestStreak
+    ]
   )
 
   const loading = matchesLoading && !matches
@@ -193,7 +230,13 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
           <StatRow head={head} />
           <div className="grid gap-4 lg:grid-cols-2">
             <PlayStyleRadar dims={scorecard} />
-            <SplitsRadar dims={splitRadar} />
+            <SplitPerformanceRadar
+              uuid={uuid}
+              details={details ?? []}
+              tierKey={rank.tier.toLowerCase()}
+              tierLabel={rank.tier}
+              loading={detailsLoading && !details}
+            />
           </div>
           <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
             <InsightsCard insights={insights} />
@@ -339,40 +382,113 @@ function PlayStyleRadar({ dims }: { dims: ScoreDim[] }) {
   )
 }
 
-function SplitsRadar({ dims }: { dims: SplitRadarDim[] }) {
-  const data = dims
-    .filter((d) => d.score != null)
-    .map((d) => ({
-      axis: d.label,
-      score: d.score as number,
-      detail: d.avgMs != null ? `avg ${msToTime(d.avgMs)} · pace ${msToTime(d.refMs)}` : '—'
-    }))
+/** Custom polar-axis label: split name + the player's time + Top/Bottom % (colored). */
+function PerfTick(props: {
+  x?: number
+  y?: number
+  cx?: number
+  payload?: { value: string }
+  perf?: Record<string, SplitPerf>
+}) {
+  const { x = 0, y = 0, cx = 0, payload, perf } = props
+  const p = payload && perf ? perf[payload.value] : undefined
+  const anchor = x > cx + 8 ? 'start' : x < cx - 8 ? 'end' : 'middle'
+  const dx = anchor === 'start' ? 6 : anchor === 'end' ? -6 : 0
+  const pctColor = !p || p.pctLabel === '—' ? '#8b8b9e' : p.pctLabel.startsWith('Top') ? '#5fd38d' : '#e2706e'
+  return (
+    <g>
+      <text x={x + dx} y={y - 5} textAnchor={anchor} fill="#cdcdd8" fontSize={12} className="font-display">
+        {payload?.value}
+      </text>
+      <text x={x + dx} y={y + 10} textAnchor={anchor} fontSize={11}>
+        <tspan fill="#8b8b9e">{p?.ms != null ? msToTime(p.ms) : '—'}</tspan>
+        {p && p.pctLabel !== '—' ? <tspan fill={pctColor}> · {p.pctLabel}</tspan> : null}
+      </text>
+    </g>
+  )
+}
+
+/** Split Performance radar — each segment ranked (Top/Bottom %) vs a baseline, World or your tier. */
+function SplitPerformanceRadar({
+  uuid,
+  details,
+  tierKey,
+  tierLabel,
+  loading
+}: {
+  uuid: string
+  details: MatchInfo[]
+  tierKey: string
+  tierLabel: string
+  loading: boolean
+}) {
+  const buckets = splitBaseline.buckets as Record<string, Record<string, number[]>>
+  const hasTier = !!buckets[tierKey]
+  const [basis, setBasis] = useState<'world' | 'tier'>('world')
+  const activeBasis = basis === 'tier' && hasTier ? 'tier' : 'world'
+  const bucket = activeBasis === 'tier' ? buckets[tierKey] : buckets.world
+
+  const perf = useMemo(() => splitPerformance(uuid, details, bucket), [uuid, details, bucket])
+  const byLabel = useMemo(() => {
+    const m: Record<string, SplitPerf> = {}
+    for (const p of perf) m[p.label] = p
+    return m
+  }, [perf])
+  // Only plot splits the player actually has data for. Coalescing a null score to 0 would collapse
+  // that spoke to the polygon centre — the visual encoding for worst-possible — misrepresenting a
+  // no-data split (very common: `end` needs a win) as bottom-of-field, contradicting its '—' label.
+  const data = perf
+    .filter((p) => p.score != null)
+    .map((p) => ({ axis: p.label, score: p.score as number }))
+  const rated = data.length
+
   return (
     <section className="surface p-5 animate-fade-up" style={{ animationDelay: '90ms' }}>
-      <header className="mb-2 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Split pace</h2>
-        <span className="text-xs text-faint">vs typical pace</span>
+      <header className="mb-1 flex items-center justify-between gap-2">
+        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">
+          Split performance
+        </h2>
+        <div className="flex overflow-hidden rounded-lg border border-[var(--line)] text-[11px]">
+          {(['world', 'tier'] as const).map((b) => {
+            const on = activeBasis === b
+            const disabled = b === 'tier' && !hasTier
+            return (
+              <button
+                key={b}
+                disabled={disabled}
+                onClick={() => setBasis(b)}
+                title={disabled ? 'Not enough data for your tier yet' : undefined}
+                className="px-2.5 py-1 font-medium transition-colors disabled:opacity-40"
+                style={{
+                  color: on ? 'var(--gold)' : 'var(--muted)',
+                  background: on ? 'rgba(245,200,66,0.12)' : 'transparent'
+                }}
+              >
+                {b === 'world' ? 'World' : tierLabel || 'My Tier'}
+              </button>
+            )
+          })}
+        </div>
       </header>
-      {data.length < 3 ? (
-        <div className="grid h-[240px] place-items-center text-center text-sm text-muted">
-          Not enough split data in your recent matches yet.
+      {rated < 3 ? (
+        <div className="grid h-[300px] place-items-center text-center text-sm text-muted">
+          {loading ? 'Loading split data…' : 'Not enough split data in your recent matches yet.'}
         </div>
       ) : (
-        <div className="h-[240px]">
+        <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={data} outerRadius="70%">
+            <RadarChart data={data} outerRadius="60%" margin={{ top: 24, right: 62, bottom: 24, left: 62 }}>
               <PolarGrid stroke="rgba(255,255,255,0.08)" />
-              <PolarAngleAxis dataKey="axis" tick={{ fill: '#8b8b9e', fontSize: 11 }} />
+              <PolarAngleAxis dataKey="axis" tick={<PerfTick perf={byLabel} />} />
               <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
               <Radar
                 dataKey="score"
-                stroke="#7aa2f7"
-                fill="#7aa2f7"
+                stroke="#9f6bff"
+                fill="#9f6bff"
                 fillOpacity={0.28}
                 isAnimationActive
                 animationDuration={600}
               />
-              <Tooltip content={<RadarTooltip />} />
             </RadarChart>
           </ResponsiveContainer>
         </div>

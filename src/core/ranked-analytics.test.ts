@@ -4,11 +4,12 @@ import {
   analyzeSplits,
   analyzeTypeBreakdowns,
   buildScorecard,
-  buildSplitRadar,
   countDeaths,
-  scorecardInsights
+  playerSegments,
+  scorecardInsights,
+  splitCallouts,
+  splitPerformance
 } from './ranked-analytics'
-import type { SplitStat } from './ranked-analytics'
 import type { MatchInfo } from '@services/mcsr-ranked'
 
 const ME = 'me-uuid'
@@ -448,7 +449,7 @@ describe('analyzeTypeBreakdowns', () => {
   })
 })
 
-describe('buildScorecard / buildSplitRadar / scorecardInsights', () => {
+describe('buildScorecard / scorecardInsights', () => {
   it('uses the authoritative season win rate for the Win Rate dimension', () => {
     // Recent window is all losses, but the season record is 6-5.
     const recent = analyzeRanked(ME, [match({ winner: OPP }), match({ winner: OPP })])
@@ -460,18 +461,6 @@ describe('buildScorecard / buildSplitRadar / scorecardInsights', () => {
 
   it('only includes dimensions that have data', () => {
     expect(buildScorecard(analyzeRanked(ME, []), null, 0)).toEqual([])
-  })
-
-  it('scores a split faster than the reference above 50 and skips non-cumulative splits', () => {
-    const splits: SplitStat[] = [
-      { key: 'overworld', label: 'Overworld', best: 100_000, average: 105_000, count: 3 },
-      { key: 'finish', label: 'Finish', best: 600_000, average: 600_000, count: 1 }
-    ]
-    const radar = buildSplitRadar(splits)
-    const ow = radar.find((d) => d.key === 'overworld')!
-    expect(ow.refMs).toBe(210_000)
-    expect(ow.score).toBeGreaterThan(50)
-    expect(radar.find((d) => d.key === 'finish')).toBeUndefined()
   })
 
   it('anchors insights to the season record, not the recent losing window', () => {
@@ -546,5 +535,115 @@ describe('countDeaths + death insights', () => {
       deaths
     )
     expect(ins.some((i) => i.label === 'Dies too much')).toBe(false)
+  })
+})
+
+describe('playerSegments / splitPerformance', () => {
+  const tl = (events: Array<[string, string, number]>): MatchInfo['timelines'] =>
+    events.map(([uuid, type, time]) => ({ uuid, time, type }))
+  const d = (opts: {
+    timelines: MatchInfo['timelines']
+    winner?: string | null
+    time?: number | null
+  }): MatchInfo => ({
+    id: nextId++,
+    type: 2,
+    players: [
+      { uuid: ME, nickname: 'Me' },
+      { uuid: OPP, nickname: 'Opp' }
+    ],
+    result: { uuid: opts.winner ?? null, time: opts.time ?? null },
+    timelines: opts.timelines
+  })
+
+  it('derives per-segment durations from consecutive milestones', () => {
+    const segs = playerSegments(ME, [
+      d({
+        winner: ME,
+        time: 700_000,
+        timelines: tl([
+          [ME, 'story.enter_the_nether', 100_000],
+          [ME, 'nether.find_bastion', 150_000],
+          [ME, 'nether.find_fortress', 300_000],
+          [ME, 'projectelo.timeline.blind_travel', 400_000],
+          [ME, 'story.follow_ender_eye', 500_000],
+          [ME, 'story.enter_the_end', 600_000]
+        ])
+      })
+    ])
+    expect(segs.overworld.avg).toBe(100_000) // start -> nether
+    expect(segs.nether.avg).toBe(50_000) // nether -> bastion
+    expect(segs.bastion.avg).toBe(150_000) // bastion -> fortress
+    expect(segs.end.avg).toBe(100_000) // enter end -> finish (700k - 600k)
+  })
+
+  it('ranks a fast segment as Top% and a missing baseline as —', () => {
+    const arr = Array.from({ length: 101 }, (_, i) => 100_000 + i * 1000) // 100k..200k ascending
+    const details = [d({ timelines: tl([[ME, 'story.enter_the_nether', 110_000]]) })]
+    const perf = splitPerformance(ME, details, { overworld: arr })
+    const ow = perf.find((p) => p.key === 'overworld')!
+    expect(ow.ms).toBe(110_000)
+    expect(ow.pctLabel).toMatch(/^Top /)
+    expect(ow.score).toBeGreaterThan(80)
+    expect(perf.find((p) => p.key === 'bastion')?.pctLabel).toBe('—')
+  })
+})
+
+describe('splitCallouts', () => {
+  const perf = (rows: Array<[string, string, number | null, number | null, string]>) =>
+    rows.map(([key, label, ms, score, pctLabel]) => ({
+      key,
+      label,
+      ms,
+      score,
+      pctLabel,
+      sample: 5
+    }))
+
+  it('names the best and weakest split by percentile score', () => {
+    const rows = perf([
+      ['overworld', 'Overworld', 100_000, 90, 'Top 10%'],
+      ['nether', 'Nether', 50_000, 50, 'Top 50%'],
+      ['bastion', 'Bastion', 150_000, 20, 'Bottom 20%']
+    ])
+    const out = splitCallouts(rows, {})
+    const best = out.find((i) => i.label === 'Best split')
+    const weak = out.find((i) => i.label === 'Weakest split')
+    expect(best?.detail).toContain('Overworld')
+    expect(weak?.detail).toContain('Bastion')
+    expect(out.find((i) => i.label === 'To rank up')).toBeUndefined()
+  })
+
+  it('does not label the same split both best and weakest when every score ties', () => {
+    // A player faster than the whole field on every split scores 100 across the board.
+    const rows = perf([
+      ['overworld', 'Overworld', 100_000, 100, 'Top 1%'],
+      ['nether', 'Nether', 50_000, 100, 'Top 1%'],
+      ['bastion', 'Bastion', 150_000, 100, 'Top 1%']
+    ])
+    const out = splitCallouts(rows, {})
+    expect(out.find((i) => i.label === 'Best split')).toBeUndefined()
+    expect(out.find((i) => i.label === 'Weakest split')).toBeUndefined()
+  })
+
+  it('flags the split with the biggest gap to the next tier', () => {
+    const rows = perf([
+      ['overworld', 'Overworld', 120_000, 60, 'Top 40%'],
+      ['bastion', 'Bastion', 200_000, 30, 'Bottom 30%']
+    ])
+    const segs = {
+      overworld: { avg: 120_000, count: 4 },
+      bastion: { avg: 200_000, count: 4 }
+    }
+    // next-tier medians: overworld barely ahead, bastion far ahead of the player
+    const med = (m: number) => Array.from({ length: 101 }, () => m)
+    const nextTier = {
+      label: 'Diamond',
+      bucket: { overworld: med(118_000), bastion: med(150_000) }
+    }
+    const out = splitCallouts(rows, segs, nextTier)
+    const focus = out.find((i) => i.label === 'To rank up')
+    expect(focus?.detail).toContain('Bastion')
+    expect(focus?.detail).toContain('Diamond')
   })
 })

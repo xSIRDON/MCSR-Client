@@ -713,38 +713,6 @@ export function buildScorecard(
   return dims
 }
 
-export interface SplitRadarDim {
-  key: string
-  label: string
-  avgMs: number | null
-  refMs: number
-  score: number | null // 0–100, higher = faster than the reference pace; null if no data
-  sample: number
-}
-
-/** Reference cumulative split times (ms from start) — a rough ~13:00 mid-tier pace baseline. */
-const REFERENCE_SPLITS: Record<string, number> = {
-  overworld: 210_000,
-  bastion: 270_000,
-  fortress: 345_000,
-  blind: 420_000,
-  stronghold: 540_000,
-  end: 660_000
-}
-
-/** Per-split speed vs a typical pace: 50 = on pace, higher = faster. Cumulative splits only. */
-export function buildSplitRadar(splits: SplitStat[]): SplitRadarDim[] {
-  const out: SplitRadarDim[] = []
-  for (const s of splits) {
-    const ref = REFERENCE_SPLITS[s.key]
-    if (ref == null) continue // skip finish / fortToFinish — not cumulative milestones
-    const avg = s.average
-    const score = avg != null && avg > 0 ? clamp100((ref / avg) * 50) : null
-    out.push({ key: s.key, label: s.label, avgMs: avg, refMs: ref, score, sample: s.count })
-  }
-  return out
-}
-
 /**
  * Human-readable strengths/weaknesses, anchored to the authoritative season record so they
  * stay meaningful even when the recent match window is a sparse losing streak.
@@ -795,4 +763,177 @@ export function scorecardInsights(
     out.push({ kind: 'note', label: 'Getting started', detail: 'Play a few ranked games to build your profile.' })
   }
   return out.slice(0, 6)
+}
+
+// ---- Split Performance (percentile vs a bundled baseline) ----
+
+/** A baseline distribution: segment key -> 101 ascending percentile-point times (ms). */
+export type SplitBaselineBucket = Record<string, number[]>
+
+export interface SplitPerf {
+  key: string
+  label: string
+  ms: number | null // the player's average segment time
+  score: number | null // 0–100 for the radar (higher = faster than more of the field)
+  pctLabel: string // "Top 10%" / "Bottom 25%" / "—"
+  sample: number // matches contributing this segment
+}
+
+/** The seven run segments (durations between milestones), in run order. */
+const SPLIT_SEGMENTS: { key: string; label: string }[] = [
+  { key: 'overworld', label: 'Overworld' },
+  { key: 'nether', label: 'Nether' },
+  { key: 'bastion', label: 'Bastion' },
+  { key: 'fortress', label: 'Fortress' },
+  { key: 'blind', label: 'Blind' },
+  { key: 'stronghold', label: 'Stronghold' },
+  { key: 'end', label: 'The End' }
+]
+
+const M_NETHER = 'story.enter_the_nether'
+const M_BASTION = 'nether.find_bastion'
+const M_FORTRESS = 'nether.find_fortress'
+const M_BLIND = 'projectelo.timeline.blind_travel'
+const M_STRONGHOLD = 'story.follow_ender_eye'
+const M_END = 'story.enter_the_end'
+
+/** Per-segment durations for one match (canonical route: consecutive-milestone diffs, positive only). */
+function matchSegments(uuid: string, m: MatchInfo): Record<string, number> {
+  const t = (ev: string): number | null => earliestEvent(uuid, m, ev)
+  const nether = t(M_NETHER)
+  const bastion = t(M_BASTION)
+  const fortress = t(M_FORTRESS)
+  const blind = t(M_BLIND)
+  const stronghold = t(M_STRONGHOLD)
+  const end = t(M_END)
+  const won = m.result?.uuid === uuid
+  const finish = won && typeof m.result?.time === 'number' ? m.result.time : null
+  const out: Record<string, number> = {}
+  const seg = (key: string, a: number | null, b: number | null): void => {
+    if (a != null && b != null && b > a) out[key] = b - a
+  }
+  if (nether != null && nether > 0) out.overworld = nether
+  seg('nether', nether, bastion)
+  seg('bastion', bastion, fortress)
+  seg('fortress', fortress, blind)
+  seg('blind', blind, stronghold)
+  seg('stronghold', stronghold, end)
+  seg('end', end, finish)
+  return out
+}
+
+/** The player's average time per segment across their recent match-detail timelines. */
+export function playerSegments(
+  uuid: string,
+  details: MatchInfo[]
+): Record<string, { avg: number; count: number }> {
+  const me = uuid.toLowerCase()
+  const list = Array.isArray(details)
+    ? details.filter((m) => m && m.type === 2 && Array.isArray(m.timelines))
+    : []
+  const acc: Record<string, number[]> = {}
+  for (const m of list) {
+    for (const [k, v] of Object.entries(matchSegments(me, m))) (acc[k] ??= []).push(v)
+  }
+  const out: Record<string, { avg: number; count: number }> = {}
+  for (const { key } of SPLIT_SEGMENTS) {
+    const arr = acc[key]
+    if (arr && arr.length) {
+      out[key] = { avg: Math.round(arr.reduce((a, b) => a + b, 0) / arr.length), count: arr.length }
+    }
+  }
+  return out
+}
+
+/** Fraction of the baseline strictly faster (smaller) than t. `arr` is ascending (101 points). */
+function fasterFraction(t: number, arr: number[]): number {
+  const n = arr.length
+  if (n < 2) return 0.5
+  if (t <= arr[0]) return 0
+  if (t >= arr[n - 1]) return 1
+  let lo = 0
+  let hi = n - 1
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1
+    if (arr[mid] <= t) lo = mid
+    else hi = mid
+  }
+  const span = arr[hi] - arr[lo] || 1
+  return Math.max(0, Math.min(1, (lo + (t - arr[lo]) / span) / (n - 1)))
+}
+
+/**
+ * Rank the player's average segment times against a baseline distribution. One entry per segment:
+ * a 0–100 radar score (higher = faster than more of the field) and a "Top X%" / "Bottom X%" label.
+ */
+export function splitPerformance(
+  uuid: string,
+  details: MatchInfo[],
+  baseline: SplitBaselineBucket | undefined
+): SplitPerf[] {
+  const segs = playerSegments(uuid, details)
+  return SPLIT_SEGMENTS.map(({ key, label }) => {
+    const p = segs[key]
+    const arr = baseline?.[key]
+    if (!p || !arr || arr.length < 2) {
+      return { key, label, ms: p?.avg ?? null, score: null, pctLabel: '—', sample: p?.count ?? 0 }
+    }
+    const f = fasterFraction(p.avg, arr)
+    const score = clamp100((1 - f) * 100)
+    const pctLabel =
+      f <= 0.5
+        ? `Top ${Math.max(1, Math.round(f * 100))}%`
+        : `Bottom ${Math.max(1, Math.round((1 - f) * 100))}%`
+    return { key, label, ms: p.avg, score, pctLabel, sample: p.count }
+  })
+}
+
+/**
+ * Textual split callouts: your best and weakest split (by percentile), and — when a tier above
+ * exists — the split where you lose the most time vs that tier's median ("to rank up").
+ */
+export function splitCallouts(
+  perf: SplitPerf[],
+  segs: Record<string, { avg: number; count: number }>,
+  nextTier?: { label: string; bucket: SplitBaselineBucket }
+): RankedInsight[] {
+  const out: RankedInsight[] = []
+  const scored = perf.filter((p) => p.score != null)
+  if (scored.length >= 3) {
+    const best = scored.reduce((a, b) => ((b.score as number) > (a.score as number) ? b : a))
+    const worst = scored.reduce((a, b) => ((b.score as number) < (a.score as number) ? b : a))
+    // Only call out a best vs weakest when there is real spread — if every split ties on score
+    // (e.g. a player faster or slower than the whole field across the board) `best` and `worst`
+    // collapse to the same segment, which must not be labelled both a strength and a weakness.
+    if (worst !== best) {
+      out.push({
+        kind: 'strength',
+        label: 'Best split',
+        detail: `${best.label} — ${best.pctLabel}.`
+      })
+      out.push({
+        kind: 'weakness',
+        label: 'Weakest split',
+        detail: `${worst.label} — ${worst.pctLabel}.`
+      })
+    }
+  }
+  if (nextTier) {
+    let focus: { label: string; gap: number } | null = null
+    for (const p of perf) {
+      const seg = segs[p.key]
+      const arr = nextTier.bucket[p.key]
+      if (!seg || !arr || arr.length < 51) continue
+      const gap = seg.avg - arr[50] // player's avg minus the next tier's median
+      if (gap > 0 && (!focus || gap > focus.gap)) focus = { label: p.label, gap }
+    }
+    if (focus) {
+      out.push({
+        kind: 'note',
+        label: 'To rank up',
+        detail: `Your ${focus.label} is ${msToTime(focus.gap)} behind ${nextTier.label} pace.`
+      })
+    }
+  }
+  return out
 }
