@@ -5,7 +5,7 @@
 <br />
 <br />
 
-[![Version](https://img.shields.io/badge/version-v1.0.2-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![Version](https://img.shields.io/badge/version-v1.0.3-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-3b82f6?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&labelColor=15151c)](LICENSE)
 
@@ -19,7 +19,7 @@ One app to sign in, install your instances, launch the game, and watch your rank
 
 ### [⬇  Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 
-<sub>Windows installer · auto-updates · v1.0.2</sub>
+<sub>Windows installer · auto-updates · v1.0.3</sub>
 
 </div>
 
@@ -61,7 +61,8 @@ Your stats, front and center:
 ### Self-review & analytics
 A dedicated review tab that turns your ranked history into insight:
 
-- **Strengths & weaknesses** and **split-pace** radars at a glance.
+- **Split Performance radar** — every split (Overworld, Nether, Bastion, Fortress, Blind, Stronghold, End) ranked by percentile against the whole field, with a toggle to compare against your own **Elo tier** instead.
+- **Strengths & weaknesses** radar and plain-English insights — your **best and weakest split**, plus a "to rank up" callout showing where you lose the most time versus the tier above you.
 - **Per-split timing** — Overworld, Bastion, Fortress, Blind, Stronghold, End, Finish, and Fort → Finish.
 - **Seed-type breakdowns** — your pace by overworld structure and bastion type.
 - Win rate, recent form, finishing, deaths, and personal-best insights drawn from your real season record.
