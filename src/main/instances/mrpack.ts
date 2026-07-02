@@ -8,8 +8,11 @@ import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import extract from 'extract-zip'
 
+// Upstream consolidated the per-variant packs into this one all-inclusive pack (it still
+// bundles mcsrranked + mcsrfairplay + seedqueue); the old "-All" URL now 404s. Ranked installs
+// every file, RSG drops the ranked-only jars via RSG_EXCLUDE_PREFIXES.
 export const MCSR_MRPACK_URL =
-  'https://redlime.github.io/MCSRMods/modpacks/v4/MCSRRanked-Windows-1.16.1-All.mrpack'
+  'https://redlime.github.io/MCSRMods/modpacks/v4/MCSRRanked-Windows-1.16.1-RSG.mrpack'
 
 /** Mod id/filename prefixes that are ranked-only and must be excluded from RSG. */
 export const RSG_EXCLUDE_PREFIXES = ['mcsrranked', 'mcsrfairplay']
