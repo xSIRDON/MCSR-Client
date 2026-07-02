@@ -5,7 +5,7 @@
 <br />
 <br />
 
-[![Version](https://img.shields.io/badge/version-v1.0.3-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![Version](https://img.shields.io/badge/version-v1.0.4-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-3b82f6?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&labelColor=15151c)](LICENSE)
 
@@ -19,7 +19,7 @@ One app to sign in, install your instances, launch the game, and watch your rank
 
 ### [⬇  Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 
-<sub>Windows installer · auto-updates · v1.0.3</sub>
+<sub>Windows installer · auto-updates · v1.0.4</sub>
 
 </div>
 
