@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import extract from 'extract-zip'
 
 export const MCSR_MRPACK_URL =
-  'https://redlime.github.io/MCSRMods/modpacks/v4/MCSRRanked-Windows-1.16.1-All.mrpack'
+  'https://redlime.github.io/MCSRMods/modpacks/v4/MCSRRanked-Windows-1.16.1-RSG.mrpack'
 
 export const RSG_EXCLUDE_PREFIXES = ['mcsrranked', 'mcsrfairplay']
 
