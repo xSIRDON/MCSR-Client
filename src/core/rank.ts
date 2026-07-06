@@ -78,3 +78,7 @@ export function eloToRank(elo: number | null | undefined): Rank {
   const found = RANKS.find((r) => elo >= r.min && elo <= r.max)
   return found ?? RANKS[RANKS.length - 1]
 }
+
+export function eloWinChance(a: number, b: number): number {
+  return 1 / (1 + Math.pow(10, (b - a) / 400))
+}

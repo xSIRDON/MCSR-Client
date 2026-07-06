@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest'
-import { eloToRank, RANKS } from './rank'
+import { eloToRank, eloWinChance, RANKS } from './rank'
+
+describe('eloWinChance', () => {
+  it('gives 50% for equal ratings', () => {
+    expect(eloWinChance(1200, 1200)).toBeCloseTo(0.5)
+  })
+
+  it('gives ~91% at +400 and is symmetric', () => {
+    expect(eloWinChance(1600, 1200)).toBeCloseTo(0.909, 2)
+    expect(eloWinChance(1200, 1600) + eloWinChance(1600, 1200)).toBeCloseTo(1)
+  })
+})
 
 describe('eloToRank', () => {
   it('maps 0 to Coal I', () => {

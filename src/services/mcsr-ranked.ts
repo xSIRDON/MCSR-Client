@@ -48,18 +48,28 @@ export interface McsrUser {
     season?: Statistics
     total?: Statistics
   }
-  seasonResult?: { eloRate: number | null; eloRank: number | null; phasePoint?: number }
+  seasonResult?: {
+    last?: { eloRate: number | null; eloRank: number | null; phasePoint?: number }
+    highest?: number | null
+    lowest?: number | null
+    phases?: { phase: number; eloRate: number | null; eloRank: number | null; point?: number }[]
+  }
 }
 
-export function seasonRanked(user: McsrUser | undefined): {
+export interface FlatRankedStats {
   wins: number
   loses: number
   played: number
   currentStreak: number
   bestStreak: number
   bestTime: number | null
-} {
-  const s = user?.statistics?.season
+}
+
+export function rankedStats(
+  user: McsrUser | undefined,
+  scope: 'season' | 'total' = 'season'
+): FlatRankedStats {
+  const s = scope === 'total' ? user?.statistics?.total : user?.statistics?.season
   return {
     wins: s?.wins?.ranked ?? 0,
     loses: s?.loses?.ranked ?? 0,
@@ -68,6 +78,10 @@ export function seasonRanked(user: McsrUser | undefined): {
     bestStreak: s?.highestWinStreak?.ranked ?? 0,
     bestTime: s?.bestTime?.ranked ?? null
   }
+}
+
+export function seasonRanked(user: McsrUser | undefined): FlatRankedStats {
+  return rankedStats(user, 'season')
 }
 
 export interface MatchPlayer {
@@ -156,12 +170,22 @@ export interface MatchesOpts {
   type?: number
   count?: number
   page?: number
+  season?: number
+}
+
+export interface SeasonMeta {
+  number: number
+  startsAt?: number
+  endsAt?: number
 }
 
 export function createMcsrClient(fetchImpl: FetchLike, base = MCSR_BASE) {
   return {
-    getUser(identifier: string): Promise<McsrUser> {
-      return call<McsrUser>(fetchImpl, `${base}/users/${encodeURIComponent(identifier)}`)
+    getUser(identifier: string, opts: { season?: number } = {}): Promise<McsrUser> {
+      return call<McsrUser>(
+        fetchImpl,
+        `${base}/users/${encodeURIComponent(identifier)}${qs({ season: opts.season })}`
+      )
     },
     getMatches(identifier: string, opts: MatchesOpts = {}): Promise<MatchInfo[]> {
       return call<MatchInfo[]>(
@@ -169,7 +193,8 @@ export function createMcsrClient(fetchImpl: FetchLike, base = MCSR_BASE) {
         `${base}/users/${encodeURIComponent(identifier)}/matches${qs({
           type: opts.type,
           count: opts.count,
-          page: opts.page
+          page: opts.page,
+          season: opts.season
         })}`
       )
     },
@@ -182,8 +207,10 @@ export function createMcsrClient(fetchImpl: FetchLike, base = MCSR_BASE) {
     getMatch(matchId: number | string): Promise<MatchInfo> {
       return call<MatchInfo>(fetchImpl, `${base}/matches/${matchId}`)
     },
-    getLeaderboard(opts: { season?: number } = {}): Promise<{ users: LeaderboardEntry[] }> {
-      return call<{ users: LeaderboardEntry[] }>(
+    getLeaderboard(
+      opts: { season?: number } = {}
+    ): Promise<{ season?: SeasonMeta; users: LeaderboardEntry[] }> {
+      return call<{ season?: SeasonMeta; users: LeaderboardEntry[] }>(
         fetchImpl,
         `${base}/leaderboard${qs({ season: opts.season })}`
       )
