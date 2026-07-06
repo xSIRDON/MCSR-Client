@@ -93,3 +93,12 @@ export function eloToRank(elo: number | null | undefined): Rank {
   const found = RANKS.find((r) => elo >= r.min && elo <= r.max)
   return found ?? RANKS[RANKS.length - 1]
 }
+
+/**
+ * Standard Elo expected score for player A vs player B, as a 0–1 probability.
+ * 0 rating difference → 0.5; +400 → ~0.91. MCSR's ladder is Elo-based, so this is
+ * the textbook estimate — not a guarantee.
+ */
+export function eloWinChance(a: number, b: number): number {
+  return 1 / (1 + Math.pow(10, (b - a) / 400))
+}
