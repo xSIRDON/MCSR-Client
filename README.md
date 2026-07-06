@@ -5,7 +5,7 @@
 <br />
 <br />
 
-[![Version](https://img.shields.io/badge/version-v1.1.1-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![Version](https://img.shields.io/badge/version-v1.1.2-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-3b82f6?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&labelColor=15151c)](LICENSE)
 
@@ -19,7 +19,7 @@ One app to sign in, install your instances, launch the game, and watch your rank
 
 ### [⬇  Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 
-<sub>Windows installer · auto-updates · v1.1.1</sub>
+<sub>Windows installer · auto-updates · v1.1.2</sub>
 
 </div>
 
@@ -56,6 +56,7 @@ Your stats, front and center:
 
 - ELO, tier (**Coal → Netherite**), peak rating, win rate, win streak, best time, and total matches.
 - An **ELO-over-time chart** and a feed of your recent matches.
+- A **season switcher** on profiles, the review, and Compare — view any past season (with its closing Elo and rank) or **career totals**.
 - The **global leaderboard** plus full **player search** — with skins and **donor-tier badges** (Stone / Iron / Diamond).
 
 ### Self-review & analytics
