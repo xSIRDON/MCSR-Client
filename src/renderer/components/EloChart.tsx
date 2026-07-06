@@ -20,8 +20,10 @@ interface Point {
 
 /**
  * Builds an ELO-over-time series from the player's recent ranked matches.
- * Each match's `changes` entry carries the player's resulting eloRate, so we
- * read it directly — reliable regardless of the /seasons payload shape.
+ * A match's `changes.eloRate` is the player's rating going INTO the game (verified:
+ * eloRate + change of the newest match equals the live eloRate), so plot
+ * eloRate + change — the post-match rating — or the whole chart lags one game
+ * behind the player's actual Elo.
  */
 export function EloChart({ uuid }: { uuid: string }) {
   const { data: matches, isLoading } = useQuery({
@@ -37,7 +39,7 @@ export function EloChart({ uuid }: { uuid: string }) {
     for (const m of ordered) {
       const mine = m.changes?.find((c) => c.uuid === uuid)
       if (mine && mine.eloRate != null) {
-        pts.push({ i: i++, elo: mine.eloRate, change: mine.change ?? null })
+        pts.push({ i: i++, elo: mine.eloRate + (mine.change ?? 0), change: mine.change ?? null })
       }
     }
     return pts
