@@ -5,14 +5,22 @@ import { mcsr } from '../lib/clients'
 import { eloToRank } from '@core/rank'
 import { AccountMenu } from './AccountMenu'
 
-const NAV = [
-  { to: '/', label: 'Home', icon: HomeIcon, end: true },
-  { to: '/play', label: 'Play', icon: PlayIcon, end: false },
-  { to: '/leaderboard', label: 'Leaders', icon: LeaderboardIcon, end: false },
-  { to: '/review', label: 'Review', icon: ReviewIcon, end: false },
-  { to: '/console', label: 'Console', icon: ConsoleIcon, end: false },
-  { to: '/profile', label: 'Profile', icon: UserIcon, end: false },
-  { to: '/settings', label: 'Settings', icon: GearIcon, end: false }
+/** Nav in scannable groups: play the game / study the numbers / run the app. */
+const NAV_GROUPS: { to: string; label: string; icon: () => JSX.Element; end?: boolean }[][] = [
+  [
+    { to: '/', label: 'Home', icon: HomeIcon, end: true },
+    { to: '/play', label: 'Play', icon: PlayIcon }
+  ],
+  [
+    { to: '/leaderboard', label: 'Leaders', icon: LeaderboardIcon },
+    { to: '/review', label: 'Review', icon: ReviewIcon },
+    { to: '/compare', label: 'Compare', icon: CompareIcon }
+  ],
+  [
+    { to: '/console', label: 'Console', icon: ConsoleIcon },
+    { to: '/profile', label: 'Profile', icon: UserIcon },
+    { to: '/settings', label: 'Settings', icon: GearIcon }
+  ]
 ]
 
 /** Compact icon rail, à la a real Minecraft launcher. */
@@ -27,39 +35,72 @@ export function Sidebar() {
 
   return (
     <aside className="flex w-[72px] shrink-0 flex-col items-center border-r border-[var(--line)] bg-black/25 py-3">
-      <nav className="flex w-full flex-col items-center gap-1 px-2">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            title={label}
-            className={({ isActive }) =>
-              `group relative flex h-[54px] w-full flex-col items-center justify-center gap-1 rounded-xl transition-all duration-150 ${
-                isActive
-                  ? 'bg-[var(--gold)]/[0.13] text-[var(--gold)]'
-                  : 'text-muted hover:bg-white/[0.06] hover:text-text'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span className="absolute left-[-8px] top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--gold)]" />
+      <nav className="flex w-full flex-col items-center px-2">
+        {NAV_GROUPS.map((group, gi) => (
+          <div key={gi} className="flex w-full flex-col items-center gap-0.5">
+            {gi > 0 && <div className="my-2 h-px w-6 bg-[var(--line)]" />}
+            {group.map(({ to, label, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                title={label}
+                className={({ isActive }) =>
+                  `group relative flex h-[50px] w-full flex-col items-center justify-center gap-[3px] rounded-xl transition-all duration-200 ${
+                    isActive
+                      ? 'text-[var(--gold)]'
+                      : 'text-muted hover:bg-white/[0.05] hover:text-text'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {isActive && (
+                      <>
+                        {/* soft gold wash + hairline ring, glow bleeding off the left edge */}
+                        <span
+                          className="absolute inset-0 rounded-xl"
+                          style={{
+                            background:
+                              'linear-gradient(90deg, rgba(245,200,66,0.16), rgba(245,200,66,0.05))',
+                            boxShadow: 'inset 0 0 0 1px rgba(245,200,66,0.22)'
+                          }}
+                        />
+                        <span className="absolute left-[-8px] top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--gold)] shadow-[0_0_8px_rgba(245,200,66,0.8)]" />
+                      </>
+                    )}
+                    <span
+                      className={`relative transition-transform duration-200 ${
+                        isActive ? '' : 'group-hover:-translate-y-[1px]'
+                      }`}
+                      style={
+                        isActive
+                          ? { filter: 'drop-shadow(0 0 5px rgba(245,200,66,0.55))' }
+                          : undefined
+                      }
+                    >
+                      <Icon />
+                    </span>
+                    <span
+                      className={`relative text-[9px] tracking-[0.06em] transition-opacity duration-200 ${
+                        isActive ? 'font-semibold' : 'opacity-70 group-hover:opacity-100'
+                      }`}
+                    >
+                      {label}
+                    </span>
+                  </>
                 )}
-                <Icon />
-                <span className="text-[10px] font-medium tracking-[0.03em]">{label}</span>
-              </>
-            )}
-          </NavLink>
+              </NavLink>
+            ))}
+          </div>
         ))}
       </nav>
 
-      <div className="mt-auto flex flex-col items-center gap-2.5">
-        <div className="h-px w-7 bg-[var(--line)]" />
+      <div className="mt-auto flex flex-col items-center gap-2.5 pt-3">
+        <div className="h-px w-6 bg-[var(--line)]" />
         {profile && (
           <div
-            className="rounded-lg p-0.5"
+            className="rounded-lg p-0.5 transition-shadow duration-300 hover:shadow-[0_0_16px_rgba(245,200,66,0.25)]"
             style={{ boxShadow: `0 0 0 1.5px ${rank.color}66, 0 0 12px ${rank.glow}33` }}
           >
             <AccountMenu profile={profile} />
@@ -127,6 +168,15 @@ function LeaderboardIcon() {
       <rect x="2.5" y="9" width="3.4" height="6" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
       <rect x="7.3" y="4" width="3.4" height="11" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
       <rect x="12.1" y="11" width="3.4" height="4" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function CompareIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
+      <circle cx="6" cy="6.5" r="2.6" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="12" cy="6.5" r="2.6" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M2 15a4 4 0 018 0M8 15a4 4 0 018 0" stroke="currentColor" strokeWidth="1.3" />
     </svg>
   )
 }
