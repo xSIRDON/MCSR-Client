@@ -40,6 +40,12 @@ export function hasKey(): boolean {
   return !!store.secret.get(KEY_SECRET)
 }
 
+/** The saved access key (decrypted), or null. Settings shows it so the box isn't
+ *  mysteriously empty after a save — it renders masked (password input) there. */
+export function getKey(): string | null {
+  return store.secret.get(KEY_SECRET) ?? null
+}
+
 export function setKey(key: string): void {
   store.secret.set(KEY_SECRET, key.trim())
   writeOptions()

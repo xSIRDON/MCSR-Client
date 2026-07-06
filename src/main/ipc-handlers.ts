@@ -464,6 +464,7 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.logClear, () => clearLog())
 
   ipcMain.handle(IPC.paceSetKey, (_e, key: string) => tracker.setKey(key))
+  ipcMain.handle(IPC.paceGetKey, () => tracker.getKey())
   ipcMain.handle(IPC.paceStatus, () => tracker.status())
 
   ipcMain.handle(IPC.cfgGet, () => store.getConfig())

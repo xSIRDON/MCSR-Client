@@ -59,6 +59,7 @@ export const IPC = {
   logClear: 'log:clear',
   // paceman
   paceSetKey: 'pace:setKey',
+  paceGetKey: 'pace:getKey',
   paceStatus: 'pace:status',
   paceStatusChanged: 'pace:statusChanged', // main -> renderer stream
   // config
@@ -146,6 +147,8 @@ export interface McsrApi {
   }
   paceman: {
     setKey(key: string): Promise<void>
+    /** The saved access key, so Settings can show it instead of an empty box. */
+    getKey(): Promise<string | null>
     status(): Promise<TrackerStatus>
     onStatusChanged(cb: (s: TrackerStatus) => void): () => void
   }

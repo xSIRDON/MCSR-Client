@@ -17,6 +17,11 @@ export function Settings() {
   useEffect(() => {
     void window.mcsr.config.get().then(setConfig)
     void window.mcsr.paceman.status().then(setTracker)
+    // Show the saved key (masked) instead of an empty box, so nobody wonders
+    // whether their key actually stuck.
+    void window.mcsr.paceman.getKey().then((k) => {
+      if (k) setKeyInput(k)
+    })
     void window.mcsr.system.java().then(setJava)
     void window.mcsr.auth.accounts().then(setAccounts)
     void window.mcsr.updater.status().then(setUpdate)
@@ -37,9 +42,11 @@ export function Settings() {
   }
 
   async function saveKey() {
-    if (!keyInput.trim()) return
-    await window.mcsr.paceman.setKey(keyInput.trim())
-    setKeyInput('')
+    const key = keyInput.trim()
+    if (!key) return
+    await window.mcsr.paceman.setKey(key)
+    // Keep the key in the box (masked) — clearing it made people think the save didn't take.
+    setKeyInput(key)
     // A key means paceman is connected — default live lookups to the IGN (if no name was set)
     // so the home PB / live pace light up immediately, without a second step.
     if (!pacemanName && profile?.name) setPacemanName(profile.name)
