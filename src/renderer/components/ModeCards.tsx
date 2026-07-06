@@ -47,9 +47,10 @@ export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }
 /** RSG — nether-portal purple. Personal best, a live RUNNING/IDLE badge, and a one-tap launch. */
 export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: number }) {
   const navigate = useNavigate()
-  const { data: runs } = useQuery({
-    queryKey: ['rsg-card', name],
-    queryFn: () => paceman.getRecentRuns(name!, { limit: 50, hours: 24 * 365 }),
+  // The real PB from paceman's PB table — a recent-runs window can miss it entirely.
+  const { data: pbData } = useQuery({
+    queryKey: ['rsg-card-pb', name],
+    queryFn: () => paceman.getPB(name!),
     enabled: !!name
   })
   const { data: liveRuns } = useQuery({
@@ -72,8 +73,7 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
   const prog = progress.rsg
   const busy = isBusy(status.state)
 
-  const finished = runs?.filter((r) => r.finish != null) ?? []
-  const pb = finished.length ? Math.min(...finished.map((r) => r.finish as number)) : null
+  const pb = pbData?.finish ?? null
 
   // Only show a PB when paceman is explicitly connected (name set). Otherwise prompt to connect —
   // never silently surface paceman runs just because they match the Minecraft IGN.

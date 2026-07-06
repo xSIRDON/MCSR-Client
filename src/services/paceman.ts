@@ -22,8 +22,28 @@ export interface RunSplits {
 
 export interface RecentRun extends RunSplits {
   id: number
-  /** total time / current run time in ms. */
+  /** Unix seconds of the run's nether enter (paceman's insert time). */
   time: number | null
+}
+
+/** A player's paceman-tracked personal best (their fastest uploaded completion). */
+export interface PacemanPB {
+  /** PB completion time in ms (in-game time). */
+  finish: number
+  uuid: string
+  /** Unix seconds of the PB run. */
+  timestamp: number
+  name: string
+  /** Pre-formatted "m:ss" string from paceman. */
+  pb: string
+}
+
+/** getSessionNethers — enter count/avg for a window, plus the player's uuid. */
+export interface SessionNethers {
+  count: number
+  avg: string | null
+  rnph: number
+  uuid?: string
 }
 
 export interface WorldData extends RunSplits {
@@ -84,9 +104,19 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
   return '?' + entries.map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&')
 }
 
+export class PacemanApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message)
+    this.name = 'PacemanApiError'
+  }
+}
+
 async function getJson<T>(fetchImpl: FetchLike, url: string): Promise<T> {
   const res = await fetchImpl(url)
-  if (!res.ok) throw new Error(`paceman request failed (${res.status})`)
+  if (!res.ok) throw new PacemanApiError(`paceman request failed (${res.status})`, res.status)
   return (await res.json()) as T
 }
 
@@ -132,6 +162,38 @@ export function createPacemanClient(fetchImpl: FetchLike, base = PACEMAN_BASE) {
           hoursBetween: opts.hoursBetween
         })}`
       )
+    },
+    getSessionNethers(name: string, opts: RecentOpts = {}): Promise<SessionNethers> {
+      return getJson<SessionNethers>(
+        fetchImpl,
+        `${base}/getSessionNethers/${qs({
+          name,
+          hours: opts.hours,
+          hoursBetween: opts.hoursBetween
+        })}`
+      )
+    },
+    /** PBs by uuid. (The `names` variant is a case-sensitive exact match upstream — avoid it.) */
+    getPBs(uuids: string[]): Promise<PacemanPB[]> {
+      return getJson<PacemanPB[]>(fetchImpl, `${base}/getPBs/${qs({ uuids: uuids.join(',') })}`)
+    },
+    /**
+     * A player's true personal best, by paceman name. Resolves the name to a uuid first
+     * (getSessionNethers echoes it back for any known player), then asks getPBs — the
+     * recent-runs window can miss the PB entirely, so never derive a PB from it.
+     * Returns null only for players paceman doesn't know (404); transient failures rethrow
+     * so callers (react-query) retry instead of caching a false "no PB".
+     */
+    async getPB(name: string): Promise<PacemanPB | null> {
+      try {
+        const session = await this.getSessionNethers(name, { hours: 999999, hoursBetween: 999999 })
+        if (!session?.uuid) return null
+        const pbs = await this.getPBs([session.uuid])
+        return pbs[0] ?? null
+      } catch (e) {
+        if (e instanceof PacemanApiError && e.status === 404) return null
+        throw e
+      }
     }
   }
 }
