@@ -4,6 +4,7 @@ import {
   analyzeSplits,
   analyzeTypeBreakdowns,
   buildScorecard,
+  consistencyFromDetails,
   countDeaths,
   playerSegments,
   scorecardInsights,
@@ -586,6 +587,47 @@ describe('playerSegments / splitPerformance', () => {
     expect(ow.pctLabel).toMatch(/^Top /)
     expect(ow.score).toBeGreaterThan(80)
     expect(perf.find((p) => p.key === 'bastion')?.pctLabel).toBe('—')
+  })
+})
+
+describe('consistencyFromDetails', () => {
+  const tl = (events: Array<[string, string, number]>): MatchInfo['timelines'] =>
+    events.map(([uuid, type, time]) => ({ uuid, time, type }))
+  const d = (netherAt: number): MatchInfo => ({
+    id: nextId++,
+    type: 2,
+    players: [
+      { uuid: ME, nickname: 'Me' },
+      { uuid: OPP, nickname: 'Opp' }
+    ],
+    result: { uuid: null, time: null },
+    timelines: tl([[ME, 'story.enter_the_nether', netherAt]])
+  })
+
+  it('scores identical splits as highly consistent', () => {
+    const c = consistencyFromDetails(ME, [d(120_000), d(120_000), d(120_000)])
+    expect(c).not.toBeNull()
+    expect(c!.score).toBeGreaterThanOrEqual(95)
+    expect(c!.sample).toBe(3)
+  })
+
+  it('scores wildly varying splits lower', () => {
+    const steady = consistencyFromDetails(ME, [d(120_000), d(121_000), d(119_000)])!
+    const wild = consistencyFromDetails(ME, [d(60_000), d(240_000), d(400_000)])!
+    expect(wild.score).toBeLessThan(steady.score - 20)
+  })
+
+  it('returns null with no usable timelines', () => {
+    expect(consistencyFromDetails(ME, [])).toBeNull()
+  })
+
+  it('feeds buildScorecard a Consistency dim even when win times are missing', () => {
+    const analytics = analyzeRanked(ME, []) // nothing — best/averageWin are null
+    const dims = buildScorecard(analytics, null, 0, undefined, { score: 72, sample: 12 })
+    const dim = dims.find((x) => x.key === 'consistency')
+    expect(dim).toBeDefined()
+    expect(dim!.score).toBe(72)
+    expect(dim!.detail).toContain('12 games')
   })
 })
 
