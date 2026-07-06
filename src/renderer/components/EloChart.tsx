@@ -18,11 +18,14 @@ interface Point {
   change: number | null
 }
 
-export function EloChart({ uuid }: { uuid: string }) {
+export function EloChart({ uuid, season }: { uuid: string; season?: number | 'all' }) {
+  const seasonNum = typeof season === 'number' ? season : undefined
   const { data: matches, isLoading } = useQuery({
-    queryKey: ['matches-chart', uuid],
-    queryFn: () => mcsr.getMatches(uuid, { type: 2, count: 50 })
+    queryKey: seasonNum != null ? ['matches-chart', uuid, seasonNum] : ['matches-chart', uuid],
+    queryFn: () => mcsr.getMatches(uuid, { type: 2, count: 50, season: seasonNum })
   })
+  const title =
+    season === 'all' ? 'Elo · recent' : seasonNum != null ? `Elo · season ${seasonNum}` : 'Elo · this season'
 
   const points = useMemo<Point[]>(() => {
     if (!matches) return []
@@ -45,7 +48,7 @@ export function EloChart({ uuid }: { uuid: string }) {
   return (
     <section className="surface p-5 animate-fade-up" style={{ animationDelay: '60ms' }}>
       <header className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Elo · this season</h2>
+        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">{title}</h2>
         {points.length > 1 && (
           <span className="font-display text-sm" style={{ color: 'var(--gold)' }}>
             {points[points.length - 1].elo}

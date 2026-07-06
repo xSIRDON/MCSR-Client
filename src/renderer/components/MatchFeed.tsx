@@ -14,11 +14,12 @@ function outcomeOf(m: MatchInfo, uuid: string): Outcome {
   return m.result.uuid === uuid ? 'win' : 'loss'
 }
 
-export function MatchFeed({ uuid }: { uuid: string }) {
+export function MatchFeed({ uuid, season }: { uuid: string; season?: number | 'all' }) {
   const [expanded, setExpanded] = useState(false)
+  const seasonNum = typeof season === 'number' ? season : undefined
   const { data: matches, isLoading } = useQuery({
-    queryKey: ['matches', uuid],
-    queryFn: () => mcsr.getMatches(uuid, { type: 2, count: 15 })
+    queryKey: seasonNum != null ? ['matches', uuid, seasonNum] : ['matches', uuid],
+    queryFn: () => mcsr.getMatches(uuid, { type: 2, count: 15, season: seasonNum })
   })
 
   const all = matches ?? []
@@ -107,7 +108,7 @@ function Row({ m, uuid }: { m: MatchInfo; uuid: string }) {
             {m.forfeited && <span className="text-[var(--loss)]">Forfeited</span>}
             {mine?.eloRate != null && (
               <span>
-                New elo: <span className="text-text">{mine.eloRate}</span>
+                New elo: <span className="text-text">{mine.eloRate + (mine.change ?? 0)}</span>
               </span>
             )}
           </div>
