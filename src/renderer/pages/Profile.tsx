@@ -10,7 +10,9 @@ import { RsgStats } from '../components/RsgStats'
 import { PlayerSearch } from '../components/PlayerSearch'
 import { PlayStyleRadar } from '../components/PlayStyleRadar'
 import { SplitPerformanceRadar } from '../components/SplitPerformanceRadar'
+import { SeasonPicker } from '../components/SeasonPicker'
 import { usePlayerAnalytics } from '../hooks/usePlayerAnalytics'
+import type { SeasonSel } from '../hooks/usePlayerAnalytics'
 
 export function Profile() {
   const [params] = useSearchParams()
@@ -20,6 +22,7 @@ export function Profile() {
   const queried = params.get('name')?.trim()
   const identifier = queried || profile?.uuid || ''
   const [tab, setTab] = useState<'ranked' | 'rsg'>('ranked')
+  const [seasonSel, setSeasonSel] = useState<SeasonSel>(undefined)
 
   // Resolve a searched name to a uuid for the chart/feed; nickname drives paceman.
   const { data: user, isError: noRankedProfile } = useQuery({
@@ -47,16 +50,19 @@ export function Profile() {
 
       {identifier ? (
         <>
-          <ProfileHero identifier={identifier} name={displayName} />
+          <ProfileHero identifier={identifier} name={displayName} season={seasonSel} />
 
           <div className="flex items-center justify-between gap-3">
-            <div className="flex w-fit gap-1 rounded-xl border border-[var(--line)] bg-[var(--bg-2)] p-1">
-              <Tab active={tab === 'ranked'} onClick={() => setTab('ranked')} accent="var(--gold)">
-                Ranked
-              </Tab>
-              <Tab active={tab === 'rsg'} onClick={() => setTab('rsg')} accent="var(--portal)">
-                RSG
-              </Tab>
+            <div className="flex items-center gap-3">
+              <div className="flex w-fit gap-1 rounded-xl border border-[var(--line)] bg-[var(--bg-2)] p-1">
+                <Tab active={tab === 'ranked'} onClick={() => setTab('ranked')} accent="var(--gold)">
+                  Ranked
+                </Tab>
+                <Tab active={tab === 'rsg'} onClick={() => setTab('rsg')} accent="var(--portal)">
+                  RSG
+                </Tab>
+              </div>
+              {tab === 'ranked' && <SeasonPicker value={seasonSel} onChange={setSeasonSel} />}
             </div>
             {queried && profile?.name && user?.nickname && user.uuid !== profile.uuid && (
               <button
@@ -76,12 +82,12 @@ export function Profile() {
             !noRankedProfile && uuid ? (
               <>
                 <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-                  <EloChart uuid={uuid} />
+                  <EloChart uuid={uuid} season={seasonSel} />
                   <div className="flex min-h-[280px] flex-col">
-                    <MatchFeed key={uuid} uuid={uuid} />
+                    <MatchFeed key={uuid} uuid={uuid} season={seasonSel} />
                   </div>
                 </div>
-                <ProfileAnalytics uuid={uuid} />
+                <ProfileAnalytics uuid={uuid} season={seasonSel} />
               </>
             ) : null
           ) : (
@@ -96,8 +102,8 @@ export function Profile() {
 }
 
 /** The same analytics radars the self-review uses, for whichever player is being viewed. */
-function ProfileAnalytics({ uuid }: { uuid: string }) {
-  const { scorecard, details, rank, detailsLoading, hasData } = usePlayerAnalytics(uuid)
+function ProfileAnalytics({ uuid, season }: { uuid: string; season?: SeasonSel }) {
+  const { scorecard, details, rank, detailsLoading, hasData } = usePlayerAnalytics(uuid, season)
   if (!hasData) return null
   return (
     <div className="grid gap-4 lg:grid-cols-2">

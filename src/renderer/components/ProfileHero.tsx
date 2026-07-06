@@ -1,17 +1,27 @@
 import { useQuery } from '@tanstack/react-query'
 import { mcsr, } from '../lib/clients'
-import { seasonRanked } from '@services/mcsr-ranked'
+import { rankedStats } from '@services/mcsr-ranked'
 import { eloToRank } from '@core/rank'
 import { msToTime, winRate } from '@core/format'
+import type { SeasonSel } from '../hooks/usePlayerAnalytics'
 import { PlayerHead } from './PlayerHead'
 import { RankBadge } from './RankBadge'
 import { StatTile } from './StatTile'
 import { DonorBadge } from './DonorBadge'
 
-export function ProfileHero({ identifier, name }: { identifier: string; name?: string }) {
+export function ProfileHero({
+  identifier,
+  name,
+  season
+}: {
+  identifier: string
+  name?: string
+  season?: SeasonSel
+}) {
+  const seasonNum = typeof season === 'number' ? season : undefined
   const { data: user, isLoading, isError } = useQuery({
-    queryKey: ['user', identifier],
-    queryFn: () => mcsr.getUser(identifier)
+    queryKey: seasonNum != null ? ['user', identifier, seasonNum] : ['user', identifier],
+    queryFn: () => mcsr.getUser(identifier, { season: seasonNum })
   })
 
   if (isLoading) return <HeroSkeleton />
@@ -39,10 +49,15 @@ export function ProfileHero({ identifier, name }: { identifier: string; name?: s
       </section>
     )
 
-  const rank = eloToRank(user.eloRate)
-  const stats = seasonRanked(user)
+  // Past seasons show that season's closing rating/rank; current and career use the live one.
+  const elo = seasonNum != null ? (user.seasonResult?.last?.eloRate ?? null) : user.eloRate
+  const eloRank = seasonNum != null ? (user.seasonResult?.last?.eloRank ?? null) : user.eloRank
+  const rank = eloToRank(elo)
+  const stats = rankedStats(user, season === 'all' ? 'total' : 'season')
+  const matchesHint = season === 'all' ? 'career' : seasonNum != null ? `season ${seasonNum}` : 'this season'
   const wr = winRate(stats.wins, stats.loses)
-  const decay = user.timestamp?.nextDecay
+  // The decay warning is about the live rating — meaningless on a past-season view.
+  const decay = seasonNum == null ? user.timestamp?.nextDecay : null
 
   return (
     <section
@@ -87,13 +102,13 @@ export function ProfileHero({ identifier, name }: { identifier: string; name?: s
                 className="font-display tnum animate-count text-5xl leading-none"
                 style={{ color: rank.color, textShadow: `0 0 24px ${rank.glow}55` }}
               >
-                {user.eloRate ?? '—'}
+                {elo ?? '—'}
               </div>
             </div>
             <div className="mb-0.5 flex flex-col gap-1.5">
-              <RankBadge elo={user.eloRate} size="md" />
+              <RankBadge elo={elo} size="md" />
               <div className="text-xs text-muted">
-                Global rank <span className="font-display text-text">#{user.eloRank ?? '—'}</span>
+                Global rank <span className="font-display text-text">#{eloRank ?? '—'}</span>
               </div>
             </div>
           </div>
@@ -110,7 +125,7 @@ export function ProfileHero({ identifier, name }: { identifier: string; name?: s
         <StatTile label="Win Rate" value={`${wr}%`} accent={wr >= 50 ? 'var(--win)' : undefined} hint={`${stats.wins}W · ${stats.loses}L`} delay={40} />
         <StatTile label="Win Streak" value={stats.currentStreak} hint={`best ${stats.bestStreak}`} delay={90} />
         <StatTile label="Best Time" value={msToTime(stats.bestTime)} accent="var(--gold)" delay={140} />
-        <StatTile label="Matches" value={stats.played} hint="this season" delay={190} />
+        <StatTile label="Matches" value={stats.played} hint={matchesHint} delay={190} />
       </div>
     </section>
   )
