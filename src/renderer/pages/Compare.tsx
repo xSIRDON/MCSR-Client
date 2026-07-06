@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   Legend,
@@ -165,12 +165,17 @@ function NameInput({
 }
 
 function SideHero({ side, color }: { side: Side; color: string }) {
+  const navigate = useNavigate()
   const { user, notFound, name, head, scope } = side
   const gamesLabel = scope === 'total' ? 'career games' : 'games this season'
   const smallSample = head.played > 0 && head.played < SMALL_SAMPLE
   return (
     <section
-      className="surface flex items-center gap-3 p-4 animate-fade-up"
+      onClick={user ? () => navigate(`/profile?name=${encodeURIComponent(user.nickname)}`) : undefined}
+      title={user ? `Open ${user.nickname}'s profile` : undefined}
+      className={`surface flex items-center gap-3 p-4 animate-fade-up transition-all duration-200 ${
+        user ? 'cursor-pointer hover:-translate-y-[1px] hover:brightness-110' : ''
+      }`}
       style={{ animationDelay: '60ms', boxShadow: `inset 0 0 0 1px ${color}33, 0 12px 44px rgba(0,0,0,.4)` }}
     >
       {user ? (
