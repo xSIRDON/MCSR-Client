@@ -45,9 +45,9 @@ export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }
 
 export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: number }) {
   const navigate = useNavigate()
-  const { data: runs } = useQuery({
-    queryKey: ['rsg-card', name],
-    queryFn: () => paceman.getRecentRuns(name!, { limit: 50, hours: 24 * 365 }),
+  const { data: pbData } = useQuery({
+    queryKey: ['rsg-card-pb', name],
+    queryFn: () => paceman.getPB(name!),
     enabled: !!name
   })
   const { data: liveRuns } = useQuery({
@@ -70,8 +70,7 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
   const prog = progress.rsg
   const busy = isBusy(status.state)
 
-  const finished = runs?.filter((r) => r.finish != null) ?? []
-  const pb = finished.length ? Math.min(...finished.map((r) => r.finish as number)) : null
+  const pb = pbData?.finish ?? null
 
   const pbValue: ReactNode =
     name == null ? (
