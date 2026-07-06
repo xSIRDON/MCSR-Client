@@ -601,11 +601,40 @@ export interface ScoreDim {
   sample: number
 }
 
+export function consistencyFromDetails(
+  uuid: string,
+  details: MatchInfo[]
+): { score: number; sample: number } | null {
+  const me = uuid.toLowerCase()
+  const list = Array.isArray(details)
+    ? details.filter((m) => m && m.type === 2 && Array.isArray(m.timelines))
+    : []
+  const perSegment: Record<string, number[]> = {}
+  for (const m of list) {
+    for (const [k, v] of Object.entries(matchSegments(me, m))) (perSegment[k] ??= []).push(v)
+  }
+  let weightedCv = 0
+  let weight = 0
+  for (const arr of Object.values(perSegment)) {
+    if (arr.length < 3) continue
+    const mean = arr.reduce((a, b) => a + b, 0) / arr.length
+    if (mean <= 0) continue
+    const variance = arr.reduce((a, b) => a + (b - mean) ** 2, 0) / arr.length
+    const cv = Math.sqrt(variance) / mean
+    weightedCv += cv * arr.length
+    weight += arr.length
+  }
+  if (weight === 0) return null
+  const cv = weightedCv / weight
+  return { score: clamp100(100 - cv * 200), sample: list.length }
+}
+
 export function buildScorecard(
   a: RankedAnalytics,
   seasonWinRate: number | null,
   seasonPlayed: number,
-  deaths?: DeathStats
+  deaths?: DeathStats,
+  consistency?: { score: number; sample: number } | null
 ): ScoreDim[] {
   const dims: ScoreDim[] = []
 
@@ -627,7 +656,15 @@ export function buildScorecard(
     const ff = Math.round((a.forfeits.yours / a.decided) * 100)
     dims.push({ key: 'finishing', label: 'Finishing', score: clamp100(100 - ff), detail: `forfeited ${ff}% of games`, sample: a.decided })
   }
-  if (a.best != null && a.averageWin != null && a.averageWin > 0) {
+  if (consistency) {
+    dims.push({
+      key: 'consistency',
+      label: 'Consistency',
+      score: consistency.score,
+      detail: `split-to-split steadiness over ${consistency.sample} games`,
+      sample: consistency.sample
+    })
+  } else if (a.best != null && a.averageWin != null && a.averageWin > 0) {
     const spread = (a.averageWin - a.best) / a.averageWin
     dims.push({ key: 'consistency', label: 'Consistency', score: clamp100(100 - spread * 250), detail: 'win pace vs your best', sample: a.completionTimes.length })
   }
