@@ -17,6 +17,9 @@ export function Settings() {
   useEffect(() => {
     void window.mcsr.config.get().then(setConfig)
     void window.mcsr.paceman.status().then(setTracker)
+    void window.mcsr.paceman.getKey().then((k) => {
+      if (k) setKeyInput(k)
+    })
     void window.mcsr.system.java().then(setJava)
     void window.mcsr.auth.accounts().then(setAccounts)
     void window.mcsr.updater.status().then(setUpdate)
@@ -37,9 +40,10 @@ export function Settings() {
   }
 
   async function saveKey() {
-    if (!keyInput.trim()) return
-    await window.mcsr.paceman.setKey(keyInput.trim())
-    setKeyInput('')
+    const key = keyInput.trim()
+    if (!key) return
+    await window.mcsr.paceman.setKey(key)
+    setKeyInput(key)
     if (!pacemanName && profile?.name) setPacemanName(profile.name)
     flash('Paceman connected')
   }

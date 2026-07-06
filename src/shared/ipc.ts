@@ -51,6 +51,7 @@ export const IPC = {
   logHistory: 'log:history',
   logClear: 'log:clear',
   paceSetKey: 'pace:setKey',
+  paceGetKey: 'pace:getKey',
   paceStatus: 'pace:status',
   paceStatusChanged: 'pace:statusChanged',
   cfgGet: 'cfg:get',
@@ -127,6 +128,7 @@ export interface McsrApi {
   }
   paceman: {
     setKey(key: string): Promise<void>
+    getKey(): Promise<string | null>
     status(): Promise<TrackerStatus>
     onStatusChanged(cb: (s: TrackerStatus) => void): () => void
   }

@@ -78,6 +78,7 @@ const api: McsrApi = {
   },
   paceman: {
     setKey: (key: string) => ipcRenderer.invoke(IPC.paceSetKey, key),
+    getKey: () => ipcRenderer.invoke(IPC.paceGetKey),
     status: () => ipcRenderer.invoke(IPC.paceStatus),
     onStatusChanged: (cb: (s: TrackerStatus) => void) =>
       subscribe<TrackerStatus>(IPC.paceStatusChanged, cb)

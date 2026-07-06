@@ -34,6 +34,10 @@ export function hasKey(): boolean {
   return !!store.secret.get(KEY_SECRET)
 }
 
+export function getKey(): string | null {
+  return store.secret.get(KEY_SECRET) ?? null
+}
+
 export function setKey(key: string): void {
   store.secret.set(KEY_SECRET, key.trim())
   writeOptions()
