@@ -32,7 +32,7 @@ export function EloChart({ uuid }: { uuid: string }) {
     for (const m of ordered) {
       const mine = m.changes?.find((c) => c.uuid === uuid)
       if (mine && mine.eloRate != null) {
-        pts.push({ i: i++, elo: mine.eloRate, change: mine.change ?? null })
+        pts.push({ i: i++, elo: mine.eloRate + (mine.change ?? 0), change: mine.change ?? null })
       }
     }
     return pts
