@@ -33,6 +33,17 @@ describe('createMcsrClient', () => {
     )
   })
 
+  it('passes the season filter to users and matches', async () => {
+    const fetchImpl = stub({ status: 'success', data: [] })
+    const client = createMcsrClient(fetchImpl)
+    await client.getUser('Feinberg', { season: 7 })
+    expect(fetchImpl).toHaveBeenCalledWith('https://api.mcsrranked.com/users/Feinberg?season=7')
+    await client.getMatches('Feinberg', { type: 2, count: 20, season: 7 })
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://api.mcsrranked.com/users/Feinberg/matches?type=2&count=20&season=7'
+    )
+  })
+
   it('throws McsrApiError on an error envelope', async () => {
     const fetchImpl = stub({ status: 'error', data: 'not found' }, true, 200)
     const client = createMcsrClient(fetchImpl)
