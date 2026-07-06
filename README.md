@@ -5,7 +5,7 @@
 <br />
 <br />
 
-[![Version](https://img.shields.io/badge/version-v1.0.4-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![Version](https://img.shields.io/badge/version-v1.1.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-3b82f6?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&labelColor=15151c)](LICENSE)
 
@@ -63,9 +63,21 @@ A dedicated review tab that turns your ranked history into insight:
 
 - **Split Performance radar** — every split (Overworld, Nether, Bastion, Fortress, Blind, Stronghold, End) ranked by percentile against the whole field, with a toggle to compare against your own **Elo tier** instead.
 - **Strengths & weaknesses** radar and plain-English insights — your **best and weakest split**, plus a "to rank up" callout showing where you lose the most time versus the tier above you.
+- **Target splits** — the next tier's median split times next to yours, with the exact gaps to close.
 - **Per-split timing** — Overworld, Bastion, Fortress, Blind, Stronghold, End, Finish, and Fort → Finish.
 - **Seed-type breakdowns** — your pace by overworld structure and bastion type.
-- Win rate, recent form, finishing, deaths, and personal-best insights drawn from your real season record.
+- Win rate, recent form, finishing, deaths, average win time, and personal-best insights drawn from your real season record.
+
+### Compare any two players
+A head-to-head tab: search two names and get overlaid **split-performance radars**, per-split
+average-time gaps, and a stat-by-stat scorecard — Elo, win rate, best time, average win, streaks,
+and paceman RSG PBs. Every searched profile also gets the full radar treatment, plus a one-click
+**Compare with me**.
+
+### RSG stats that are actually yours
+The RSG personal best comes straight from **paceman's PB table** (not a recent-runs window), and
+the profile's RSG tab lists your **recent runs with real per-split times** alongside the all-time
+split funnel.
 
 ### Built-in pace tracking
 - A **paceman tracker** runs alongside RSG automatically and surfaces your live pace on the home screen.
