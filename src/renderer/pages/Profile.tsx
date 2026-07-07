@@ -81,7 +81,7 @@ export function Profile() {
           {tab === 'ranked' ? (
             !noRankedProfile && uuid ? (
               <>
-                <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+                <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(320px,1fr))]">
                   <EloChart uuid={uuid} season={seasonSel} />
                   <div className="flex min-h-[280px] flex-col">
                     <MatchFeed key={uuid} uuid={uuid} season={seasonSel} />
@@ -106,7 +106,7 @@ function ProfileAnalytics({ uuid, season }: { uuid: string; season?: SeasonSel }
   const { scorecard, details, rank, detailsLoading, hasData } = usePlayerAnalytics(uuid, season)
   if (!hasData) return null
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(360px,1fr))]">
       <PlayStyleRadar dims={scorecard} delay={110} />
       <SplitPerformanceRadar
         uuid={uuid}

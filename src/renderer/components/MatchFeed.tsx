@@ -97,7 +97,11 @@ function Row({ m, uuid }: { m: MatchInfo; uuid: string }) {
           <div className="font-display tnum text-sm" style={{ color }}>
             {mine ? signedElo(mine.change) : '—'}
           </div>
-          <div className="text-xs text-faint">{msToTime(m.result?.time ?? null)}</div>
+          <div className="text-xs text-faint">
+            {/* A forfeit's "time" is when it ended, not a run — mark it so it can't read as a pace. */}
+            {m.forfeited && m.result?.time ? 'FF · ' : ''}
+            {msToTime(m.result?.time ?? null)}
+          </div>
         </div>
       </div>
       {open && (
