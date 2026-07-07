@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -20,6 +19,7 @@ import { eloWinChance } from '@core/rank'
 import { PlayerHead } from '../components/PlayerHead'
 import { RankBadge } from '../components/RankBadge'
 import { SeasonPicker } from '../components/SeasonPicker'
+import { PlayerAutocomplete } from '../components/PlayerAutocomplete'
 
 const A_COLOR = '#f5c842' // gold
 const B_COLOR = '#9f6bff' // portal purple
@@ -142,16 +142,15 @@ function NameInput({
     setLast(initial)
     setQ(initial)
   }
-  const submit = (e: FormEvent): void => {
-    e.preventDefault()
-    const v = q.trim()
-    if (v) onSubmit(v)
-  }
   return (
-    <form onSubmit={submit} className="min-w-0 flex-1">
-      <input
+    <div className="min-w-0 flex-1">
+      <PlayerAutocomplete
         value={q}
-        onChange={(e) => setQ(e.target.value)}
+        onChange={setQ}
+        onSubmit={(name) => {
+          const v = name.trim()
+          if (v) onSubmit(v)
+        }}
         onBlur={() => {
           const v = q.trim()
           if (v && v !== initial) onSubmit(v)
@@ -160,7 +159,7 @@ function NameInput({
         className="w-full rounded-lg border bg-[var(--bg-2)] px-3 py-2 text-sm text-text outline-none transition-colors placeholder:text-faint"
         style={{ borderColor: `${color}55` }}
       />
-    </form>
+    </div>
   )
 }
 
