@@ -1,0 +1,16 @@
+{
+  "name": "mcsr-client-friends",
+  "version": "1.0.0",
+  "description": "Friends and presence server for MCSR Client",
+  "author": "xSIRDON",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
