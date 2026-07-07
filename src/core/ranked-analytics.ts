@@ -129,8 +129,14 @@ export function analyzeRanked(uuid: string, matches: MatchInfo[]): RankedAnalyti
       else if (outcome === 'win') forfeitsTheirs++
     }
 
-    // Winning completion times.
-    if (outcome === 'win' && typeof m.result?.time === 'number' && m.result.time > 0) {
+    // Winning completion times. A win by opponent forfeit carries the elapsed time at the
+    // forfeit, not a run completion — counting it would poison Avg Win / best / the histogram.
+    if (
+      outcome === 'win' &&
+      !m.forfeited &&
+      typeof m.result?.time === 'number' &&
+      m.result.time > 0
+    ) {
       winTimes.push(m.result.time)
     }
 
@@ -430,9 +436,11 @@ export function analyzeSplits(uuid: string, details: MatchInfo[]): SplitStat[] {
       if (t != null) buckets[s.key].push(t)
     }
 
-    // Finish + Fort → Finish only count when this player won the match.
+    // Finish + Fort → Finish only count when this player won the match — and actually ran it
+    // out: a win by opponent forfeit carries the elapsed time at the forfeit, not a completion.
     const won = m.result?.uuid === uuid
-    const finish = won && typeof m.result?.time === 'number' ? m.result.time : null
+    const finish =
+      won && !m.forfeited && typeof m.result?.time === 'number' ? m.result.time : null
     if (finish != null && finish > 0) {
       finishTimes.push(finish)
       const fort = timeOf('nether.find_fortress')
@@ -854,7 +862,9 @@ function matchSegments(uuid: string, m: MatchInfo): Record<string, number> {
   const stronghold = t(M_STRONGHOLD)
   const end = t(M_END)
   const won = m.result?.uuid === uuid
-  const finish = won && typeof m.result?.time === 'number' ? m.result.time : null
+  // A forfeit "win time" is the elapsed time at the forfeit, not a completion — never a real
+  // end split.
+  const finish = won && !m.forfeited && typeof m.result?.time === 'number' ? m.result.time : null
   const out: Record<string, number> = {}
   const seg = (key: string, a: number | null, b: number | null): void => {
     if (a != null && b != null && b > a) out[key] = b - a

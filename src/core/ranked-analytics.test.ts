@@ -68,6 +68,17 @@ describe('analyzeRanked', () => {
     expect(a.insights[0]).toMatchObject({ kind: 'note', label: 'No data' })
   })
 
+  it('excludes forfeit wins from completion times — an FF time is not a run', () => {
+    const a = analyzeRanked(ME, [
+      match({ winner: ME, time: 720_000 }), // real 12:00 completion
+      match({ winner: ME, time: 224_000, forfeited: true }) // opponent FF'd at 3:44
+    ])
+    expect(a.wins).toBe(2) // still a win on the record…
+    expect(a.completionTimes).toEqual([720_000]) // …but not a completion
+    expect(a.best).toBe(720_000)
+    expect(a.averageWin).toBe(720_000)
+  })
+
   it('counts wins, losses, draws and computes win rate over decided games', () => {
     const matches = [
       match({ winner: ME }),
