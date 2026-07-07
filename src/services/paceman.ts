@@ -36,6 +36,18 @@ export interface SessionNethers {
   uuid?: string
 }
 
+export interface LiveRun {
+  worldId: string
+  nickname: string
+  user: { uuid: string; liveAccount: string | null }
+  eventList: { eventId: string; rta: number; igt: number }[]
+  isCheated?: boolean
+  isHidden?: boolean
+  lastUpdated?: number
+}
+
+export const PACEMAN_LIVERUNS_URL = 'https://paceman.gg/api/ars/liveruns'
+
 export interface WorldData extends RunSplits {
   id: number
   worldId: string
@@ -140,6 +152,9 @@ export function createPacemanClient(fetchImpl: FetchLike, base = PACEMAN_BASE) {
           hoursBetween: opts.hoursBetween
         })}`
       )
+    },
+    getLiveRuns(): Promise<LiveRun[]> {
+      return getJson<LiveRun[]>(fetchImpl, PACEMAN_LIVERUNS_URL)
     },
     getSessionNethers(name: string, opts: RecentOpts = {}): Promise<SessionNethers> {
       return getJson<SessionNethers>(

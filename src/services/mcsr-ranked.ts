@@ -132,9 +132,22 @@ export interface LeaderboardEntry {
   seasonResult?: { eloRate: number | null; eloRank: number | null }
 }
 
+export interface LiveMatchPlayer {
+  uuid: string
+  nickname: string
+  roleType?: number
+  eloRate: number | null
+  eloRank?: number | null
+  country?: string | null
+}
+export interface LiveMatch {
+  currentTime: number
+  players: LiveMatchPlayer[]
+  data: Record<string, { liveUrl: string | null; timeline?: { time: number; type: string } | null }>
+}
 export interface LiveInfo {
   players?: number
-  liveMatches?: unknown[]
+  liveMatches?: LiveMatch[]
 }
 
 interface Envelope<T> {

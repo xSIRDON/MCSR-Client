@@ -4,6 +4,7 @@ import type { UpdateStatus } from '@shared/types'
 import { useUi } from './store/uiStore'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
+import { FriendsRail } from './components/FriendsRail'
 import { PlayBar } from './components/PlayBar'
 import { InstallMapPicker } from './components/InstallMapPicker'
 import { Login } from './pages/Login'
@@ -19,7 +20,7 @@ import { Compare } from './pages/Compare'
 import { McsrLogo } from './components/Logo'
 
 export function App() {
-  const { profile, authReady, setProfile, setAuthReady, setPacemanName } = useUi()
+  const { profile, authReady, setProfile, setAuthReady, setPacemanName, setFavorites } = useUi()
 
   useEffect(() => {
     let active = true
@@ -33,6 +34,8 @@ export function App() {
         if (!active) return
         if (p) setProfile(p)
         setPacemanName(cfg.pacemanName ?? (pace.hasKey ? (p?.name ?? null) : null))
+        setFavorites(cfg.favorites ?? [])
+        if (p) void window.mcsr.friends.autoConnect()
       } finally {
         if (active) setAuthReady(true)
       }
@@ -40,7 +43,7 @@ export function App() {
     return () => {
       active = false
     }
-  }, [setProfile, setAuthReady, setPacemanName])
+  }, [setProfile, setAuthReady, setPacemanName, setFavorites])
 
   return (
     <div className="relative z-10 flex h-full flex-col">
@@ -67,6 +70,7 @@ export function App() {
                 <Route path="/settings" element={<Settings />} />
               </Routes>
             </main>
+            <FriendsRail />
           </div>
           <PlayBar />
           <InstallMapPicker />

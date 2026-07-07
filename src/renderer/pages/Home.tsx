@@ -25,7 +25,7 @@ export function Home() {
     <div className="mx-auto max-w-[1120px] space-y-3 px-5 py-3">
       <HomeHero uuid={profile.uuid} name={profile.name} />
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(270px,1fr))]">
         <RankedCard uuid={profile.uuid} delay={40} />
         <RsgCard name={pacemanName} delay={110} />
         <ZsgCard delay={180} />
