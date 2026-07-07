@@ -49,6 +49,28 @@ export interface AppConfig {
   pacemanName: string | null
   ninjabrain: boolean
   toolscreen: boolean
+  favorites: string[]
+  friendsServerUrl: string | null
+}
+
+export const DEFAULT_FRIENDS_SERVER = 'https://mcsrfriends.duckdns.org:8787'
+
+export type FriendNetPresence = 'idle' | 'ranked' | 'rsg' | 'zsg' | 'offline'
+
+export interface FriendEntry {
+  uuid: string
+  nickname: string
+  state: FriendNetPresence
+  lastSeen: number | null
+}
+
+export interface FriendsNetState {
+  configured: boolean
+  connected: boolean
+  error: string | null
+  friends: FriendEntry[]
+  incoming: FriendEntry[]
+  outgoing: FriendEntry[]
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -58,7 +80,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   seedQueueOverride: null,
   pacemanName: null,
   ninjabrain: true,
-  toolscreen: true
+  toolscreen: true,
+  favorites: [],
+  friendsServerUrl: DEFAULT_FRIENDS_SERVER
 }
 
 export interface ModInfo {

@@ -3,6 +3,7 @@ import { IPC } from '../shared/ipc'
 import type { McsrApi } from '../shared/ipc'
 import type {
   AppConfig,
+  FriendsNetState,
   InstanceId,
   InstanceStatus,
   LogLine,
@@ -82,6 +83,19 @@ const api: McsrApi = {
     status: () => ipcRenderer.invoke(IPC.paceStatus),
     onStatusChanged: (cb: (s: TrackerStatus) => void) =>
       subscribe<TrackerStatus>(IPC.paceStatusChanged, cb)
+  },
+  friends: {
+    state: () => ipcRenderer.invoke(IPC.friendsState),
+    autoConnect: () => ipcRenderer.invoke(IPC.friendsAutoConnect),
+    connect: () => ipcRenderer.invoke(IPC.friendsConnect),
+    disconnect: () => ipcRenderer.invoke(IPC.friendsDisconnect),
+    request: (uuid: string, nickname?: string) =>
+      ipcRenderer.invoke(IPC.friendsRequest, uuid, nickname),
+    accept: (uuid: string) => ipcRenderer.invoke(IPC.friendsAccept, uuid),
+    decline: (uuid: string) => ipcRenderer.invoke(IPC.friendsDecline, uuid),
+    remove: (uuid: string) => ipcRenderer.invoke(IPC.friendsRemove, uuid),
+    onChanged: (cb: (s: FriendsNetState) => void) =>
+      subscribe<FriendsNetState>(IPC.friendsChanged, cb)
   },
   config: {
     get: () => ipcRenderer.invoke(IPC.cfgGet),

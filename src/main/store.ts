@@ -13,6 +13,8 @@ type RawConfig = {
   pacemanName?: string | null
   ninjabrain?: boolean
   toolscreen?: boolean
+  favorites?: unknown[]
+  friendsServerUrl?: string | null
 }
 
 function normalizeConfig(raw: RawConfig): AppConfig {
@@ -39,7 +41,14 @@ function normalizeConfig(raw: RawConfig): AppConfig {
         : DEFAULT_CONFIG.seedQueueOverride,
     pacemanName: typeof raw.pacemanName === 'string' ? raw.pacemanName : DEFAULT_CONFIG.pacemanName,
     ninjabrain: typeof raw.ninjabrain === 'boolean' ? raw.ninjabrain : DEFAULT_CONFIG.ninjabrain,
-    toolscreen: typeof raw.toolscreen === 'boolean' ? raw.toolscreen : DEFAULT_CONFIG.toolscreen
+    toolscreen: typeof raw.toolscreen === 'boolean' ? raw.toolscreen : DEFAULT_CONFIG.toolscreen,
+    favorites: Array.isArray(raw.favorites)
+      ? raw.favorites.filter((f): f is string => typeof f === 'string')
+      : [...DEFAULT_CONFIG.favorites],
+    friendsServerUrl:
+      typeof raw.friendsServerUrl === 'string' && raw.friendsServerUrl
+        ? raw.friendsServerUrl
+        : DEFAULT_CONFIG.friendsServerUrl
   }
 }
 
