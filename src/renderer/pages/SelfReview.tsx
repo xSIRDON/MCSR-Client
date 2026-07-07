@@ -132,7 +132,7 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
       ) : (
         <>
           <StatRow head={head} scope={scope} />
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(360px,1fr))]">
             <PlayStyleRadar dims={scorecard} />
             <SplitPerformanceRadar
               uuid={uuid}
@@ -142,7 +142,7 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
               loading={detailsLoading}
             />
           </div>
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(320px,1fr))]">
             <InsightsCard insights={insights} />
             <WinRateBars analytics={analytics} />
           </div>
@@ -153,7 +153,7 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
             </div>
           )}
           <TargetSplitsGrid splits={splits} perf={perfWorld} nextTier={nextTier} loading={detailsLoading} />
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(320px,1fr))]">
             <TypeBars
               title="Overworld by seed type"
               breakdown={breakdowns.overworld}
@@ -197,7 +197,7 @@ function TargetSplitsGrid({
     return <SplitsCard splits={splits} loading={loading} />
   }
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(408px,1fr))]">
       <SplitsCard splits={splits} loading={loading} />
       <TargetSplitsCard tierLabel={nextTier.label} targets={targets} />
     </div>
@@ -579,12 +579,12 @@ function HistTooltip({
 function ReviewSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(128px,1fr))]">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="skeleton h-[88px] rounded-xl" />
         ))}
       </div>
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+      <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(320px,1fr))]">
         <div className="skeleton h-56 rounded-2xl" />
         <div className="skeleton h-56 rounded-2xl" />
       </div>

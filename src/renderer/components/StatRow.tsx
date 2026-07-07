@@ -9,7 +9,7 @@ export function StatRow({ head, scope = 'season' }: { head: HeadStats; scope?: '
   const streakColor = head.currentStreak > 0 ? 'var(--win)' : undefined
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(128px,1fr))]">
       <StatTile
         label="Win Rate"
         value={`${winRate}%`}
