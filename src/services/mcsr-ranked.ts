@@ -149,9 +149,26 @@ export interface LeaderboardEntry {
   seasonResult?: { eloRate: number | null; eloRank: number | null }
 }
 
+export interface LiveMatchPlayer {
+  uuid: string
+  nickname: string
+  roleType?: number
+  eloRate: number | null
+  eloRank?: number | null
+  country?: string | null
+}
+/** A ranked match currently being played (from /live). */
+export interface LiveMatch {
+  /** Elapsed match time (ms). */
+  currentTime: number
+  players: LiveMatchPlayer[]
+  /** Per-player live state keyed by uuid: twitch url + their latest timeline event. */
+  data: Record<string, { liveUrl: string | null; timeline?: { time: number; type: string } | null }>
+}
 export interface LiveInfo {
+  /** Players currently online on the ranked network. */
   players?: number
-  liveMatches?: unknown[]
+  liveMatches?: LiveMatch[]
 }
 
 interface Envelope<T> {

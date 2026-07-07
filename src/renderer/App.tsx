@@ -4,6 +4,7 @@ import type { UpdateStatus } from '@shared/types'
 import { useUi } from './store/uiStore'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
+import { FriendsRail } from './components/FriendsRail'
 import { PlayBar } from './components/PlayBar'
 import { InstallMapPicker } from './components/InstallMapPicker'
 import { Login } from './pages/Login'
@@ -19,7 +20,7 @@ import { Compare } from './pages/Compare'
 import { McsrLogo } from './components/Logo'
 
 export function App() {
-  const { profile, authReady, setProfile, setAuthReady, setPacemanName } = useUi()
+  const { profile, authReady, setProfile, setAuthReady, setPacemanName, setFavorites } = useUi()
 
   useEffect(() => {
     let active = true
@@ -36,6 +37,10 @@ export function App() {
         // opted in) — in which case default stats lookups to their IGN. No key and no name => null,
         // so an unconnected player never silently surfaces paceman runs that match their IGN.
         setPacemanName(cfg.pacemanName ?? (pace.hasKey ? (p?.name ?? null) : null))
+        setFavorites(cfg.favorites ?? [])
+        // Join the friends network automatically once signed in — no setup, no Settings toggle.
+        // The Mojang handshake needs the launch token, which the restore above just provided.
+        if (p) void window.mcsr.friends.autoConnect()
       } finally {
         if (active) setAuthReady(true)
       }
@@ -43,7 +48,7 @@ export function App() {
     return () => {
       active = false
     }
-  }, [setProfile, setAuthReady, setPacemanName])
+  }, [setProfile, setAuthReady, setPacemanName, setFavorites])
 
   return (
     <div className="relative z-10 flex h-full flex-col">
@@ -70,6 +75,7 @@ export function App() {
                 <Route path="/settings" element={<Settings />} />
               </Routes>
             </main>
+            <FriendsRail />
           </div>
           <PlayBar />
           <InstallMapPicker />

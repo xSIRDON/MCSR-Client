@@ -172,11 +172,11 @@ function LeaderboardIcon() {
   )
 }
 function CompareIcon() {
+  // Two bars facing off across a center line — a head-to-head, distinct from the friends icon.
   return (
     <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
-      <circle cx="6" cy="6.5" r="2.6" stroke="currentColor" strokeWidth="1.3" />
-      <circle cx="12" cy="6.5" r="2.6" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M2 15a4 4 0 018 0M8 15a4 4 0 018 0" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M9 2.5v13" stroke="currentColor" strokeWidth="1.1" strokeDasharray="2 1.6" />
+      <path d="M6.5 5.5L2.5 9l4 3.5M11.5 5.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

@@ -14,6 +14,7 @@ import { store } from './store'
 import * as auth from './auth/msmc-auth'
 import * as gmll from './launcher/gmll-adapter'
 import * as tracker from './paceman/tracker'
+import * as friends from './friends/service'
 import {
   fetchPack,
   installPackFiles,
@@ -369,6 +370,15 @@ export function registerIpc(): void {
   tracker.onStatus((s) => win()?.webContents.send(IPC.paceStatusChanged, s))
   onLog((l) => win()?.webContents.send(IPC.logLine, l))
 
+  // Friends network: presence heartbeats carry which instance is running.
+  friends.setStateProvider(() => {
+    for (const id of ['ranked', 'rsg', 'zsg'] as const) {
+      if (states[id].state === 'running') return id
+    }
+    return 'idle'
+  })
+  friends.onChanged((s) => win()?.webContents.send(IPC.friendsChanged, s))
+
   ipcMain.on(IPC.winMinimize, () => win()?.minimize())
   ipcMain.on(IPC.winClose, () => win()?.close())
 
@@ -466,6 +476,17 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.paceSetKey, (_e, key: string) => tracker.setKey(key))
   ipcMain.handle(IPC.paceGetKey, () => tracker.getKey())
   ipcMain.handle(IPC.paceStatus, () => tracker.status())
+
+  ipcMain.handle(IPC.friendsState, () => friends.getState())
+  ipcMain.handle(IPC.friendsAutoConnect, () => friends.autoConnect())
+  ipcMain.handle(IPC.friendsConnect, () => friends.connect())
+  ipcMain.handle(IPC.friendsDisconnect, () => friends.disconnect())
+  ipcMain.handle(IPC.friendsRequest, (_e, uuid: string, nickname?: string) =>
+    friends.request(uuid, nickname)
+  )
+  ipcMain.handle(IPC.friendsAccept, (_e, uuid: string) => friends.accept(uuid))
+  ipcMain.handle(IPC.friendsDecline, (_e, uuid: string) => friends.decline(uuid))
+  ipcMain.handle(IPC.friendsRemove, (_e, uuid: string) => friends.remove(uuid))
 
   ipcMain.handle(IPC.cfgGet, () => store.getConfig())
   ipcMain.handle(IPC.cfgSet, (_e, patch: Partial<AppConfig>) => store.setConfig(patch))

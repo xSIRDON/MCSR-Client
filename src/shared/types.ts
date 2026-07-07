@@ -63,6 +63,40 @@ export interface AppConfig {
   ninjabrain: boolean
   /** Auto-install Toolscreen into an instance on its first launch (Windows only). */
   toolscreen: boolean
+  /** Favorited runners for the friends rail — MCSR uuids (dashless, lowercase). */
+  favorites: string[]
+  /** Base URL of the friends/presence backend (see server/). Defaults to the official
+   *  MCSR Client network so friends work out of the box; overridable via the config file. */
+  friendsServerUrl: string | null
+}
+
+/** The official friends network, baked in so every client is on the same network by default.
+ *  HTTPS via Caddy + Let's Encrypt (DuckDNS DNS-01) on :8787, proxying to the internal service. */
+export const DEFAULT_FRIENDS_SERVER = 'https://mcsrfriends.duckdns.org:8787'
+
+// ---- Friends network (mutual friends via the bundled backend) ----
+
+export type FriendNetPresence = 'idle' | 'ranked' | 'rsg' | 'zsg' | 'offline'
+
+export interface FriendEntry {
+  uuid: string
+  nickname: string
+  /** Presence reported by their client's heartbeat ('offline' when stale). */
+  state: FriendNetPresence
+  /** Unix seconds of their last heartbeat, or null if they've never connected. */
+  lastSeen: number | null
+}
+
+export interface FriendsNetState {
+  /** A server URL is saved in Settings. */
+  configured: boolean
+  /** Signed in to the friends network with a valid session. */
+  connected: boolean
+  /** Last connection error, for the Settings card. */
+  error: string | null
+  friends: FriendEntry[]
+  incoming: FriendEntry[]
+  outgoing: FriendEntry[]
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -72,7 +106,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   seedQueueOverride: null,
   pacemanName: null,
   ninjabrain: true,
-  toolscreen: true
+  toolscreen: true,
+  favorites: [],
+  friendsServerUrl: DEFAULT_FRIENDS_SERVER
 }
 
 /** A single mod jar inside an instance's mods/ folder. */

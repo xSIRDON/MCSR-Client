@@ -1,0 +1,16 @@
+{
+  "name": "mcsr-client-friends",
+  "version": "1.0.0",
+  "description": "Friends & presence backend for MCSR Client — zero-dependency Node service.",
+  "author": "xSIRDON",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
