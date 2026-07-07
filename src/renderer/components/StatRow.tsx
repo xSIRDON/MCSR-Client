@@ -10,7 +10,9 @@ export function StatRow({ head, scope = 'season' }: { head: HeadStats; scope?: '
   const streakColor = head.currentStreak > 0 ? 'var(--win)' : undefined
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+    // Auto-fit by available width (not viewport) so the tiles reflow instead of overflowing
+    // when the friends rail narrows the main column.
+    <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(128px,1fr))]">
       <StatTile
         label="Win Rate"
         value={`${winRate}%`}
