@@ -2,7 +2,17 @@
 // the toast queue. The main process is the source of truth; this store just mirrors its pushes.
 import { create } from 'zustand'
 import { useEffect } from 'react'
-import type { MessageStore } from '@shared/types'
+import type { FriendMessage, MessageStore } from '@shared/types'
+
+// A single shared empty array for conversations with no messages. Returning a fresh `[]` from a
+// zustand selector on every call gives it a new identity each render, which zustand reads as a
+// changed snapshot and spins into an infinite render loop — so always hand back this constant.
+const EMPTY_THREAD: FriendMessage[] = []
+
+/** This friend's message list, or a stable shared empty array (never a fresh one — see above). */
+export function threadOf(byFriend: MessageStore['byFriend'], uuid: string): FriendMessage[] {
+  return byFriend[uuid] ?? EMPTY_THREAD
+}
 
 export interface ChatToast {
   id: number

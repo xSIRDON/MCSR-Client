@@ -10,7 +10,7 @@ import {
   normUuid
 } from '../hooks/useFriends'
 import type { FriendPresence } from '../hooks/useFriends'
-import { useMessagesStore, useTotalUnread } from '../store/messagesStore'
+import { useMessagesStore, useTotalUnread, threadOf } from '../store/messagesStore'
 import { PlayerHead } from './PlayerHead'
 import { PlayerAutocomplete } from './PlayerAutocomplete'
 
@@ -424,7 +424,11 @@ function DmThread({
   nickname: string
   onBack: () => void
 }) {
-  const msgs = useMessagesStore((s) => s.store.byFriend[uuid] ?? [])
+  // Select the (referentially stable) thread map, then resolve this friend's list via threadOf —
+  // which returns a shared empty array, never a fresh one. Falling back to `[]` inside the
+  // selector would change identity every render and spin the renderer into an infinite loop.
+  const byFriend = useMessagesStore((s) => s.store.byFriend)
+  const msgs = threadOf(byFriend, uuid)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
