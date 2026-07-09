@@ -20,10 +20,13 @@ export function listWorlds(gameDir: string): string[] {
 
 /**
  * Copy the settings a speedrunner cares about from `srcGameDir` into `dstGameDir`:
- *   - options.txt   — keybinds, sensitivity, video settings
- *   - hotbar.nbt    — saved hotbars (only if the source has one)
- *   - config/       — the whole folder, recursively: standardoptions.txt + every mod's config
- *   - saves/<name>  — only the worlds named in `opts.worlds` (the player picks which)
+ *   - options.txt      — keybinds, sensitivity, video settings
+ *   - hotbar.nbt       — saved hotbars (only if the source has one)
+ *   - config/          — the whole folder, recursively: standardoptions.txt + every mod's config
+ *   - resourcepacks/   — the whole folder, recursively: SeedQueue wall packs (the "seedwall")
+ *                        and any other packs. Merged in, so a target's bundled walls survive
+ *                        unless the source overrides one by the same filename.
+ *   - saves/<name>     — only the worlds named in `opts.worlds` (the player picks which)
  *
  * Returns the list of items copied, for UI feedback. Best-effort per item; overwrites matching
  * files/worlds in the target.
@@ -44,10 +47,17 @@ export function copyInstanceSettings(
     }
   }
 
-  const srcConfig = join(srcGameDir, 'config')
-  if (existsSync(srcConfig)) {
-    cpSync(srcConfig, join(dstGameDir, 'config'), { recursive: true })
-    copied.push('config/')
+  // Folders copied whole: config (mod settings + standardoptions) and resourcepacks (the seedwall).
+  // The active pack is named in options.txt, which we copied above, so the wall carries over intact.
+  for (const [folder, label] of [
+    ['config', 'config/'],
+    ['resourcepacks', 'resource packs']
+  ] as const) {
+    const src = join(srcGameDir, folder)
+    if (existsSync(src)) {
+      cpSync(src, join(dstGameDir, folder), { recursive: true })
+      copied.push(label)
+    }
   }
 
   let worlds = 0

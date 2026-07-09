@@ -99,9 +99,10 @@ export function InstallMapPicker() {
         <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--bg-2)]/50 p-3">
           <label className="block text-sm text-text">Import settings (optional)</label>
           <p className="mt-1 text-xs text-faint">
-            Copy <code>options.txt</code>, <code>hotbar.nbt</code>, and the whole <code>config/</code>{' '}
-            folder from another instance — or any folder (another launcher’s instance, an old{' '}
-            <code>.minecraft</code>) — and pick which of its worlds to bring along.
+            Copy <code>options.txt</code>, <code>hotbar.nbt</code>, <code>config/</code>, and your{' '}
+            <code>resourcepacks/</code> (your seedwall) from another instance — or any folder (another{' '}
+            launcher’s instance, an old <code>.minecraft</code>) — and pick which of its worlds to
+            bring along.
           </p>
           {importFolder ? (
             <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-[var(--gold)]/40 bg-[var(--bg-2)] px-3 py-2">

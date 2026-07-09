@@ -293,7 +293,7 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
       setResult(
         copied.length > 0
           ? { ok: true, msg: `Imported ${copied.join(', ')} from the chosen folder.` }
-          : { ok: false, msg: 'No options.txt / hotbar.nbt / config found in that folder.' }
+          : { ok: false, msg: 'No options.txt / hotbar.nbt / config / resourcepacks found in that folder.' }
       )
     } catch (e) {
       setResult({ ok: false, msg: e instanceof Error ? e.message : 'Could not import from that folder.' })
@@ -325,8 +325,9 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
       {/* From another instance */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 text-sm text-muted">
-          Copy <code>options.txt</code>, <code>hotbar.nbt</code>, and the whole <code>config/</code>{' '}
-          folder (keybinds, sensitivity, StandardSettings and world options) from another instance.
+          Copy <code>options.txt</code>, <code>hotbar.nbt</code>, <code>config/</code>, and your{' '}
+          <code>resourcepacks/</code> (keybinds, sensitivity, StandardSettings, world options, and
+          your seedwall) from another instance.
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <select
