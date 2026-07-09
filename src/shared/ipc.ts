@@ -1,11 +1,14 @@
 import type {
   Account,
   AppConfig,
+  FriendMessage,
   FriendsNetState,
   InstanceId,
   InstanceStatus,
   JavaInfo,
   LogLine,
+  MessagesEvent,
+  MessageStore,
   ModInfo,
   Profile,
   ProgressEvent,
@@ -64,6 +67,10 @@ export const IPC = {
   friendsDecline: 'friends:decline',
   friendsRemove: 'friends:remove',
   friendsChanged: 'friends:changed',
+  friendsMessages: 'friends:messages',
+  friendsSendMessage: 'friends:sendMessage',
+  friendsMarkRead: 'friends:markRead',
+  friendsMessagesChanged: 'friends:messagesChanged',
   cfgGet: 'cfg:get',
   cfgSet: 'cfg:set',
   cfgPickJar: 'cfg:pickJar',
@@ -152,6 +159,10 @@ export interface McsrApi {
     decline(uuid: string): Promise<FriendsNetState>
     remove(uuid: string): Promise<FriendsNetState>
     onChanged(cb: (s: FriendsNetState) => void): () => void
+    messages(): Promise<MessageStore>
+    sendMessage(uuid: string, body: string): Promise<FriendMessage | null>
+    markRead(uuid: string): Promise<void>
+    onMessages(cb: (e: MessagesEvent) => void): () => void
   }
   config: {
     get(): Promise<AppConfig>

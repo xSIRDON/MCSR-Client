@@ -70,6 +70,7 @@ export const paths = {
   tools: () => join(rootDir(), 'tools'),
   configFile: () => join(sessionDir(), 'config.json'),
   secretsFile: () => join(sessionDir(), 'secrets.json'),
+  messagesFile: () => join(sessionDir(), 'friends-messages.json'),
   resource: (name: string): string =>
     app.isPackaged ? join(process.resourcesPath, name) : join(app.getAppPath(), 'resources', name)
 }

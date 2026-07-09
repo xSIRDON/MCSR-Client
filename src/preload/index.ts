@@ -7,6 +7,7 @@ import type {
   InstanceId,
   InstanceStatus,
   LogLine,
+  MessagesEvent,
   ProgressEvent,
   StandardSettings,
   TrackerStatus,
@@ -95,7 +96,13 @@ const api: McsrApi = {
     decline: (uuid: string) => ipcRenderer.invoke(IPC.friendsDecline, uuid),
     remove: (uuid: string) => ipcRenderer.invoke(IPC.friendsRemove, uuid),
     onChanged: (cb: (s: FriendsNetState) => void) =>
-      subscribe<FriendsNetState>(IPC.friendsChanged, cb)
+      subscribe<FriendsNetState>(IPC.friendsChanged, cb),
+    messages: () => ipcRenderer.invoke(IPC.friendsMessages),
+    sendMessage: (uuid: string, body: string) =>
+      ipcRenderer.invoke(IPC.friendsSendMessage, uuid, body),
+    markRead: (uuid: string) => ipcRenderer.invoke(IPC.friendsMarkRead, uuid),
+    onMessages: (cb: (e: MessagesEvent) => void) =>
+      subscribe<MessagesEvent>(IPC.friendsMessagesChanged, cb)
   },
   config: {
     get: () => ipcRenderer.invoke(IPC.cfgGet),

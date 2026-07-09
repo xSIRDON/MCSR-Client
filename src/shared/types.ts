@@ -73,6 +73,25 @@ export interface FriendsNetState {
   outgoing: FriendEntry[]
 }
 
+export interface FriendMessage {
+  id: number
+  from: string
+  to: string
+  body: string
+  at: number
+  read: boolean
+}
+
+export interface MessageStore {
+  byFriend: Record<string, FriendMessage[]>
+  unread: Record<string, number>
+}
+
+export interface MessagesEvent {
+  store: MessageStore
+  toast?: { uuid: string; nickname: string; body: string }
+}
+
 export const DEFAULT_CONFIG: AppConfig = {
   ram: { ranked: 3072, rsg: 3072, zsg: 3072 },
   java: { ranked: null, rsg: null, zsg: null },
