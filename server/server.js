@@ -304,7 +304,8 @@ async function route(req, res) {
       to: r.recipient,
       body: r.body,
       at: r.created_at,
-      read: r.recipient === me ? r.read_at != null : true
+      read: r.read_at != null,
+      readAt: r.read_at
     }))
     const lastId = messages.length ? messages[messages.length - 1].id : since
     return send(res, 200, { messages, lastId })
@@ -317,6 +318,22 @@ async function route(req, res) {
     if (!isUuid(other) || !Number.isFinite(cap)) return send(res, 400, { error: 'bad request' })
     q.markRead.run(nowS(), me, other, cap)
     return send(res, 204)
+  }
+
+  if (path === '/v1/messages/receipts' && req.method === 'GET') {
+    const ids = (url.searchParams.get('ids') ?? '')
+      .split(',')
+      .map((s) => Number(s))
+      .filter((n) => Number.isInteger(n) && n > 0)
+      .slice(0, 100)
+    if (ids.length === 0) return send(res, 200, { receipts: [] })
+    const placeholders = ids.map(() => '?').join(',')
+    const rows = db
+      .prepare(
+        `SELECT id, read_at FROM messages WHERE sender = ? AND read_at IS NOT NULL AND id IN (${placeholders})`
+      )
+      .all(me, ...ids)
+    return send(res, 200, { receipts: rows.map((r) => ({ id: r.id, readAt: r.read_at })) })
   }
 
   return send(res, 404, { error: 'not found' })

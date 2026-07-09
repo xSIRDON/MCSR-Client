@@ -409,6 +409,27 @@ function AddBox({ tab, canFriend }: { tab: Tab; canFriend: boolean }) {
   )
 }
 
+function fmtClock(atSec: number): string {
+  const d = new Date(atSec * 1000)
+  const h = d.getHours()
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  return `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')} ${ampm}`
+}
+
+function dayKey(atSec: number): string {
+  const d = new Date(atSec * 1000)
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+}
+
+function fmtDay(atSec: number): string {
+  const d = new Date(atSec * 1000)
+  const mid = (x: Date): number => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const diff = Math.round((mid(new Date()) - mid(d)) / 86_400_000)
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Yesterday'
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
 function DmThread({
   uuid,
   nickname,
@@ -423,6 +444,14 @@ function DmThread({
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
+
+  let lastMineId: number | null = null
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].from !== uuid) {
+      lastMineId = msgs[i].id
+      break
+    }
+  }
 
   useEffect(() => {
     void window.mcsr.friends.markRead(uuid)
@@ -464,20 +493,38 @@ function DmThread({
             No messages yet — say hi.
           </div>
         ) : (
-          msgs.map((m) => {
+          msgs.map((m, i) => {
             const mine = m.from !== uuid
+            const showDay = i === 0 || dayKey(m.at) !== dayKey(msgs[i - 1].at)
             return (
-              <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className="max-w-[82%] whitespace-pre-wrap break-words rounded-2xl px-3 py-1.5 text-[13px] leading-snug"
-                  style={
-                    mine
-                      ? { background: 'var(--gold)', color: '#12100a' }
-                      : { background: 'var(--bg-2)', color: 'var(--text)' }
-                  }
-                >
-                  {m.body}
+              <div key={m.id}>
+                {showDay && (
+                  <div className="my-2 text-center text-[10px] uppercase tracking-wider text-faint">
+                    {fmtDay(m.at)}
+                  </div>
+                )}
+                <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                  <div className="max-w-[82%]">
+                    <div
+                      className="whitespace-pre-wrap break-words rounded-2xl px-3 py-1.5 text-[13px] leading-snug"
+                      style={
+                        mine
+                          ? { background: 'var(--gold)', color: '#12100a' }
+                          : { background: 'var(--bg-2)', color: 'var(--text)' }
+                      }
+                    >
+                      {m.body}
+                    </div>
+                    <div className={`mt-0.5 px-1 text-[10px] text-faint ${mine ? 'text-right' : 'text-left'}`}>
+                      {fmtClock(m.at)}
+                    </div>
+                  </div>
                 </div>
+                {m.id === lastMineId && (
+                  <div className="mt-0.5 px-1 text-right text-[10px] text-faint">
+                    {m.read ? `Seen${m.readAt ? ` ${fmtClock(m.readAt)}` : ''}` : 'Delivered'}
+                  </div>
+                )}
               </div>
             )
           })

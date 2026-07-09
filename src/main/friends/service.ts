@@ -244,12 +244,16 @@ async function heartbeat(): Promise<void> {
 function start(): void {
   stop()
   loadMessages()
+  emitMessages()
   justConnected = true
   void heartbeat()
   void pollMessages()
   heartbeatTimer = setInterval(() => void heartbeat(), HEARTBEAT_MS)
   pollTimer = setInterval(() => void refresh().catch(() => {}), POLL_MS)
-  msgTimer = setInterval(() => void pollMessages(), MESSAGE_POLL_MS)
+  msgTimer = setInterval(() => {
+    void pollMessages()
+    void pollReceipts()
+  }, MESSAGE_POLL_MS)
 }
 
 function stop(): void {
@@ -290,6 +294,7 @@ let msgTimer: NodeJS.Timeout | null = null
 let msgCursor = 0
 let byFriend: Record<string, FriendMessage[]> = {}
 let justConnected = false
+let messagesLoaded = false
 
 export function onMessages(cb: (e: MessagesEvent) => void): void {
   msgSink = cb
@@ -307,6 +312,7 @@ function loadMessages(): void {
     msgCursor = 0
     byFriend = {}
   }
+  messagesLoaded = true
 }
 
 function saveMessages(): void {
@@ -323,7 +329,15 @@ function friendOf(m: FriendMessage, me: string): string {
 function mergeMessage(m: FriendMessage, me: string): boolean {
   const key = friendOf(m, me)
   const list = byFriend[key] ?? (byFriend[key] = [])
-  if (list.some((x) => x.id === m.id)) return false
+  const existing = list.find((x) => x.id === m.id)
+  if (existing) {
+    if (existing.read !== m.read || (existing.readAt ?? null) !== (m.readAt ?? null)) {
+      existing.read = m.read
+      existing.readAt = m.readAt ?? null
+      return true
+    }
+    return false
+  }
   list.push(m)
   list.sort((a, b) => a.id - b.id)
   return true
@@ -339,7 +353,8 @@ function sanitizeMessage(e: unknown): FriendMessage | null {
   const body = typeof o.body === 'string' ? o.body.slice(0, 500) : ''
   if (!body) return null
   const at = typeof o.at === 'number' && Number.isFinite(o.at) ? o.at : Math.floor(Date.now() / 1000)
-  return { id, from, to, body, at, read: o.read === true }
+  const readAt = typeof o.readAt === 'number' && Number.isFinite(o.readAt) ? o.readAt : null
+  return { id, from, to, body, at, read: o.read === true, readAt }
 }
 
 function messagesSnapshot(): MessageStore {
@@ -352,6 +367,7 @@ function messagesSnapshot(): MessageStore {
 }
 
 export function getMessages(): MessageStore {
+  if (!messagesLoaded) loadMessages()
   return messagesSnapshot()
 }
 
@@ -386,6 +402,46 @@ async function pollMessages(): Promise<void> {
     if (added) {
       saveMessages()
       emitMessages(toast)
+    }
+  } catch {
+  }
+}
+
+async function pollReceipts(): Promise<void> {
+  const me = session?.uuid
+  if (!me) return
+  const pending: number[] = []
+  for (const list of Object.values(byFriend)) {
+    for (const m of list) if (m.from === me && !m.read) pending.push(m.id)
+  }
+  if (pending.length === 0) return
+  try {
+    const raw = await api<{ receipts?: unknown[] }>(
+      `/v1/messages/receipts?ids=${pending.slice(0, 100).join(',')}`
+    )
+    const receipts = Array.isArray(raw?.receipts) ? raw.receipts : []
+    let changed = false
+    for (const item of receipts) {
+      if (!item || typeof item !== 'object') continue
+      const o = item as Record<string, unknown>
+      const id = typeof o.id === 'number' ? o.id : null
+      if (id == null) continue
+      const readAt =
+        typeof o.readAt === 'number' && Number.isFinite(o.readAt)
+          ? o.readAt
+          : Math.floor(Date.now() / 1000)
+      for (const list of Object.values(byFriend)) {
+        const msg = list.find((x) => x.id === id && x.from === me)
+        if (msg && !msg.read) {
+          msg.read = true
+          msg.readAt = readAt
+          changed = true
+        }
+      }
+    }
+    if (changed) {
+      saveMessages()
+      emitMessages()
     }
   } catch {
   }

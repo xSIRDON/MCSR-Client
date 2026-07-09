@@ -80,6 +80,7 @@ export interface FriendMessage {
   body: string
   at: number
   read: boolean
+  readAt?: number | null
 }
 
 export interface MessageStore {
