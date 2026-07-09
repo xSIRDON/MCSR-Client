@@ -7,9 +7,9 @@ import { mcsr } from '../lib/clients'
 import {
   analyzeRanked,
   buildScorecard,
-  consistencyFromDetails,
   countDeaths,
   playerSegments,
+  speedFromPerf,
   splitPerformance
 } from '@core/ranked-analytics'
 import { rankedStats } from '@services/mcsr-ranked'
@@ -128,17 +128,15 @@ export function usePlayerAnalytics(uuid: string | null | undefined, season?: Sea
     seasonDecided > 0 ? Math.round((seasonStats.wins / seasonDecided) * 1000) / 10 : null
 
   const deaths = useMemo(() => countDeaths(uuid ?? '', details ?? []), [uuid, details])
-  const consistency = useMemo(
-    () => consistencyFromDetails(uuid ?? '', details ?? []),
-    [uuid, details]
-  )
-  const scorecard = useMemo(
-    () => buildScorecard(analytics, seasonWinRate, seasonStats.played, deaths, consistency),
-    [analytics, seasonWinRate, seasonStats.played, deaths, consistency]
-  )
   const perfWorld = useMemo(
     () => splitPerformance(uuid ?? '', details ?? [], WORLD_BUCKET),
     [uuid, details]
+  )
+  // "Speed" play-style dim: overall run pace vs the field (average of the split percentiles).
+  const speed = useMemo(() => speedFromPerf(perfWorld), [perfWorld])
+  const scorecard = useMemo(
+    () => buildScorecard(analytics, seasonWinRate, seasonStats.played, deaths, speed),
+    [analytics, seasonWinRate, seasonStats.played, deaths, speed]
   )
   const playerSegs = useMemo(() => playerSegments(uuid ?? '', details ?? []), [uuid, details])
 

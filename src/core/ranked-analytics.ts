@@ -2,7 +2,7 @@
 // Only a type-only import of MatchInfo (no runtime dependency).
 // Matches are assumed to arrive newest-first (as the MCSR API returns them).
 
-import type { MatchInfo } from '@services/mcsr-ranked'
+import type { MatchInfo, TimelineEvent } from '@services/mcsr-ranked'
 import { msToTime } from './format'
 
 export interface RankedInsight {
@@ -675,43 +675,6 @@ export interface ScoreDim {
 }
 
 /**
- * How steady the player's pace is, from the spread of their split times across recent match
- * timelines. Win-time spread (the old basis) only exists when recent wins carry a completion
- * time — often none do (forfeit wins, missing API data) and the dimension silently vanished.
- * Split timelines exist for nearly every match, so this always records once a few games are in.
- *
- * Score: weighted-average coefficient of variation across segments, mapped so
- * cv 0.10 → 80, cv 0.25 → 50, cv 0.40 → 20.
- */
-export function consistencyFromDetails(
-  uuid: string,
-  details: MatchInfo[]
-): { score: number; sample: number } | null {
-  const me = uuid.toLowerCase()
-  const list = Array.isArray(details)
-    ? details.filter((m) => m && m.type === 2 && Array.isArray(m.timelines))
-    : []
-  const perSegment: Record<string, number[]> = {}
-  for (const m of list) {
-    for (const [k, v] of Object.entries(matchSegments(me, m))) (perSegment[k] ??= []).push(v)
-  }
-  let weightedCv = 0
-  let weight = 0
-  for (const arr of Object.values(perSegment)) {
-    if (arr.length < 3) continue
-    const mean = arr.reduce((a, b) => a + b, 0) / arr.length
-    if (mean <= 0) continue
-    const variance = arr.reduce((a, b) => a + (b - mean) ** 2, 0) / arr.length
-    const cv = Math.sqrt(variance) / mean
-    weightedCv += cv * arr.length
-    weight += arr.length
-  }
-  if (weight === 0) return null
-  const cv = weightedCv / weight
-  return { score: clamp100(100 - cv * 200), sample: list.length }
-}
-
-/**
  * Play-style dimensions on a 0–100 scale (higher = stronger). Win Rate is authoritative
  * (season stats); the rest derive from the recent match window. Only dimensions with data
  * are returned, so a sparse history yields a smaller — but honest — radar.
@@ -721,7 +684,7 @@ export function buildScorecard(
   seasonWinRate: number | null,
   seasonPlayed: number,
   deaths?: DeathStats,
-  consistency?: { score: number; sample: number } | null
+  speed?: { score: number; sample: number } | null
 ): ScoreDim[] {
   const dims: ScoreDim[] = []
 
@@ -743,18 +706,15 @@ export function buildScorecard(
     const ff = Math.round((a.forfeits.yours / a.decided) * 100)
     dims.push({ key: 'finishing', label: 'Finishing', score: clamp100(100 - ff), detail: `forfeited ${ff}% of games`, sample: a.decided })
   }
-  if (consistency) {
+  if (speed) {
+    const pct = clamp100(speed.score)
     dims.push({
-      key: 'consistency',
-      label: 'Consistency',
-      score: consistency.score,
-      detail: `split-to-split steadiness over ${consistency.sample} games`,
-      sample: consistency.sample
+      key: 'speed',
+      label: 'Speed',
+      score: pct,
+      detail: `run pace — faster than ~${pct}% of the field`,
+      sample: speed.sample
     })
-  } else if (a.best != null && a.averageWin != null && a.averageWin > 0) {
-    // Fallback when no match timelines are available: spread of win times vs your best.
-    const spread = (a.averageWin - a.best) / a.averageWin
-    dims.push({ key: 'consistency', label: 'Consistency', score: clamp100(100 - spread * 250), detail: 'win pace vs your best', sample: a.completionTimes.length })
   }
   if (deaths && deaths.matches >= 1) {
     dims.push({
@@ -943,6 +903,305 @@ export function splitPerformance(
         : `Bottom ${Math.max(1, Math.round((1 - f) * 100))}%`
     return { key, label, ms: p.avg, score, pctLabel, sample: p.count }
   })
+}
+
+/**
+ * Overall run pace as a single 0–100 play-style score: the average of the player's split
+ * percentiles vs the field (higher = faster than more players). Null until a couple of splits
+ * are rated. Feeds the "Speed" dimension on the strengths & weaknesses radar.
+ */
+export function speedFromPerf(perf: SplitPerf[]): { score: number; sample: number } | null {
+  const scored = perf.filter((p) => p.score != null)
+  if (scored.length < 2) return null
+  const avg = scored.reduce((s, p) => s + (p.score as number), 0) / scored.length
+  return { score: Math.round(avg), sample: scored.length }
+}
+
+// ---- Composite matchup win chance (Elo anchor + splits + form) ----
+
+/** One player's inputs to the matchup metric. A missing signal simply drops out of the
+ *  blend (weights renormalize over what's present) rather than counting as a tie. */
+export interface MatchupInput {
+  elo: number | null
+  /** Season win rate, 0–100. */
+  winRate: number | null
+  /** Mean winning time in ms (lower = faster). */
+  avgWin: number | null
+  /** Average split percentile vs the field, 0–100 (from speedFromPerf). */
+  splitScore: number | null
+  /** Share of decided games NOT forfeited, 0–1 (higher = doesn't fold). */
+  completion: number | null
+  /** Current signed streak (+win / −loss). */
+  streak: number | null
+  /** Decided games backing these numbers — thin records lean on Elo. */
+  games: number
+}
+
+export interface MatchupFactor {
+  key: string
+  label: string
+  favors: 'a' | 'b' | 'even'
+  /** Signed (A-positive), already weighted — magnitude ranks the factors. */
+  edge: number
+}
+
+export interface Matchup {
+  /** A's win probability, 0–1. Null when either Elo is missing. */
+  pA: number | null
+  /** Effective-Elo tilt the non-Elo signals applied to A (signed, already sample-shrunk). */
+  adjustElo: number
+  /** Composite edge for A across the blended signals, roughly −1..1. */
+  edge: number
+  factors: MatchupFactor[]
+  /** True when no split/form signals were available and only Elo drove the number. */
+  eloOnly: boolean
+}
+
+// How many effective Elo points a total domination (edge = ±1) in the side signals is worth.
+// Elo already encodes head-to-head skill, so this stays deliberately bounded — the side
+// signals tilt the matchup, they don't overturn the rating.
+const MATCHUP_EDGE_MAX = 200
+// Records below this many decided games shrink the side-signal tilt toward zero.
+const MATCHUP_FULL_TRUST = 10
+// A 60s gap in mean finish time counts as a full-strength pace edge.
+const MATCHUP_AVGWIN_REF_MS = 60_000
+
+function clampSigned(n: number): number {
+  return Math.max(-1, Math.min(1, n))
+}
+
+/**
+ * Composite win chance: the textbook Elo expectation, tilted by who holds the edge in splits,
+ * win rate, finishing pace, not-folding, and recent form. Every signal is expressed in
+ * effective-Elo so the tilt stays interpretable and Elo remains the anchor. Signals absent for
+ * a side drop out of the blend rather than counting as a tie, and the whole tilt shrinks toward
+ * zero on small records (where the side stats are just noise).
+ */
+export function matchupWinChance(a: MatchupInput, b: MatchupInput): Matchup {
+  const raw: Array<{ key: string; label: string; weight: number; edge: number | null }> = [
+    {
+      key: 'splits',
+      label: 'Splits',
+      weight: 0.35,
+      edge:
+        a.splitScore != null && b.splitScore != null
+          ? clampSigned((a.splitScore - b.splitScore) / 100)
+          : null
+    },
+    {
+      key: 'winrate',
+      label: 'Win rate',
+      weight: 0.25,
+      edge: a.winRate != null && b.winRate != null ? clampSigned((a.winRate - b.winRate) / 100) : null
+    },
+    {
+      key: 'pace',
+      label: 'Avg win',
+      weight: 0.15,
+      edge:
+        a.avgWin != null && b.avgWin != null
+          ? clampSigned((b.avgWin - a.avgWin) / MATCHUP_AVGWIN_REF_MS)
+          : null
+    },
+    {
+      key: 'finishing',
+      label: 'Finishing',
+      weight: 0.15,
+      edge:
+        a.completion != null && b.completion != null ? clampSigned(a.completion - b.completion) : null
+    },
+    {
+      key: 'form',
+      label: 'Form',
+      weight: 0.1,
+      edge: a.streak != null && b.streak != null ? clampSigned((a.streak - b.streak) / 5) : null
+    }
+  ]
+
+  const present = raw.filter((s) => s.edge != null)
+  const factors: MatchupFactor[] = present
+    .map((s) => {
+      const e = s.edge as number
+      return {
+        key: s.key,
+        label: s.label,
+        favors: (Math.abs(e) < 0.02 ? 'even' : e > 0 ? 'a' : 'b') as 'a' | 'b' | 'even',
+        edge: s.weight * e
+      }
+    })
+    .sort((x, y) => Math.abs(y.edge) - Math.abs(x.edge))
+
+  // Renormalize over present weights so a missing signal doesn't just deflate the blend.
+  const wSum = present.reduce((s, x) => s + x.weight, 0)
+  const edge = wSum > 0 ? present.reduce((s, x) => s + x.weight * (x.edge as number), 0) / wSum : 0
+
+  const games = Math.min(a.games, b.games)
+  const shrink = Math.max(0, Math.min(1, games / MATCHUP_FULL_TRUST))
+  const adjustElo = MATCHUP_EDGE_MAX * edge * shrink
+
+  const eloOnly = present.length === 0
+  if (a.elo == null || b.elo == null) {
+    return { pA: null, adjustElo, edge, factors, eloOnly }
+  }
+  const pA = 1 / (1 + Math.pow(10, (b.elo - a.elo - adjustElo) / 400))
+  return { pA, adjustElo, edge, factors, eloOnly }
+}
+
+// ---- Single-match head-to-head breakdown (splits & timestamps) ----
+
+/** Run-order milestones in a single match's breakdown — the ones that earn a head-to-head
+ *  delta. Order matters: segment durations are measured between consecutive reached ones. */
+const MATCH_MILESTONES: { key: string; label: string; type: string }[] = [
+  { key: 'nether', label: 'Nether', type: 'story.enter_the_nether' },
+  { key: 'bastion', label: 'Bastion', type: 'nether.find_bastion' },
+  { key: 'fortress', label: 'Fortress', type: 'nether.find_fortress' },
+  { key: 'rod', label: 'First rod', type: 'nether.obtain_blaze_rod' },
+  { key: 'blind', label: 'Blind', type: 'projectelo.timeline.blind_travel' },
+  { key: 'stronghold', label: 'Stronghold', type: 'story.follow_ender_eye' },
+  { key: 'end', label: 'End', type: 'story.enter_the_end' }
+]
+
+/** Non-milestone markers surfaced in a player's timestamp column (never earn a delta). */
+const MATCH_MARKERS: { key: string; label: string; type: string }[] = [
+  { key: 'death', label: 'Death', type: 'projectelo.timeline.death' },
+  { key: 'reset', label: 'Reset', type: 'projectelo.timeline.reset' }
+]
+
+export interface MatchEvent {
+  key: string // stable key for React
+  label: string // numbered on repeat, e.g. "Nether 2"
+  ms: number
+  milestone: boolean // true for run-order milestones, false for death/reset markers
+}
+
+export interface MatchSplitRow {
+  key: string
+  label: string
+  aMs: number | null
+  bMs: number | null
+  /** aMs − bMs when both present; negative = player A ahead/faster. Null otherwise. */
+  delta: number | null
+}
+
+export interface MatchBreakdown {
+  /** Time-ordered events (milestones + death/reset) for each player's timestamp column. */
+  aEvents: MatchEvent[]
+  bEvents: MatchEvent[]
+  /** Per run-order milestone (first occurrence): each player's absolute time + delta. */
+  timestamps: MatchSplitRow[]
+  /** Per segment (→Nether→…→Finish): each player's duration + delta. */
+  segments: MatchSplitRow[]
+}
+
+/** Earliest time (ms) a player hit an event type in this match, or null if they never did. */
+function firstTimeOf(tl: TimelineEvent[], uuid: string, type: string): number | null {
+  let earliest: number | null = null
+  for (const e of tl) {
+    if (e && e.uuid === uuid && e.type === type && typeof e.time === 'number' && e.time > 0) {
+      if (earliest == null || e.time < earliest) earliest = e.time
+    }
+  }
+  return earliest
+}
+
+/** One player's milestones + death/reset markers, in time order, with repeats numbered. */
+function playerEvents(tl: TimelineEvent[], uuid: string, finishMs: number | null): MatchEvent[] {
+  const wanted = new Map<string, { label: string; milestone: boolean }>()
+  for (const s of MATCH_MILESTONES) wanted.set(s.type, { label: s.label, milestone: true })
+  for (const s of MATCH_MARKERS) wanted.set(s.type, { label: s.label, milestone: false })
+
+  const raw = tl
+    .filter(
+      (e) => e && e.uuid === uuid && wanted.has(e.type) && typeof e.time === 'number' && e.time > 0
+    )
+    .map((e) => ({ type: e.type, ms: e.time }))
+    .sort((x, y) => x.ms - y.ms)
+
+  const seen: Record<string, number> = {}
+  const events: MatchEvent[] = raw.map((e, i) => {
+    const w = wanted.get(e.type)!
+    seen[e.type] = (seen[e.type] ?? 0) + 1
+    const n = seen[e.type]
+    return {
+      key: `${e.type}-${i}`,
+      label: n > 1 ? `${w.label} ${n}` : w.label,
+      ms: e.ms,
+      milestone: w.milestone
+    }
+  })
+  if (finishMs != null && finishMs > 0) {
+    events.push({ key: 'finish', label: 'Finish', ms: finishMs, milestone: true })
+  }
+  return events
+}
+
+/** Per-segment durations (keyed by milestone key) for one player: gap from the previous reached
+ *  milestone, starting at 0, plus a Finish segment when the player completed. */
+function matchSegmentDurations(tl: TimelineEvent[], uuid: string, finishMs: number | null): Record<string, number> {
+  const segs: Record<string, number> = {}
+  let prev = 0
+  for (const s of MATCH_MILESTONES) {
+    const t = firstTimeOf(tl, uuid, s.type)
+    if (t == null) continue
+    segs[s.key] = t - prev
+    prev = t
+  }
+  if (finishMs != null && finishMs > 0 && finishMs > prev) segs['finish'] = finishMs - prev
+  return segs
+}
+
+/**
+ * Head-to-head breakdown of a single match for its two players, feeding the match card's
+ * Splits ⇄ Timestamps views: per-player time-ordered event columns, per-milestone absolute
+ * timestamps with deltas, and per-segment durations with deltas. Deltas are A-minus-B (negative
+ * favors A). A finish time is taken from the per-player completions, else the winner's run time.
+ */
+export function matchBreakdown(m: MatchInfo, uuidA: string, uuidB: string): MatchBreakdown {
+  const a = uuidA.toLowerCase()
+  const b = uuidB.toLowerCase()
+  const tl: TimelineEvent[] = Array.isArray(m.timelines)
+    ? m.timelines.map((e) => ({ ...e, uuid: (e.uuid ?? '').toLowerCase() }))
+    : []
+
+  const finishOf = (u: string): number | null => {
+    const c = m.completions?.find((x) => (x.uuid ?? '').toLowerCase() === u)?.time
+    if (typeof c === 'number' && c > 0) return c
+    if (
+      m.result?.uuid &&
+      m.result.uuid.toLowerCase() === u &&
+      !m.forfeited &&
+      typeof m.result?.time === 'number' &&
+      m.result.time > 0
+    ) {
+      return m.result.time
+    }
+    return null
+  }
+  const aFin = finishOf(a)
+  const bFin = finishOf(b)
+
+  const timestamps: MatchSplitRow[] = []
+  for (const s of MATCH_MILESTONES) {
+    const aMs = firstTimeOf(tl, a, s.type)
+    const bMs = firstTimeOf(tl, b, s.type)
+    if (aMs == null && bMs == null) continue
+    timestamps.push({ key: s.key, label: s.label, aMs, bMs, delta: aMs != null && bMs != null ? aMs - bMs : null })
+  }
+  if (aFin != null || bFin != null) {
+    timestamps.push({ key: 'finish', label: 'Finish', aMs: aFin, bMs: bFin, delta: aFin != null && bFin != null ? aFin - bFin : null })
+  }
+
+  const aSeg = matchSegmentDurations(tl, a, aFin)
+  const bSeg = matchSegmentDurations(tl, b, bFin)
+  const segments: MatchSplitRow[] = []
+  for (const s of [...MATCH_MILESTONES, { key: 'finish', label: 'Finish' }]) {
+    const aMs = aSeg[s.key] ?? null
+    const bMs = bSeg[s.key] ?? null
+    if (aMs == null && bMs == null) continue
+    segments.push({ key: s.key, label: s.label, aMs, bMs, delta: aMs != null && bMs != null ? aMs - bMs : null })
+  }
+
+  return { aEvents: playerEvents(tl, a, aFin), bEvents: playerEvents(tl, b, bFin), timestamps, segments }
 }
 
 /**

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { mcsr, } from '../lib/clients'
 import type { MatchInfo } from '@services/mcsr-ranked'
 import { msToTime, signedElo, epochToAgo } from '@core/format'
+import { MatchBreakdownCard } from './MatchBreakdown'
 
 const TYPE_LABEL: Record<number, string> = { 1: 'Casual', 2: 'Ranked', 3: 'Private', 4: 'Event' }
 const PREVIEW = 5
@@ -70,10 +71,21 @@ export function MatchFeed({ uuid, season }: { uuid: string; season?: number | 'a
 function Row({ m, uuid }: { m: MatchInfo; uuid: string }) {
   const [open, setOpen] = useState(false)
   const outcome = outcomeOf(m, uuid)
+  const me = m.players?.find((p) => p.uuid === uuid)
   const opponent = m.players?.find((p) => p.uuid !== uuid)
   const mine = m.changes?.find((c) => c.uuid === uuid)
   const color = outcome === 'win' ? 'var(--win)' : outcome === 'loss' ? 'var(--loss)' : 'var(--muted)'
   const tag = outcome === 'win' ? 'WIN' : outcome === 'loss' ? 'LOSS' : 'DRAW'
+
+  // The match list carries no timelines — pull the detail (splits + timestamps) only on expand,
+  // and cache it forever: a played match's timeline never changes.
+  const { data: detail, isLoading: detailLoading } = useQuery({
+    queryKey: ['match-detail', m.id],
+    queryFn: () => mcsr.getMatch(m.id),
+    enabled: open,
+    staleTime: Infinity,
+    gcTime: Infinity
+  })
 
   return (
     <div
@@ -105,8 +117,8 @@ function Row({ m, uuid }: { m: MatchInfo; uuid: string }) {
         </div>
       </div>
       {open && (
-        <div className="border-t border-[var(--line)] bg-black/20 px-3 py-2 text-xs text-muted">
-          <div className="flex flex-wrap gap-x-5 gap-y-1">
+        <div className="border-t border-[var(--line)] bg-black/20">
+          <div className="flex flex-wrap gap-x-5 gap-y-1 px-3 py-2 text-xs text-muted">
             <span>Match #{m.id}</span>
             {m.category && <span>Category: {m.category}</span>}
             {m.forfeited && <span className="text-[var(--loss)]">Forfeited</span>}
@@ -117,6 +129,21 @@ function Row({ m, uuid }: { m: MatchInfo; uuid: string }) {
               </span>
             )}
           </div>
+          {detailLoading && !detail ? (
+            <div className="px-3 pb-3">
+              <div className="skeleton h-24" />
+            </div>
+          ) : detail && opponent ? (
+            <div className="border-t border-[var(--line)]">
+              <MatchBreakdownCard
+                match={detail}
+                meUuid={uuid}
+                meName={me?.nickname ?? 'You'}
+                oppUuid={opponent.uuid}
+                oppName={opponent.nickname ?? 'Opponent'}
+              />
+            </div>
+          ) : null}
         </div>
       )}
     </div>

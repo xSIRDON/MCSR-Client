@@ -4,13 +4,17 @@ import {
   analyzeSplits,
   analyzeTypeBreakdowns,
   buildScorecard,
-  consistencyFromDetails,
   countDeaths,
+  matchBreakdown,
+  matchupWinChance,
   playerSegments,
   scorecardInsights,
+  speedFromPerf,
   splitCallouts,
   splitPerformance
 } from './ranked-analytics'
+import type { MatchupInput } from './ranked-analytics'
+import { eloWinChance } from './rank'
 import type { MatchInfo } from '@services/mcsr-ranked'
 
 const ME = 'me-uuid'
@@ -601,44 +605,238 @@ describe('playerSegments / splitPerformance', () => {
   })
 })
 
-describe('consistencyFromDetails', () => {
-  const tl = (events: Array<[string, string, number]>): MatchInfo['timelines'] =>
-    events.map(([uuid, type, time]) => ({ uuid, time, type }))
-  const d = (netherAt: number): MatchInfo => ({
+describe('speedFromPerf', () => {
+  const perf = (scores: Array<number | null>) =>
+    scores.map((score, i) => ({
+      key: `split${i}`,
+      label: `Split ${i}`,
+      ms: score == null ? null : 100_000,
+      score,
+      pctLabel: score == null ? '—' : `Top ${100 - score}%`,
+      sample: 5
+    }))
+
+  it('averages the scored split percentiles', () => {
+    const s = speedFromPerf(perf([80, 60, 40]))
+    expect(s).not.toBeNull()
+    expect(s!.score).toBe(60)
+    expect(s!.sample).toBe(3)
+  })
+
+  it('ignores splits with no baseline (null score)', () => {
+    const s = speedFromPerf(perf([90, null, 70, null]))
+    expect(s!.score).toBe(80)
+    expect(s!.sample).toBe(2)
+  })
+
+  it('returns null with fewer than two scored splits', () => {
+    expect(speedFromPerf(perf([]))).toBeNull()
+    expect(speedFromPerf(perf([75]))).toBeNull()
+    expect(speedFromPerf(perf([75, null, null]))).toBeNull()
+  })
+
+  it('feeds buildScorecard a Speed dim even when win times are missing', () => {
+    const analytics = analyzeRanked(ME, []) // nothing — best/averageWin are null
+    const dims = buildScorecard(analytics, null, 0, undefined, { score: 72, sample: 12 })
+    const dim = dims.find((x) => x.key === 'speed')
+    expect(dim).toBeDefined()
+    expect(dim!.label).toBe('Speed')
+    expect(dim!.score).toBe(72)
+    expect(dim!.detail).toContain('72')
+  })
+})
+
+describe('matchupWinChance', () => {
+  const side = (o: Partial<MatchupInput> = {}): MatchupInput => ({
+    elo: 1500,
+    winRate: 50,
+    avgWin: 600_000,
+    splitScore: 50,
+    completion: 0.9,
+    streak: 0,
+    games: 100,
+    ...o
+  })
+
+  it('is a coin flip when both sides are identical', () => {
+    const m = matchupWinChance(side(), side())
+    expect(m.pA).toBeCloseTo(0.5, 5)
+    expect(m.adjustElo).toBeCloseTo(0, 5)
+  })
+
+  it('collapses to the pure Elo expectation when every side stat ties', () => {
+    const m = matchupWinChance(side({ elo: 1700 }), side({ elo: 1500 }))
+    expect(m.adjustElo).toBeCloseTo(0, 5)
+    expect(m.pA).toBeCloseTo(eloWinChance(1700, 1500), 6)
+  })
+
+  it('tilts an even-Elo matchup toward the player with better splits + win rate', () => {
+    const m = matchupWinChance(
+      side({ splitScore: 85, winRate: 62 }),
+      side({ splitScore: 40, winRate: 45 })
+    )
+    expect(m.adjustElo).toBeGreaterThan(0)
+    expect(m.pA!).toBeGreaterThan(0.5)
+    // Splits carry the most weight, so it should top the factor list favoring A.
+    expect(m.factors[0].key).toBe('splits')
+    expect(m.factors[0].favors).toBe('a')
+  })
+
+  it('can favor the lower-Elo player when the side signals strongly disagree', () => {
+    const under = side({ elo: 1450, splitScore: 92, winRate: 65, streak: 6, avgWin: 540_000 })
+    const over = side({ elo: 1550, splitScore: 35, winRate: 42, streak: -4, avgWin: 640_000 })
+    const m = matchupWinChance(under, over)
+    expect(m.pA!).toBeGreaterThan(eloWinChance(1450, 1550)) // stats pulled it up past raw Elo
+  })
+
+  it('shrinks the tilt toward zero on thin records', () => {
+    const strong = side({ splitScore: 95, winRate: 70, games: 2 })
+    const weak = side({ splitScore: 20, winRate: 40, games: 2 })
+    const m = matchupWinChance(strong, weak)
+    // Only 2 shared games → 0.2× trust, so the tilt is a fraction of its full-sample size.
+    const full = matchupWinChance(side({ ...strong, games: 100 }), side({ ...weak, games: 100 }))
+    expect(Math.abs(m.adjustElo)).toBeLessThan(Math.abs(full.adjustElo))
+    expect(m.adjustElo).toBeCloseTo(full.adjustElo * 0.2, 5)
+  })
+
+  it('renormalizes weights when a side is missing a signal', () => {
+    // Only splits available on both → the whole blend rides on splits alone.
+    const bare = (splitScore: number): MatchupInput => ({
+      elo: 1500,
+      winRate: null,
+      avgWin: null,
+      splitScore,
+      completion: null,
+      streak: null,
+      games: 100
+    })
+    const m = matchupWinChance(bare(80), bare(30))
+    expect(m.factors).toHaveLength(1)
+    expect(m.factors[0].key).toBe('splits')
+    // edge renormalized to the raw split edge (0.5), not diluted by absent signals.
+    expect(m.edge).toBeCloseTo(0.5, 5)
+    expect(m.eloOnly).toBe(false)
+  })
+
+  it('returns a null probability but keeps the edge when an Elo is missing', () => {
+    const m = matchupWinChance(side({ elo: null, splitScore: 80 }), side({ splitScore: 40 }))
+    expect(m.pA).toBeNull()
+    expect(m.edge).toBeGreaterThan(0)
+  })
+
+  it('flags eloOnly when no side signals are present', () => {
+    const onlyElo = (elo: number): MatchupInput => ({
+      elo,
+      winRate: null,
+      avgWin: null,
+      splitScore: null,
+      completion: null,
+      streak: null,
+      games: 100
+    })
+    const m = matchupWinChance(onlyElo(1600), onlyElo(1500))
+    expect(m.eloOnly).toBe(true)
+    expect(m.adjustElo).toBeCloseTo(0, 5)
+    expect(m.pA).toBeCloseTo(eloWinChance(1600, 1500), 6)
+  })
+})
+
+describe('matchBreakdown', () => {
+  const ev = (uuid: string, type: string, time: number) => ({ uuid, type, time })
+  const base = (over: Partial<MatchInfo> = {}): MatchInfo => ({
     id: nextId++,
     type: 2,
     players: [
       { uuid: ME, nickname: 'Me' },
       { uuid: OPP, nickname: 'Opp' }
     ],
-    result: { uuid: null, time: null },
-    timelines: tl([[ME, 'story.enter_the_nether', netherAt]])
+    result: { uuid: ME, time: 420_000 },
+    timelines: [
+      ev(ME, 'story.enter_the_nether', 60_000),
+      ev(ME, 'nether.find_bastion', 120_000),
+      ev(ME, 'nether.find_fortress', 180_000),
+      ev(ME, 'projectelo.timeline.death', 200_000),
+      ev(ME, 'nether.obtain_blaze_rod', 210_000),
+      ev(ME, 'projectelo.timeline.blind_travel', 260_000),
+      ev(ME, 'story.follow_ender_eye', 300_000),
+      ev(ME, 'story.enter_the_end', 360_000),
+      ev(OPP, 'projectelo.timeline.reset', 30_000),
+      ev(OPP, 'story.enter_the_nether', 90_000),
+      ev(OPP, 'nether.find_bastion', 150_000),
+      ev(OPP, 'nether.find_fortress', 200_000),
+      ev(OPP, 'nether.obtain_blaze_rod', 230_000),
+      ev(OPP, 'projectelo.timeline.blind_travel', 280_000),
+      ev(OPP, 'story.follow_ender_eye', 330_000)
+    ],
+    completions: [{ uuid: ME, time: 420_000 }],
+    ...over
   })
 
-  it('scores identical splits as highly consistent', () => {
-    const c = consistencyFromDetails(ME, [d(120_000), d(120_000), d(120_000)])
-    expect(c).not.toBeNull()
-    expect(c!.score).toBeGreaterThanOrEqual(95)
-    expect(c!.sample).toBe(3)
+  it('pairs milestone timestamps with an A-minus-B delta', () => {
+    const b = matchBreakdown(base(), ME, OPP)
+    const nether = b.timestamps.find((r) => r.key === 'nether')!
+    expect(nether.aMs).toBe(60_000)
+    expect(nether.bMs).toBe(90_000)
+    expect(nether.delta).toBe(-30_000) // A 30s ahead
+    // A reached the End, B never did → B side null, no delta.
+    const end = b.timestamps.find((r) => r.key === 'end')!
+    expect(end.aMs).toBe(360_000)
+    expect(end.bMs).toBeNull()
+    expect(end.delta).toBeNull()
   })
 
-  it('scores wildly varying splits lower', () => {
-    const steady = consistencyFromDetails(ME, [d(120_000), d(121_000), d(119_000)])!
-    const wild = consistencyFromDetails(ME, [d(60_000), d(240_000), d(400_000)])!
-    expect(wild.score).toBeLessThan(steady.score - 20)
+  it('adds a Finish row from completions', () => {
+    const b = matchBreakdown(base(), ME, OPP)
+    const fin = b.timestamps.find((r) => r.key === 'finish')!
+    expect(fin.aMs).toBe(420_000)
+    expect(fin.bMs).toBeNull()
   })
 
-  it('returns null with no usable timelines', () => {
-    expect(consistencyFromDetails(ME, [])).toBeNull()
+  it('derives per-segment durations between consecutive milestones', () => {
+    const b = matchBreakdown(base(), ME, OPP)
+    const seg = (k: string) => b.segments.find((r) => r.key === k)!
+    expect(seg('nether').aMs).toBe(60_000) // 0 -> 60k
+    expect(seg('bastion').aMs).toBe(60_000) // 60k -> 120k
+    expect(seg('rod').aMs).toBe(30_000) // 180k -> 210k
+    expect(seg('finish').aMs).toBe(60_000) // 360k -> 420k
+    // Fortress segment: A 60k (120→180), B 50k (150→200) → A slower by 10k.
+    expect(seg('fortress').delta).toBe(10_000)
   })
 
-  it('feeds buildScorecard a Consistency dim even when win times are missing', () => {
-    const analytics = analyzeRanked(ME, []) // nothing — best/averageWin are null
-    const dims = buildScorecard(analytics, null, 0, undefined, { score: 72, sample: 12 })
-    const dim = dims.find((x) => x.key === 'consistency')
-    expect(dim).toBeDefined()
-    expect(dim!.score).toBe(72)
-    expect(dim!.detail).toContain('12 games')
+  it('surfaces death/reset markers in the event column but never as milestones or deltas', () => {
+    const b = matchBreakdown(base(), ME, OPP)
+    expect(b.aEvents.some((e) => e.label === 'Death' && !e.milestone)).toBe(true)
+    expect(b.bEvents.some((e) => e.label === 'Reset' && !e.milestone)).toBe(true)
+    expect(b.timestamps.some((r) => r.key === 'death' || r.key === 'reset')).toBe(false)
+    expect(b.segments.some((r) => r.key === 'death' || r.key === 'reset')).toBe(false)
+    const times = b.aEvents.map((e) => e.ms)
+    expect(times).toEqual([...times].sort((x, y) => x - y)) // time-ordered
+  })
+
+  it('numbers repeated events (Nether 2, Reset 2)', () => {
+    const b = matchBreakdown(
+      base({
+        timelines: [
+          ev(OPP, 'projectelo.timeline.reset', 20_000),
+          ev(OPP, 'story.enter_the_nether', 40_000),
+          ev(OPP, 'projectelo.timeline.reset', 60_000),
+          ev(OPP, 'story.enter_the_nether', 90_000)
+        ],
+        completions: []
+      }),
+      ME,
+      OPP
+    )
+    expect(b.bEvents.map((e) => e.label)).toEqual(['Reset', 'Nether', 'Reset 2', 'Nether 2'])
+    // Timestamps/deltas use the FIRST occurrence.
+    expect(b.timestamps.find((r) => r.key === 'nether')!.bMs).toBe(40_000)
+  })
+
+  it('uses the winner run time for finish when completions are absent, but not on a forfeit', () => {
+    const won = matchBreakdown(base({ completions: undefined }), ME, OPP)
+    expect(won.timestamps.find((r) => r.key === 'finish')!.aMs).toBe(420_000)
+    const ff = matchBreakdown(base({ completions: undefined, forfeited: true }), ME, OPP)
+    expect(ff.timestamps.find((r) => r.key === 'finish')).toBeUndefined()
   })
 })
 

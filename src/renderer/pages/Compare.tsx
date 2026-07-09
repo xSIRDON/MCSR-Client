@@ -15,7 +15,8 @@ import { mcsr, paceman } from '../lib/clients'
 import { msToTime } from '@core/format'
 import { usePlayerAnalytics } from '../hooks/usePlayerAnalytics'
 import type { SeasonSel } from '../hooks/usePlayerAnalytics'
-import { eloWinChance } from '@core/rank'
+import { matchupWinChance, speedFromPerf } from '@core/ranked-analytics'
+import type { MatchupInput } from '@core/ranked-analytics'
 import { PlayerHead } from '../components/PlayerHead'
 import { RankBadge } from '../components/RankBadge'
 import { SeasonPicker } from '../components/SeasonPicker'
@@ -207,19 +208,45 @@ function SideHero({ side, color }: { side: Side; color: string }) {
   )
 }
 
-/** Elo-based expected win probability, as a split bar between the two players. */
+/** Map a comparison side into the matchup metric's inputs. A missing signal stays null so the
+ *  blend renormalizes around it rather than treating it as a tie. */
+function toMatchupInput(s: Side): MatchupInput {
+  const decided = s.analytics.decided
+  return {
+    elo: s.head.elo,
+    winRate: s.seasonWinRate ?? (decided > 0 ? s.analytics.winRate : null),
+    avgWin: s.head.averageWin,
+    splitScore: speedFromPerf(s.perfWorld)?.score ?? null,
+    completion: decided > 0 ? 1 - s.analytics.forfeits.yours / decided : null,
+    streak: s.head.currentStreak,
+    games: s.head.played
+  }
+}
+
+/**
+ * Composite win chance: the Elo expectation, tilted by who holds the edge in splits, win rate,
+ * finishing pace, not-folding, and recent form — rendered as a split bar plus the factors that
+ * moved it, so the number is explainable rather than a black box.
+ */
 function WinChance({ a, b }: { a: Side; b: Side }) {
-  const eloA = a.head.elo
-  const eloB = b.head.elo
-  if (eloA == null || eloB == null) return null
-  const pA = eloWinChance(eloA, eloB)
-  const pctA = Math.round(pA * 100)
+  const m = matchupWinChance(toMatchupInput(a), toMatchupInput(b))
+  if (m.pA == null) return null
+
+  const pctA = Math.min(99, Math.max(1, Math.round(m.pA * 100)))
   const pctB = 100 - pctA
+  const nameA = a.user?.nickname ?? 'A'
+  const nameB = b.user?.nickname ?? 'B'
+  const tilt = Math.round(m.adjustElo)
+  // Signals that meaningfully favor one side, most decisive first.
+  const chips = m.factors.filter((f) => f.favors !== 'even' && Math.abs(f.edge) >= 0.02).slice(0, 5)
+
   return (
     <section className="surface p-5 animate-fade-up" style={{ animationDelay: '70ms' }}>
       <header className="mb-3 flex items-center justify-between">
         <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Win chance</h2>
-        <span className="text-xs text-faint">from the Elo gap · {Math.abs(eloA - eloB)} apart</span>
+        <span className="text-xs text-faint">
+          {m.eloOnly ? 'Elo only' : 'Elo + splits + form'}
+        </span>
       </header>
       <div className="mb-1.5 flex items-baseline justify-between">
         <span className="font-display text-2xl tnum" style={{ color: A_COLOR }}>
@@ -239,9 +266,36 @@ function WinChance({ a, b }: { a: Side; b: Side }) {
           style={{ width: `${pctB}%`, background: `linear-gradient(90deg, ${B_COLOR}, ${B_COLOR}cc)` }}
         />
       </div>
-      <p className="mt-2 text-[11px] text-faint">
-        Textbook Elo expectation — {a.user?.nickname ?? 'A'} is expected to take {pctA} of 100 games
-        at these ratings. Form, seeds, and nerves not included.
+
+      {chips.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {chips.map((f) => {
+            const favA = f.favors === 'a'
+            const color = favA ? A_COLOR : B_COLOR
+            return (
+              <span
+                key={f.key}
+                className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]"
+                style={{ borderColor: `${color}55`, color, background: `${color}12` }}
+                title={`${f.label} favors ${favA ? nameA : nameB}`}
+              >
+                {favA && <span aria-hidden>◂</span>}
+                {f.label}
+                {!favA && <span aria-hidden>▸</span>}
+              </span>
+            )
+          })}
+        </div>
+      )}
+
+      <p className="mt-3 text-[11px] text-faint">
+        {m.eloOnly
+          ? `Textbook Elo expectation — not enough split data yet to fold in pace and form.`
+          : tilt === 0
+            ? `Even on splits and the side stats — this is the raw Elo expectation.`
+            : `Elo expectation, nudged ${Math.abs(tilt)} effective Elo toward ${
+                tilt > 0 ? nameA : nameB
+              } for the edge in ${chips[0]?.label.toLowerCase() ?? 'the side stats'}. Seeds and nerves not included.`}
       </p>
     </section>
   )
