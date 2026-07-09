@@ -347,8 +347,10 @@ async function route(req, res) {
       to: r.recipient,
       body: r.body,
       at: r.created_at,
-      // "read" is only meaningful for my incoming; my own outgoing are always read.
-      read: r.recipient === me ? r.read_at != null : true
+      // read = the intended reader has opened it. For my incoming that's me; for my outgoing
+      // that's the recipient — which is exactly the "Seen" signal the sender wants to show.
+      read: r.read_at != null,
+      readAt: r.read_at
     }))
     const lastId = messages.length ? messages[messages.length - 1].id : since
     return send(res, 200, { messages, lastId })
@@ -361,6 +363,24 @@ async function route(req, res) {
     if (!isUuid(other) || !Number.isFinite(cap)) return send(res, 400, { error: 'bad request' })
     q.markRead.run(nowS(), me, other, cap)
     return send(res, 204)
+  }
+
+  if (path === '/v1/messages/receipts' && req.method === 'GET') {
+    // Read-status for the caller's OWN sent messages (by id), so the sender can show Seen. Only
+    // the sender's own rows are ever returned — no way to probe someone else's messages.
+    const ids = (url.searchParams.get('ids') ?? '')
+      .split(',')
+      .map((s) => Number(s))
+      .filter((n) => Number.isInteger(n) && n > 0)
+      .slice(0, 100)
+    if (ids.length === 0) return send(res, 200, { receipts: [] })
+    const placeholders = ids.map(() => '?').join(',')
+    const rows = db
+      .prepare(
+        `SELECT id, read_at FROM messages WHERE sender = ? AND read_at IS NOT NULL AND id IN (${placeholders})`
+      )
+      .all(me, ...ids)
+    return send(res, 200, { receipts: rows.map((r) => ({ id: r.id, readAt: r.read_at })) })
   }
 
   return send(res, 404, { error: 'not found' })

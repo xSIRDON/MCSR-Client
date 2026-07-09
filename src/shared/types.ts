@@ -105,10 +105,13 @@ export interface FriendMessage {
   from: string
   to: string
   body: string
-  /** Unix seconds. */
+  /** Unix seconds the message was sent. */
   at: number
-  /** For my incoming: whether I've read it. My own outgoing are always read. */
+  /** Whether the intended reader has opened it — for my incoming, me; for my outgoing, the
+   *  recipient (i.e. "Seen"). */
   read: boolean
+  /** Unix seconds the intended reader opened it, or null if unread. Drives the "Seen 2:34" line. */
+  readAt?: number | null
 }
 
 /** The full DM cache the main process owns and hands the renderer. */

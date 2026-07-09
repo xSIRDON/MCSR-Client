@@ -268,12 +268,16 @@ async function heartbeat(): Promise<void> {
 function start(): void {
   stop()
   loadMessages()
+  emitMessages() // push cached history to the renderer right away, before the first server poll
   justConnected = true // suppress toasts for the backlog the first poll pulls in
   void heartbeat()
   void pollMessages()
   heartbeatTimer = setInterval(() => void heartbeat(), HEARTBEAT_MS)
   pollTimer = setInterval(() => void refresh().catch(() => {}), POLL_MS)
-  msgTimer = setInterval(() => void pollMessages(), MESSAGE_POLL_MS)
+  msgTimer = setInterval(() => {
+    void pollMessages()
+    void pollReceipts()
+  }, MESSAGE_POLL_MS)
 }
 
 function stop(): void {
@@ -319,6 +323,7 @@ let msgTimer: NodeJS.Timeout | null = null
 let msgCursor = 0
 let byFriend: Record<string, FriendMessage[]> = {}
 let justConnected = false
+let messagesLoaded = false
 
 export function onMessages(cb: (e: MessagesEvent) => void): void {
   msgSink = cb
@@ -336,6 +341,7 @@ function loadMessages(): void {
     msgCursor = 0
     byFriend = {}
   }
+  messagesLoaded = true
 }
 
 function saveMessages(): void {
@@ -351,11 +357,22 @@ function friendOf(m: FriendMessage, me: string): string {
   return m.from === me ? m.to : m.from
 }
 
-/** Add a message to its thread if not already present (dedupe by id). Returns whether it was new. */
+/** Add a message to its thread, or update an existing one's read receipt. Returns whether anything
+ *  changed (a genuinely new message, or a read-status flip on one we already had). */
 function mergeMessage(m: FriendMessage, me: string): boolean {
   const key = friendOf(m, me)
   const list = byFriend[key] ?? (byFriend[key] = [])
-  if (list.some((x) => x.id === m.id)) return false
+  const existing = list.find((x) => x.id === m.id)
+  if (existing) {
+    // The only thing that changes after a message exists is its read receipt — propagate it so a
+    // sent message can flip from Delivered to Seen.
+    if (existing.read !== m.read || (existing.readAt ?? null) !== (m.readAt ?? null)) {
+      existing.read = m.read
+      existing.readAt = m.readAt ?? null
+      return true
+    }
+    return false
+  }
   list.push(m)
   list.sort((a, b) => a.id - b.id)
   return true
@@ -372,7 +389,8 @@ function sanitizeMessage(e: unknown): FriendMessage | null {
   const body = typeof o.body === 'string' ? o.body.slice(0, 500) : ''
   if (!body) return null
   const at = typeof o.at === 'number' && Number.isFinite(o.at) ? o.at : Math.floor(Date.now() / 1000)
-  return { id, from, to, body, at, read: o.read === true }
+  const readAt = typeof o.readAt === 'number' && Number.isFinite(o.readAt) ? o.readAt : null
+  return { id, from, to, body, at, read: o.read === true, readAt }
 }
 
 function messagesSnapshot(): MessageStore {
@@ -385,6 +403,11 @@ function messagesSnapshot(): MessageStore {
 }
 
 export function getMessages(): MessageStore {
+  // The renderer can ask before autoConnect() has run start()/loadMessages() — load the on-disk
+  // cache on demand so a fresh launch (e.g. right after an update) shows history immediately,
+  // instead of an empty thread that only refills if the next server poll happens to find
+  // something new (a deduped poll emits nothing).
+  if (!messagesLoaded) loadMessages()
   return messagesSnapshot()
 }
 
@@ -419,6 +442,52 @@ async function pollMessages(): Promise<void> {
     if (added) {
       saveMessages()
       emitMessages(toast)
+    }
+  } catch {
+    /* transient — next poll retries */
+  }
+}
+
+/**
+ * Refresh read receipts for my own sent messages that are still marked unread — the `since`
+ * cursor never re-fetches them, so their Delivered→Seen flip has to come through this side
+ * channel. Bounded to the ids actually awaiting a receipt (nothing to do once all are Seen).
+ */
+async function pollReceipts(): Promise<void> {
+  const me = session?.uuid
+  if (!me) return
+  const pending: number[] = []
+  for (const list of Object.values(byFriend)) {
+    for (const m of list) if (m.from === me && !m.read) pending.push(m.id)
+  }
+  if (pending.length === 0) return
+  try {
+    const raw = await api<{ receipts?: unknown[] }>(
+      `/v1/messages/receipts?ids=${pending.slice(0, 100).join(',')}`
+    )
+    const receipts = Array.isArray(raw?.receipts) ? raw.receipts : []
+    let changed = false
+    for (const item of receipts) {
+      if (!item || typeof item !== 'object') continue
+      const o = item as Record<string, unknown>
+      const id = typeof o.id === 'number' ? o.id : null
+      if (id == null) continue
+      const readAt =
+        typeof o.readAt === 'number' && Number.isFinite(o.readAt)
+          ? o.readAt
+          : Math.floor(Date.now() / 1000)
+      for (const list of Object.values(byFriend)) {
+        const msg = list.find((x) => x.id === id && x.from === me)
+        if (msg && !msg.read) {
+          msg.read = true
+          msg.readAt = readAt
+          changed = true
+        }
+      }
+    }
+    if (changed) {
+      saveMessages()
+      emitMessages()
     }
   } catch {
     /* transient — next poll retries */
