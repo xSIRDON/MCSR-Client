@@ -2,11 +2,14 @@
 import type {
   Account,
   AppConfig,
+  FriendMessage,
   FriendsNetState,
   InstanceId,
   InstanceStatus,
   JavaInfo,
   LogLine,
+  MessagesEvent,
+  MessageStore,
   ModInfo,
   Profile,
   ProgressEvent,
@@ -73,6 +76,10 @@ export const IPC = {
   friendsDecline: 'friends:decline',
   friendsRemove: 'friends:remove',
   friendsChanged: 'friends:changed', // main -> renderer stream
+  friendsMessages: 'friends:messages',
+  friendsSendMessage: 'friends:sendMessage',
+  friendsMarkRead: 'friends:markRead',
+  friendsMessagesChanged: 'friends:messagesChanged', // main -> renderer stream
   // config
   cfgGet: 'cfg:get',
   cfgSet: 'cfg:set',
@@ -174,6 +181,13 @@ export interface McsrApi {
     decline(uuid: string): Promise<FriendsNetState>
     remove(uuid: string): Promise<FriendsNetState>
     onChanged(cb: (s: FriendsNetState) => void): () => void
+    /** The full DM cache (threads + unread counts). */
+    messages(): Promise<MessageStore>
+    /** Send a DM to a mutual friend; resolves the stored message, or null on failure. */
+    sendMessage(uuid: string, body: string): Promise<FriendMessage | null>
+    /** Mark this friend's incoming messages read (local + server). */
+    markRead(uuid: string): Promise<void>
+    onMessages(cb: (e: MessagesEvent) => void): () => void
   }
   config: {
     get(): Promise<AppConfig>

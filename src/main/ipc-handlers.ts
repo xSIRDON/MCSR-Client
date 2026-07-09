@@ -378,6 +378,7 @@ export function registerIpc(): void {
     return 'idle'
   })
   friends.onChanged((s) => win()?.webContents.send(IPC.friendsChanged, s))
+  friends.onMessages((e) => win()?.webContents.send(IPC.friendsMessagesChanged, e))
 
   ipcMain.on(IPC.winMinimize, () => win()?.minimize())
   ipcMain.on(IPC.winClose, () => win()?.close())
@@ -487,6 +488,11 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.friendsAccept, (_e, uuid: string) => friends.accept(uuid))
   ipcMain.handle(IPC.friendsDecline, (_e, uuid: string) => friends.decline(uuid))
   ipcMain.handle(IPC.friendsRemove, (_e, uuid: string) => friends.remove(uuid))
+  ipcMain.handle(IPC.friendsMessages, () => friends.getMessages())
+  ipcMain.handle(IPC.friendsSendMessage, (_e, uuid: string, body: string) =>
+    friends.sendMessage(uuid, body)
+  )
+  ipcMain.handle(IPC.friendsMarkRead, (_e, uuid: string) => friends.markRead(uuid))
 
   ipcMain.handle(IPC.cfgGet, () => store.getConfig())
   ipcMain.handle(IPC.cfgSet, (_e, patch: Partial<AppConfig>) => store.setConfig(patch))

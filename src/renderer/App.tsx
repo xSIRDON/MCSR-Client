@@ -5,6 +5,8 @@ import { useUi } from './store/uiStore'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
 import { FriendsRail } from './components/FriendsRail'
+import { ToastHost } from './components/Toast'
+import { useMessagesBridge } from './store/messagesStore'
 import { PlayBar } from './components/PlayBar'
 import { InstallMapPicker } from './components/InstallMapPicker'
 import { Login } from './pages/Login'
@@ -21,6 +23,7 @@ import { McsrLogo } from './components/Logo'
 
 export function App() {
   const { profile, authReady, setProfile, setAuthReady, setPacemanName, setFavorites } = useUi()
+  useMessagesBridge()
 
   useEffect(() => {
     let active = true
@@ -79,6 +82,7 @@ export function App() {
           </div>
           <PlayBar />
           <InstallMapPicker />
+          <ToastHost />
         </div>
       )}
     </div>

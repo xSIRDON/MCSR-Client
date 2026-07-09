@@ -51,6 +51,17 @@ db.prepare(
     PRIMARY KEY (a, b)
   )`
 ).run()
+db.prepare(
+  `CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender TEXT NOT NULL,
+    recipient TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    read_at INTEGER
+  )`
+).run()
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_messages_parties ON messages (sender, recipient, id)`).run()
 
 const q = {
   upsertUser: db.prepare(
@@ -69,7 +80,25 @@ const q = {
      FROM friendships f
      JOIN users u ON u.uuid = CASE WHEN f.a = ? THEN f.b ELSE f.a END
      WHERE f.a = ? OR f.b = ?`
-  )
+  ),
+  insertMsg: db.prepare(
+    `INSERT INTO messages (sender, recipient, body, created_at) VALUES (?, ?, ?, ?)`
+  ),
+  msgsSince: db.prepare(
+    `SELECT id, sender, recipient, body, created_at, read_at FROM messages
+     WHERE (sender = ? OR recipient = ?) AND id > ? ORDER BY id ASC LIMIT 500`
+  ),
+  markRead: db.prepare(
+    `UPDATE messages SET read_at = ? WHERE recipient = ? AND sender = ? AND id <= ? AND read_at IS NULL`
+  ),
+  pruneMsgs: db.prepare(`DELETE FROM messages WHERE created_at < ?`)
+}
+
+/** True only for an accepted, mutual friendship — the gate on every message operation. */
+function areFriends(x, y) {
+  const [a, b] = pairKey(x, y)
+  const row = q.pair.get(a, b)
+  return !!row && row.status === 'accepted'
 }
 
 // ---- session tokens (stateless HMAC) -----------------------------------------
@@ -138,6 +167,12 @@ setInterval(() => {
   const t = nowS()
   for (const [k, v] of buckets) if (t - v[0] > 120) buckets.delete(k)
 }, 60_000).unref()
+
+// Bound message storage: drop anything past the retention window (also runs once at boot).
+const MESSAGE_RETENTION_S = 60 * 24 * 3600
+const pruneMessages = () => q.pruneMsgs.run(nowS() - MESSAGE_RETENTION_S)
+pruneMessages()
+setInterval(pruneMessages, 24 * 3600 * 1000).unref()
 
 async function readJson(req) {
   let raw = ''
@@ -282,6 +317,49 @@ async function route(req, res) {
   if (delMatch && req.method === 'DELETE') {
     const [a, b] = pairKey(me, delMatch[1])
     q.deletePair.run(a, b)
+    return send(res, 204)
+  }
+
+  // -- direct messages (accepted friends only) --
+  if (path === '/v1/messages' && req.method === 'POST') {
+    if (limited(`msg:${me}`, 30)) return send(res, 429, { error: 'slow down' })
+    const { to, body } = await readJson(req)
+    const other = normUuid(to)
+    if (!isUuid(other) || other === me) return send(res, 400, { error: 'bad target' })
+    // Only accepted mutual friends can exchange messages — mirrors the presence gate so a
+    // pending/declined/absent relationship can neither send nor be sent to.
+    if (!areFriends(me, other)) return send(res, 403, { error: 'not friends' })
+    const text = typeof body === 'string' ? body.trim() : ''
+    if (!text || text.length > 500) return send(res, 400, { error: 'bad body' })
+    const at = nowS()
+    const info = q.insertMsg.run(me, other, text, at)
+    return send(res, 200, { id: Number(info.lastInsertRowid), at })
+  }
+
+  if (path === '/v1/messages' && req.method === 'GET') {
+    // Incremental pull: everything involving me newer than the client's cursor. A row is only
+    // ever returned to its two participants, so no message leaks past the pair.
+    const since = Number(url.searchParams.get('since') ?? 0) || 0
+    const rows = q.msgsSince.all(me, me, since)
+    const messages = rows.map((r) => ({
+      id: r.id,
+      from: r.sender,
+      to: r.recipient,
+      body: r.body,
+      at: r.created_at,
+      // "read" is only meaningful for my incoming; my own outgoing are always read.
+      read: r.recipient === me ? r.read_at != null : true
+    }))
+    const lastId = messages.length ? messages[messages.length - 1].id : since
+    return send(res, 200, { messages, lastId })
+  }
+
+  if (path === '/v1/messages/read' && req.method === 'POST') {
+    const { with: withUuid, upTo } = await readJson(req)
+    const other = normUuid(withUuid)
+    const cap = Number(upTo)
+    if (!isUuid(other) || !Number.isFinite(cap)) return send(res, 400, { error: 'bad request' })
+    q.markRead.run(nowS(), me, other, cap)
     return send(res, 204)
   }
 

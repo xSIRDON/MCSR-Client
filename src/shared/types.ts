@@ -99,6 +99,32 @@ export interface FriendsNetState {
   outgoing: FriendEntry[]
 }
 
+/** A direct message between two mutual friends. `from`/`to` are dashless-lowercase uuids. */
+export interface FriendMessage {
+  id: number
+  from: string
+  to: string
+  body: string
+  /** Unix seconds. */
+  at: number
+  /** For my incoming: whether I've read it. My own outgoing are always read. */
+  read: boolean
+}
+
+/** The full DM cache the main process owns and hands the renderer. */
+export interface MessageStore {
+  /** Messages per friend uuid, oldest-first. */
+  byFriend: Record<string, FriendMessage[]>
+  /** Unread incoming count per friend uuid. */
+  unread: Record<string, number>
+}
+
+/** Push payload when the DM store changes; `toast` is set for a fresh incoming message. */
+export interface MessagesEvent {
+  store: MessageStore
+  toast?: { uuid: string; nickname: string; body: string }
+}
+
 export const DEFAULT_CONFIG: AppConfig = {
   ram: { ranked: 3072, rsg: 3072, zsg: 3072 },
   java: { ranked: null, rsg: null, zsg: null },

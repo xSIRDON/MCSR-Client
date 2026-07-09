@@ -93,6 +93,8 @@ export const paths = {
   // Session state in userData so it survives auto-updates (the install dir is wiped on update).
   configFile: () => join(sessionDir(), 'config.json'),
   secretsFile: () => join(sessionDir(), 'secrets.json'),
+  /** Local DM cache — in userData so a friend's chat history survives auto-updates. */
+  messagesFile: () => join(sessionDir(), 'friends-messages.json'),
   /** A bundled resource (resources/ in dev, process.resourcesPath when packaged). */
   resource: (name: string): string =>
     app.isPackaged ? join(process.resourcesPath, name) : join(app.getAppPath(), 'resources', name)

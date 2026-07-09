@@ -4,14 +4,24 @@
 // Minecraft servers use), heartbeats presence while the app is open, and polls the
 // friends list, pushing changes to the renderer.
 
+import { readFileSync, writeFileSync } from 'node:fs'
 import { store } from '../store'
+import { paths } from '../paths'
 import { getLaunchToken } from '../auth/msmc-auth'
 import { DEFAULT_FRIENDS_SERVER } from '../../shared/types'
-import type { FriendsNetState, FriendEntry, FriendNetPresence } from '../../shared/types'
+import type {
+  FriendsNetState,
+  FriendEntry,
+  FriendNetPresence,
+  FriendMessage,
+  MessageStore,
+  MessagesEvent
+} from '../../shared/types'
 
 const SESSION_SECRET = 'friends-session'
 const HEARTBEAT_MS = 60_000
 const POLL_MS = 30_000
+const MESSAGE_POLL_MS = 15_000
 
 interface StoredSession {
   url: string
@@ -168,6 +178,10 @@ export function disconnect(): FriendsNetState {
   connected = false
   lastError = null
   lists = { friends: [], incoming: [], outgoing: [] }
+  byFriend = {}
+  msgCursor = 0
+  saveMessages()
+  emitMessages()
   store.secret.delete(SESSION_SECRET)
   emit()
   return getState()
@@ -253,16 +267,22 @@ async function heartbeat(): Promise<void> {
 
 function start(): void {
   stop()
+  loadMessages()
+  justConnected = true // suppress toasts for the backlog the first poll pulls in
   void heartbeat()
+  void pollMessages()
   heartbeatTimer = setInterval(() => void heartbeat(), HEARTBEAT_MS)
   pollTimer = setInterval(() => void refresh().catch(() => {}), POLL_MS)
+  msgTimer = setInterval(() => void pollMessages(), MESSAGE_POLL_MS)
 }
 
 function stop(): void {
   if (heartbeatTimer) clearInterval(heartbeatTimer)
   if (pollTimer) clearInterval(pollTimer)
+  if (msgTimer) clearInterval(msgTimer)
   heartbeatTimer = null
   pollTimer = null
+  msgTimer = null
 }
 
 export async function request(uuid: string, nickname?: string): Promise<FriendsNetState> {
@@ -287,6 +307,185 @@ export async function remove(uuid: string): Promise<FriendsNetState> {
   await api(`/v1/friends/${uuid}`, { method: 'DELETE' })
   await refresh()
   return getState()
+}
+
+// ---- direct messages ----------------------------------------------------------
+// Threads are cached locally (userData, survives updates) and kept in sync with the server via
+// an incremental "since-cursor" poll on the connection loop. The server is the source of truth
+// and delivers to offline friends; the cache is just for instant load and offline reading.
+
+let msgSink: ((e: MessagesEvent) => void) | null = null
+let msgTimer: NodeJS.Timeout | null = null
+let msgCursor = 0
+let byFriend: Record<string, FriendMessage[]> = {}
+let justConnected = false
+
+export function onMessages(cb: (e: MessagesEvent) => void): void {
+  msgSink = cb
+}
+
+function loadMessages(): void {
+  try {
+    const raw = JSON.parse(readFileSync(paths.messagesFile(), 'utf8')) as {
+      cursor?: number
+      byFriend?: Record<string, FriendMessage[]>
+    }
+    msgCursor = typeof raw?.cursor === 'number' ? raw.cursor : 0
+    byFriend = raw?.byFriend && typeof raw.byFriend === 'object' ? raw.byFriend : {}
+  } catch {
+    msgCursor = 0
+    byFriend = {}
+  }
+}
+
+function saveMessages(): void {
+  try {
+    writeFileSync(paths.messagesFile(), JSON.stringify({ cursor: msgCursor, byFriend }), 'utf8')
+  } catch {
+    /* best effort — the server keeps the authoritative copy */
+  }
+}
+
+/** The other party of a message from my perspective — the uuid its thread is filed under. */
+function friendOf(m: FriendMessage, me: string): string {
+  return m.from === me ? m.to : m.from
+}
+
+/** Add a message to its thread if not already present (dedupe by id). Returns whether it was new. */
+function mergeMessage(m: FriendMessage, me: string): boolean {
+  const key = friendOf(m, me)
+  const list = byFriend[key] ?? (byFriend[key] = [])
+  if (list.some((x) => x.id === m.id)) return false
+  list.push(m)
+  list.sort((a, b) => a.id - b.id)
+  return true
+}
+
+/** Never trust the remote server's shape — validate every field before it reaches the cache. */
+function sanitizeMessage(e: unknown): FriendMessage | null {
+  if (!e || typeof e !== 'object') return null
+  const o = e as Record<string, unknown>
+  const id = typeof o.id === 'number' && Number.isFinite(o.id) ? o.id : null
+  const from = typeof o.from === 'string' ? o.from.replace(/-/g, '').toLowerCase() : ''
+  const to = typeof o.to === 'string' ? o.to.replace(/-/g, '').toLowerCase() : ''
+  if (id == null || !/^[0-9a-f]{32}$/.test(from) || !/^[0-9a-f]{32}$/.test(to)) return null
+  const body = typeof o.body === 'string' ? o.body.slice(0, 500) : ''
+  if (!body) return null
+  const at = typeof o.at === 'number' && Number.isFinite(o.at) ? o.at : Math.floor(Date.now() / 1000)
+  return { id, from, to, body, at, read: o.read === true }
+}
+
+function messagesSnapshot(): MessageStore {
+  const me = session?.uuid ?? ''
+  const unread: Record<string, number> = {}
+  for (const [uuid, list] of Object.entries(byFriend)) {
+    unread[uuid] = list.filter((m) => m.from === uuid && m.to === me && !m.read).length
+  }
+  return { byFriend, unread }
+}
+
+export function getMessages(): MessageStore {
+  return messagesSnapshot()
+}
+
+function emitMessages(toast?: MessagesEvent['toast']): void {
+  msgSink?.({ store: messagesSnapshot(), toast })
+}
+
+async function pollMessages(): Promise<void> {
+  const me = session?.uuid
+  if (!me) return
+  const suppressToast = justConnected // don't toast the whole backlog on first sync
+  justConnected = false
+  try {
+    const raw = await api<{ messages?: unknown[]; lastId?: number }>(
+      `/v1/messages?since=${msgCursor}`
+    )
+    const items = Array.isArray(raw?.messages) ? raw.messages : []
+    let added = false
+    let toast: MessagesEvent['toast'] | undefined
+    for (const item of items) {
+      const m = sanitizeMessage(item)
+      if (!m || (m.from !== me && m.to !== me)) continue // only my own conversations
+      if (mergeMessage(m, me)) {
+        added = true
+        if (!suppressToast && m.to === me && !m.read) {
+          const nickname = lists.friends.find((f) => f.uuid === m.from)?.nickname || m.from.slice(0, 8)
+          toast = { uuid: m.from, nickname, body: m.body }
+        }
+      }
+    }
+    if (typeof raw?.lastId === 'number' && raw.lastId > msgCursor) msgCursor = raw.lastId
+    if (added) {
+      saveMessages()
+      emitMessages(toast)
+    }
+  } catch {
+    /* transient — next poll retries */
+  }
+}
+
+export async function sendMessage(uuid: string, body: string): Promise<FriendMessage | null> {
+  const me = session?.uuid
+  const to = uuid.replace(/-/g, '').toLowerCase()
+  const text = body.trim().slice(0, 500)
+  if (!me || !/^[0-9a-f]{32}$/.test(to) || !text) return null
+  try {
+    const res = await api<{ id?: number; at?: number }>('/v1/messages', {
+      method: 'POST',
+      body: JSON.stringify({ to, body: text })
+    })
+    if (!res || typeof res.id !== 'number') return null
+    // Don't advance the poll cursor here — the next poll re-returns this message (deduped) and
+    // advances the cursor safely, so a concurrent inbound message can't be skipped.
+    const msg: FriendMessage = {
+      id: res.id,
+      from: me,
+      to,
+      body: text,
+      at: typeof res.at === 'number' ? res.at : Math.floor(Date.now() / 1000),
+      read: true
+    }
+    mergeMessage(msg, me)
+    saveMessages()
+    emitMessages()
+    return msg
+  } catch {
+    return null
+  }
+}
+
+export async function markRead(uuid: string): Promise<void> {
+  const me = session?.uuid
+  const friend = uuid.replace(/-/g, '').toLowerCase()
+  if (!me) return
+  const list = byFriend[friend]
+  if (!list) return
+  let maxId = 0
+  let changed = false
+  for (const m of list) {
+    if (m.from === friend && m.to === me) {
+      if (!m.read) {
+        m.read = true
+        changed = true
+      }
+      if (m.id > maxId) maxId = m.id
+    }
+  }
+  if (changed) {
+    saveMessages()
+    emitMessages()
+  }
+  if (maxId > 0) {
+    try {
+      await api('/v1/messages/read', {
+        method: 'POST',
+        body: JSON.stringify({ with: friend, upTo: maxId })
+      })
+    } catch {
+      /* server read-state is best-effort; the local unread badge is already cleared */
+    }
+  }
 }
 
 export type { FriendEntry }

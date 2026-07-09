@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUi } from '../store/uiStore'
 import { mcsr } from '../lib/clients'
@@ -10,6 +10,7 @@ import {
   normUuid
 } from '../hooks/useFriends'
 import type { FriendPresence } from '../hooks/useFriends'
+import { useMessagesStore, useTotalUnread } from '../store/messagesStore'
 import { PlayerHead } from './PlayerHead'
 import { PlayerAutocomplete } from './PlayerAutocomplete'
 
@@ -35,6 +36,11 @@ export function FriendsRail() {
   const requests = net.incoming.length
   const totalLive = watchLive + friendsLive
 
+  const activeThread = useMessagesStore((s) => s.activeThread)
+  const closeThread = useMessagesStore((s) => s.closeThread)
+  const unread = useMessagesStore((s) => s.store.unread)
+  const totalUnread = useTotalUnread()
+
   if (!open) {
     const preview = [...mutuals, ...watchlist].slice(0, 8)
     return (
@@ -47,6 +53,8 @@ export function FriendsRail() {
           <FriendsIcon />
           {requests > 0 ? (
             <Badge color="var(--gold)">{requests}</Badge>
+          ) : totalUnread > 0 ? (
+            <Badge color="var(--gold)">{totalUnread}</Badge>
           ) : totalLive > 0 ? (
             <Badge color="var(--win)">{totalLive}</Badge>
           ) : null}
@@ -66,10 +74,22 @@ export function FriendsRail() {
     )
   }
 
+  if (activeThread) {
+    const nickname =
+      mutuals.find((m) => m.uuid === activeThread)?.nickname ??
+      net.friends.find((f) => normUuid(f.uuid) === activeThread)?.nickname ??
+      'Friend'
+    return (
+      <aside className="flex w-[264px] shrink-0 flex-col border-l border-[var(--line)] bg-black/25">
+        <DmThread uuid={activeThread} nickname={nickname} onBack={closeThread} />
+      </aside>
+    )
+  }
+
   return (
     <aside className="flex w-[264px] shrink-0 flex-col border-l border-[var(--line)] bg-black/25">
       <header className="flex items-center gap-1 border-b border-[var(--line)] px-2 py-2">
-        <TabButton active={tab === 'friends'} onClick={() => setTab('friends')} label="Friends" live={friendsLive} dot={requests} />
+        <TabButton active={tab === 'friends'} onClick={() => setTab('friends')} label="Friends" live={friendsLive} dot={requests + totalUnread} />
         <TabButton active={tab === 'watchlist'} onClick={() => setTab('watchlist')} label="Watchlist" live={watchLive} />
         <button
           onClick={() => setOpen(false)}
@@ -84,7 +104,7 @@ export function FriendsRail() {
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
         {tab === 'friends' ? (
-          <FriendsList net={net} mutuals={mutuals} />
+          <FriendsList net={net} mutuals={mutuals} unread={unread} />
         ) : (
           <WatchlistList watchlist={watchlist} />
         )}
@@ -149,11 +169,14 @@ function TabButton({
 
 function FriendsList({
   net,
-  mutuals
+  mutuals,
+  unread
 }: {
   net: ReturnType<typeof useFriendsNet>
   mutuals: FriendPresence[]
+  unread: Record<string, number>
 }) {
+  const openThread = useMessagesStore((s) => s.openThread)
   if (!net.connected) {
     return (
       <div className="px-2 py-6 text-center text-[11px] leading-relaxed text-faint">
@@ -168,7 +191,13 @@ function FriendsList({
         <RequestRow key={r.uuid} uuid={normUuid(r.uuid)} nickname={r.nickname} />
       ))}
       {mutuals.map((f) => (
-        <PresenceRow key={f.uuid} f={f} onRemove={(u) => void window.mcsr.friends.remove(u)} />
+        <PresenceRow
+          key={f.uuid}
+          f={f}
+          unread={unread[f.uuid] ?? 0}
+          onOpenChat={openThread}
+          onRemove={(u) => void window.mcsr.friends.remove(u)}
+        />
       ))}
       {net.outgoing.map((r) => (
         <div key={r.uuid} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 opacity-60">
@@ -253,7 +282,17 @@ function LiveTimer({ base, anchor }: { base: number; anchor: number }) {
   )
 }
 
-function PresenceRow({ f, onRemove }: { f: FriendPresence; onRemove: (uuid: string) => void }) {
+function PresenceRow({
+  f,
+  onRemove,
+  unread = 0,
+  onOpenChat
+}: {
+  f: FriendPresence
+  onRemove: (uuid: string) => void
+  unread?: number
+  onOpenChat?: (uuid: string) => void
+}) {
   const navigate = useNavigate()
   const inGame = f.status === 'ranked' || f.status === 'pace'
   return (
@@ -295,6 +334,20 @@ function PresenceRow({ f, onRemove }: { f: FriendPresence; onRemove: (uuid: stri
         >
           LIVE
         </a>
+      )}
+      {onOpenChat && (
+        <button
+          onClick={() => onOpenChat(f.uuid)}
+          title="Message"
+          className="relative shrink-0 text-faint transition-colors hover:text-[var(--gold)]"
+        >
+          <ChatIcon />
+          {unread > 0 && (
+            <span className="absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-[var(--gold)] px-1 font-display text-[8px] text-[#0a0a10]">
+              {unread}
+            </span>
+          )}
+        </button>
       )}
       <button
         onClick={() => onRemove(f.uuid)}
@@ -357,6 +410,129 @@ function AddBox({ tab, canFriend }: { tab: Tab; canFriend: boolean }) {
         }`}
       />
     </div>
+  )
+}
+
+/** A one-on-one DM conversation. Messages come from the main-process cache (store); sending and
+ *  read-marking round-trip through the friends network. `mine` = any message not from the friend. */
+function DmThread({
+  uuid,
+  nickname,
+  onBack
+}: {
+  uuid: string
+  nickname: string
+  onBack: () => void
+}) {
+  const msgs = useMessagesStore((s) => s.store.byFriend[uuid] ?? [])
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  // Mark read on open and whenever a new message lands while the thread is open.
+  useEffect(() => {
+    void window.mcsr.friends.markRead(uuid)
+  }, [uuid, msgs.length])
+
+  // Keep the newest message in view.
+  useEffect(() => {
+    const el = listRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [msgs.length])
+
+  async function send(): Promise<void> {
+    const body = text.trim()
+    if (!body || busy) return
+    setBusy(true)
+    setText('')
+    await window.mcsr.friends.sendMessage(uuid, body)
+    setBusy(false)
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <header className="flex items-center gap-2 border-b border-[var(--line)] px-2 py-2">
+        <button
+          onClick={onBack}
+          title="Back"
+          className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted hover:bg-white/[0.06] hover:text-text"
+        >
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+            <path d="M8 2.5L4 6l4 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <PlayerHead id={uuid} uuid={uuid} size={24} className="rounded" />
+        <span className="truncate text-sm font-medium text-text">{nickname}</span>
+      </header>
+
+      <div ref={listRef} className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-2.5 py-3">
+        {msgs.length === 0 ? (
+          <div className="px-2 py-10 text-center text-[11px] leading-relaxed text-faint">
+            No messages yet — say hi.
+          </div>
+        ) : (
+          msgs.map((m) => {
+            const mine = m.from !== uuid
+            return (
+              <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className="max-w-[82%] whitespace-pre-wrap break-words rounded-2xl px-3 py-1.5 text-[13px] leading-snug"
+                  style={
+                    mine
+                      ? { background: 'var(--gold)', color: '#12100a' }
+                      : { background: 'var(--bg-2)', color: 'var(--text)' }
+                  }
+                >
+                  {m.body}
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      <div className="border-t border-[var(--line)] p-2">
+        <div className="flex items-end gap-1.5">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                void send()
+              }
+            }}
+            rows={1}
+            maxLength={500}
+            placeholder={`Message ${nickname}…`}
+            className="max-h-24 min-h-[34px] flex-1 resize-none rounded-lg border border-[var(--line)] bg-[var(--bg-2)] px-3 py-1.5 text-xs text-text outline-none transition-colors placeholder:text-faint focus:border-[var(--gold)]/40"
+          />
+          <button
+            onClick={() => void send()}
+            disabled={!text.trim() || busy}
+            title="Send"
+            className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-lg bg-[var(--gold)] text-[#12100a] transition-all hover:brightness-110 disabled:opacity-40"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 7h9M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChatIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+      <path
+        d="M2 3.5A1.5 1.5 0 013.5 2h7A1.5 1.5 0 0112 3.5v5A1.5 1.5 0 0110.5 10H5l-3 2.5v-9z"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 
