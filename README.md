@@ -5,7 +5,7 @@
 <br />
 <br />
 
-[![Version](https://img.shields.io/badge/version-v1.4.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![Version](https://img.shields.io/badge/version-v1.4.1-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-3b82f6?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&labelColor=15151c)](LICENSE)
 
@@ -19,7 +19,7 @@ One app to sign in, install your instances, launch the game, and watch your rank
 
 ### [⬇  Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 
-<sub>Windows installer · auto-updates · v1.4.0</sub>
+<sub>Windows installer · auto-updates · v1.4.1</sub>
 
 </div>
 
@@ -111,7 +111,7 @@ Open **Edit instance** to fine-tune anything:
 - RAM and Java settings.
 - Mod toggles and a practice-map picker.
 - Open the game folder directly.
-- **Import settings** — copy `options.txt`, `hotbar.nbt`, and the whole `config/` folder from another instance, or pull in an external `options.txt`. Offered on the Edit page and during a first-time install.
+- **Import settings** — copy `options.txt`, `hotbar.nbt`, `config/`, and your `resourcepacks/` (your **seedwall**) from another instance, or pull in an external `options.txt`. Offered on the Edit page and during a first-time install.
 
 ### Built for Windows
 - A branded Windows installer.
