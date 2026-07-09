@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import { useEffect } from 'react'
-import type { MessageStore } from '@shared/types'
+import type { FriendMessage, MessageStore } from '@shared/types'
+
+const EMPTY_THREAD: FriendMessage[] = []
+
+export function threadOf(byFriend: MessageStore['byFriend'], uuid: string): FriendMessage[] {
+  return byFriend[uuid] ?? EMPTY_THREAD
+}
 
 export interface ChatToast {
   id: number

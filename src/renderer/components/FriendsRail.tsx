@@ -10,7 +10,7 @@ import {
   normUuid
 } from '../hooks/useFriends'
 import type { FriendPresence } from '../hooks/useFriends'
-import { useMessagesStore, useTotalUnread } from '../store/messagesStore'
+import { useMessagesStore, useTotalUnread, threadOf } from '../store/messagesStore'
 import { PlayerHead } from './PlayerHead'
 import { PlayerAutocomplete } from './PlayerAutocomplete'
 
@@ -418,7 +418,8 @@ function DmThread({
   nickname: string
   onBack: () => void
 }) {
-  const msgs = useMessagesStore((s) => s.store.byFriend[uuid] ?? [])
+  const byFriend = useMessagesStore((s) => s.store.byFriend)
+  const msgs = threadOf(byFriend, uuid)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
