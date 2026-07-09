@@ -5,7 +5,7 @@
 <br />
 <br />
 
-[![Version](https://img.shields.io/badge/version-v1.2.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![Version](https://img.shields.io/badge/version-v1.3.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-3b82f6?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&labelColor=15151c)](LICENSE)
 
@@ -19,7 +19,7 @@ One app to sign in, install your instances, launch the game, and watch your rank
 
 ### [⬇  Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 
-<sub>Windows installer · auto-updates · v1.2.0</sub>
+<sub>Windows installer · auto-updates · v1.3.0</sub>
 
 </div>
 
@@ -55,7 +55,9 @@ SeedQueue wall resource packs come pre-installed for RSG and ZSG.
 Your stats, front and center:
 
 - ELO, tier (**Coal → Netherite**), peak rating, win rate, win streak, best time, and total matches.
-- An **ELO-over-time chart** and a feed of your recent matches.
+- An **ELO-over-time chart** and a feed of your recent matches — **expand any match** for a
+  **Splits ⇄ Timestamps** card: both players' milestones side by side with the head-to-head gap at
+  each split.
 - A **season switcher** on profiles, the review, and Compare — view any past season (with its closing Elo and rank) or **career totals**.
 - The **global leaderboard** plus full **player search** — with **type-ahead autocomplete** (sourced from the leaderboard, your friends, and everyone you've viewed), skins, and **donor-tier badges** (Stone / Iron / Diamond).
 
@@ -72,10 +74,11 @@ A dedicated review tab that turns your ranked history into insight:
 ### Compare any two players
 A head-to-head tab: search two names and get overlaid **split-performance radars**, per-split
 average-time gaps, and a stat-by-stat scorecard — Elo, win rate, best time, average win, streaks,
-and paceman RSG PBs. Every searched profile also gets the full radar treatment, plus a one-click
-**Compare with me**.
+and paceman RSG PBs. A **composite win-chance** meter blends the Elo gap with splits, win rate,
+finishing pace, and recent form — and shows which factors tip the matchup. Every searched profile
+also gets the full radar treatment, plus a one-click **Compare with me**.
 
-### Friends & watchlist
+### Friends, DMs & watchlist
 An Epic-style rail on the right edge of the app, on by default:
 
 - **Watchlist** — star any runner and see, live, when they're **in a ranked match** (with their
@@ -83,6 +86,9 @@ An Epic-style rail on the right edge of the app, on by default:
   and a one-click Twitch watch link.
 - **Mutual friends** — real friend requests with accept/decline and **"in the client"** presence,
   each tab showing a live count of who's in a game right now.
+- **Direct messages** — chat one-on-one with your mutual friends right in the rail. Messages are
+  stored and delivered even when they're offline, with unread badges and a pop-in toast when a
+  new one arrives. History survives updates.
 - **No password, no extra account** — sign-in proves your Minecraft account through Mojang's own
   session server, over HTTPS. Runs against the built-in network out of the box; the backend is a
   tiny self-hostable service (see [`server/`](server/)) if you'd rather run your own.
