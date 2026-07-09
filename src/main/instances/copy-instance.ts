@@ -30,10 +30,15 @@ export function copyInstanceSettings(
     }
   }
 
-  const srcConfig = join(srcGameDir, 'config')
-  if (existsSync(srcConfig)) {
-    cpSync(srcConfig, join(dstGameDir, 'config'), { recursive: true })
-    copied.push('config/')
+  for (const [folder, label] of [
+    ['config', 'config/'],
+    ['resourcepacks', 'resource packs']
+  ] as const) {
+    const src = join(srcGameDir, folder)
+    if (existsSync(src)) {
+      cpSync(src, join(dstGameDir, folder), { recursive: true })
+      copied.push(label)
+    }
   }
 
   let worlds = 0
