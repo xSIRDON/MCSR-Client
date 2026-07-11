@@ -5,7 +5,7 @@
 <br />
 <br />
 
-[![Version](https://img.shields.io/badge/version-v1.4.1-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![Version](https://img.shields.io/badge/version-v1.5.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-3b82f6?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&labelColor=15151c)](LICENSE)
 
@@ -19,7 +19,7 @@ One app to sign in, install your instances, launch the game, and watch your rank
 
 ### [⬇  Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 
-<sub>Windows installer · auto-updates · v1.4.1</sub>
+<sub>Windows installer · auto-updates · v1.5.0</sub>
 
 </div>
 
@@ -77,6 +77,12 @@ average-time gaps, and a stat-by-stat scorecard — Elo, win rate, best time, av
 and paceman RSG PBs. A **composite win-chance** meter blends the Elo gap with splits, win rate,
 finishing pace, and recent form — and shows which factors tip the matchup. Every searched profile
 also gets the full radar treatment, plus a one-click **Compare with me**.
+
+### Practice off the best
+A **Practice** tab for learning from top runners: pick a runner, browse their fastest recent seeds
+(overworld/bastion structure, end towers, and their splits), **copy a seed** into a private-room
+Set Seed, and after you play it, see a **split-by-split gap** — exactly where you lose time versus
+their run.
 
 ### Friends, DMs & watchlist
 An Epic-style rail on the right edge of the app, on by default:
