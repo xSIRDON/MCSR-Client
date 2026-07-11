@@ -19,6 +19,7 @@ import { Console } from './pages/Console'
 import { Leaderboard } from './pages/Leaderboard'
 import { SelfReview } from './pages/SelfReview'
 import { Compare } from './pages/Compare'
+import { Practice } from './pages/Practice'
 import { McsrLogo } from './components/Logo'
 
 export function App() {
@@ -72,6 +73,7 @@ export function App() {
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/review" element={<SelfReview />} />
                 <Route path="/compare" element={<Compare />} />
+                <Route path="/practice" element={<Practice />} />
                 <Route path="/console" element={<Console />} />
                 <Route path="/instance/:id" element={<Instance />} />
                 <Route path="/profile" element={<Profile />} />

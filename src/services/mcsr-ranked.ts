@@ -119,7 +119,15 @@ export interface MatchInfo {
   result?: { uuid: string | null; time: number | null }
   forfeited?: boolean
   decayed?: boolean
-  seed?: { id?: string | null; overworld?: string | null; nether?: string | null }
+  seed?: {
+    id?: string | null
+    overworld?: string | null
+    nether?: string | null
+    /** The four end-tower heights (blocks), when present. */
+    endTowers?: number[] | null
+    /** Structural tags describing the seed, e.g. "bastion:single:2", "biome:fortress:nether_wastes". */
+    variations?: string[] | null
+  }
   /** Overworld structure type: VILLAGE | SHIPWRECK | RUINED_PORTAL | DESERT_TEMPLE | BURIED_TREASURE (mirrors seed.overworld). */
   seedType?: string | null
   /** Bastion remnant type: HOUSING | TREASURE | STABLES | BRIDGE (mirrors seed.nether). */

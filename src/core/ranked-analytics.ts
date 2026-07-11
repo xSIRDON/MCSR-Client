@@ -454,6 +454,49 @@ export function analyzeSplits(uuid: string, details: MatchInfo[]): SplitStat[] {
   return out
 }
 
+// ---- Practice: gap between a top runner's seed run and your typical splits ----
+
+export interface GapRow {
+  key: string
+  label: string
+  /** The top runner's time to this split on the seed (ms), or null. */
+  runnerMs: number | null
+  /** Your average time to this split (ms), or null. */
+  youMs: number | null
+  /** youMs − runnerMs: positive = you're slower (time to make up), negative = you're ahead. */
+  delta: number | null
+}
+
+/**
+ * The split-by-split gap between a top runner's run on a seed and your own typical splits. Feed it
+ * `analyzeSplits(runnerUuid, [theirMatch])` (their times on that one seed) and
+ * `analyzeSplits(yourUuid, yourRecentMatches)` (your averages). Rows follow the runner's splits, so
+ * a split they never reached drops out; `youMs`/`delta` are null where you have no baseline yet.
+ */
+export function buildSplitGap(runner: SplitStat[], you: SplitStat[]): GapRow[] {
+  const youBy = new Map(you.map((s) => [s.key, s]))
+  return runner.map((r) => {
+    const youMs = youBy.get(r.key)?.average ?? null
+    return {
+      key: r.key,
+      label: r.label,
+      runnerMs: r.average,
+      youMs,
+      delta: r.average != null && youMs != null ? youMs - r.average : null
+    }
+  })
+}
+
+/** Human label for a seed structure code, e.g. RUINED_PORTAL → "Ruined Portal", BRIDGE → "Bridge". */
+export function seedStructureLabel(code: string | null | undefined): string {
+  if (!code) return '—'
+  return code
+    .toLowerCase()
+    .split('_')
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(' ')
+}
+
 // ---- Per-type breakdowns (overworld structure & bastion remnant type) ----
 
 export interface TypeStat {

@@ -4,16 +4,18 @@ import {
   analyzeSplits,
   analyzeTypeBreakdowns,
   buildScorecard,
+  buildSplitGap,
   countDeaths,
   matchBreakdown,
   matchupWinChance,
   playerSegments,
   scorecardInsights,
+  seedStructureLabel,
   speedFromPerf,
   splitCallouts,
   splitPerformance
 } from './ranked-analytics'
-import type { MatchupInput } from './ranked-analytics'
+import type { MatchupInput, SplitStat } from './ranked-analytics'
 import { eloWinChance } from './rank'
 import type { MatchInfo } from '@services/mcsr-ranked'
 
@@ -896,5 +898,45 @@ describe('splitCallouts', () => {
     const focus = out.find((i) => i.label === 'To rank up')
     expect(focus?.detail).toContain('Bastion')
     expect(focus?.detail).toContain('Diamond')
+  })
+})
+
+describe('buildSplitGap', () => {
+  const ss = (key: string, label: string, average: number | null): SplitStat => ({
+    key,
+    label,
+    best: average,
+    average,
+    count: average == null ? 0 : 3
+  })
+
+  it('diffs the runner’s splits against yours (youMs − runnerMs)', () => {
+    const runner = [
+      ss('overworld', 'Overworld', 60_000),
+      ss('bastion', 'Bastion', 120_000),
+      ss('finish', 'Finish', 560_000)
+    ]
+    const you = [ss('overworld', 'Overworld', 75_000), ss('bastion', 'Bastion', 110_000)]
+    const rows = buildSplitGap(runner, you)
+    expect(rows.map((r) => r.key)).toEqual(['overworld', 'bastion', 'finish'])
+    expect(rows[0].delta).toBe(15_000) // 15s slower reaching the nether
+    expect(rows[1].delta).toBe(-10_000) // 10s faster to bastion
+    expect(rows[2].youMs).toBeNull() // no finish baseline of your own
+    expect(rows[2].delta).toBeNull()
+  })
+
+  it('keeps a runner split with no time but leaves its delta null', () => {
+    const rows = buildSplitGap([ss('overworld', 'Overworld', null)], [ss('overworld', 'Overworld', 60_000)])
+    expect(rows[0].runnerMs).toBeNull()
+    expect(rows[0].delta).toBeNull()
+  })
+})
+
+describe('seedStructureLabel', () => {
+  it('title-cases structure codes and handles blanks', () => {
+    expect(seedStructureLabel('RUINED_PORTAL')).toBe('Ruined Portal')
+    expect(seedStructureLabel('BRIDGE')).toBe('Bridge')
+    expect(seedStructureLabel(null)).toBe('—')
+    expect(seedStructureLabel(undefined)).toBe('—')
   })
 })

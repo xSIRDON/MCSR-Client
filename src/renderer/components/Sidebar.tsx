@@ -14,7 +14,8 @@ const NAV_GROUPS: { to: string; label: string; icon: () => JSX.Element; end?: bo
   [
     { to: '/leaderboard', label: 'Leaders', icon: LeaderboardIcon },
     { to: '/review', label: 'Review', icon: ReviewIcon },
-    { to: '/compare', label: 'Compare', icon: CompareIcon }
+    { to: '/compare', label: 'Compare', icon: CompareIcon },
+    { to: '/practice', label: 'Practice', icon: TargetIcon }
   ],
   [
     { to: '/console', label: 'Console', icon: ConsoleIcon },
@@ -185,6 +186,16 @@ function ReviewIcon() {
     <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
       <path d="M3 3v12h12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M5.5 11l3-3 2.4 2L15 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function TargetIcon() {
+  // A target — "practice / close the gap to the best".
+  return (
+    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="9" cy="9" r="0.6" fill="currentColor" />
     </svg>
   )
 }
