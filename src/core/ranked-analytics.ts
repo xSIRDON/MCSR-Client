@@ -412,6 +412,37 @@ export function analyzeSplits(uuid: string, details: MatchInfo[]): SplitStat[] {
   return out
 }
 
+export interface GapRow {
+  key: string
+  label: string
+  runnerMs: number | null
+  youMs: number | null
+  delta: number | null
+}
+
+export function buildSplitGap(runner: SplitStat[], you: SplitStat[]): GapRow[] {
+  const youBy = new Map(you.map((s) => [s.key, s]))
+  return runner.map((r) => {
+    const youMs = youBy.get(r.key)?.average ?? null
+    return {
+      key: r.key,
+      label: r.label,
+      runnerMs: r.average,
+      youMs,
+      delta: r.average != null && youMs != null ? youMs - r.average : null
+    }
+  })
+}
+
+export function seedStructureLabel(code: string | null | undefined): string {
+  if (!code) return '—'
+  return code
+    .toLowerCase()
+    .split('_')
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(' ')
+}
+
 export interface TypeStat {
   key: string
   label: string

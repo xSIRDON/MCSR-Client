@@ -107,7 +107,13 @@ export interface MatchInfo {
   result?: { uuid: string | null; time: number | null }
   forfeited?: boolean
   decayed?: boolean
-  seed?: { id?: string | null; overworld?: string | null; nether?: string | null }
+  seed?: {
+    id?: string | null
+    overworld?: string | null
+    nether?: string | null
+    endTowers?: number[] | null
+    variations?: string[] | null
+  }
   seedType?: string | null
   bastionType?: string | null
   changes?: MatchChange[]
