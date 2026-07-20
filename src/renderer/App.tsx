@@ -9,6 +9,7 @@ import { ToastHost } from './components/Toast'
 import { useMessagesBridge } from './store/messagesStore'
 import { PlayBar } from './components/PlayBar'
 import { InstallMapPicker } from './components/InstallMapPicker'
+import { ExtraOptionsPrompt } from './components/ExtraOptionsPrompt'
 import { Login } from './pages/Login'
 import { Home } from './pages/Home'
 import { Play } from './pages/Play'
@@ -84,6 +85,7 @@ export function App() {
           </div>
           <PlayBar />
           <InstallMapPicker />
+          <ExtraOptionsPrompt />
           <ToastHost />
         </div>
       )}
