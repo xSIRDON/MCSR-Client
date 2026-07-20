@@ -41,6 +41,9 @@ export const IPC = {
   instStateChanged: 'inst:stateChanged', // main -> renderer stream
   instMods: 'inst:mods',
   instToggleMod: 'inst:toggleMod',
+  instExtraOptionsPrompt: 'inst:extraOptionsPrompt',
+  instAddExtraOptions: 'inst:addExtraOptions',
+  instDismissExtraOptionsPrompt: 'inst:dismissExtraOptionsPrompt',
   instOpenFolder: 'inst:openFolder',
   instStdGet: 'inst:stdGet',
   instStdSet: 'inst:stdSet',
@@ -123,6 +126,12 @@ export interface McsrApi {
     onStateChanged(cb: (s: InstanceStatus) => void): () => void
     mods(id: InstanceId): Promise<ModInfo[]>
     toggleMod(id: InstanceId, file: string, enabled: boolean): Promise<ModInfo[]>
+    /** Whether to show the one-time extra-options prompt, and for which installed instances. */
+    extraOptionsPrompt(): Promise<{ show: boolean; instances: InstanceId[] }>
+    /** Install extra-options into each given instance (idempotent, best-effort per instance). */
+    addExtraOptions(instances: InstanceId[]): Promise<void>
+    /** Record that the one-time extra-options prompt has been answered. */
+    dismissExtraOptionsPrompt(): Promise<void>
     openFolder(id: InstanceId): Promise<void>
     getStandardSettings(id: InstanceId): Promise<StandardSettings>
     setStandardSettings(id: InstanceId, patch: StandardSettings): Promise<StandardSettings>

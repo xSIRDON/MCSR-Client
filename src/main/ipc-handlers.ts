@@ -25,7 +25,13 @@ import {
 } from './instances/mrpack'
 import { writeRankedConfigs, writeRsgConfigs } from './instances/configs'
 import { syncMaps } from './instances/maps'
-import { listMods, setModEnabled } from './instances/mods'
+import {
+  listMods,
+  setModEnabled,
+  installModJar,
+  hasExtraOptions,
+  shouldPromptExtraOptions
+} from './instances/mods'
 import { readStandardSettings, writeStandardSettings, importOptionsFile } from './instances/standard-settings'
 import { copyInstanceSettings, resolveGameDir, listWorlds } from './instances/copy-instance'
 import { getSkin } from './skins'
@@ -145,21 +151,32 @@ async function ensureInstanceExtras(id: InstanceId, gameDir: string): Promise<vo
   await runSyncMaps(id, 'Practice maps')
 }
 
-const FSG_MOD = {
-  file: 'FSG-Mod-5.3.0+MC1.16.1.jar',
-  url: 'https://cdn.modrinth.com/data/XZOGBIpM/versions/qc4OUmcd/FSG-Mod-5.3.0%2BMC1.16.1.jar'
+const EXTRA_OPTIONS_MOD = {
+  file: 'extra-options-2.2.1+1.16.1.jar',
+  // Primary: the author's GitHub release. Fallback: the legal-mods mirror mcsr-meta points at.
+  // Both are the same jar; whichever verifies against the hash first is used.
+  urls: [
+    'https://github.com/tildejustin/extra-options/releases/download/v2.2.1/extra-options-2.2.1+1.16.1.jar',
+    'https://github.com/Minecraft-Java-Edition-Speedrunning/legal-mods/raw/2ba63fc475270404e4a1c1f910f22bdc9bc14186/legal-mods/extra-options/1.16-1.16.1/extra-options-2.2.1+1.16.1.jar'
+  ],
+  sha512:
+    'd2a997eb2a19c09fb2d548df4f7de85020079124fe64a1a5b5393419df3a070d76faee11f6df364310145baeccbbc99c9237bf8264bf1419f98482a82c2dc544'
 }
 
-/** ZSG is the RSG mod set plus the FSG (filtered seed) mod. Idempotent. */
-async function installFsgMod(gameDir: string, id: InstanceId): Promise<void> {
-  const modsDir = join(gameDir, 'mods')
-  mkdirSync(modsDir, { recursive: true })
-  const dest = join(modsDir, FSG_MOD.file)
-  if (existsSync(dest)) return
-  sendProgress({ instance: id, phase: 'mods', fraction: null, message: 'Installing FSG mod…' })
-  const res = await fetch(FSG_MOD.url, { redirect: 'follow' })
-  if (!res.ok) throw new Error(`FSG mod download failed (${res.status})`)
-  writeFileSync(dest, Buffer.from(await res.arrayBuffer()))
+const FSG_MOD = {
+  file: 'FSG-Mod-5.3.0+MC1.16.1.jar',
+  urls: ['https://cdn.modrinth.com/data/XZOGBIpM/versions/qc4OUmcd/FSG-Mod-5.3.0%2BMC1.16.1.jar']
+}
+
+/** Download one legal add-on mod jar into the instance's mods/, surfacing progress. */
+async function installInstanceMod(
+  gameDir: string,
+  id: InstanceId,
+  mod: { file: string; urls: string[]; sha512?: string },
+  label: string
+): Promise<void> {
+  sendProgress({ instance: id, phase: 'mods', fraction: null, message: `Installing ${label}…` })
+  await installModJar(join(gameDir, 'mods'), mod)
 }
 
 async function installInstance(
@@ -202,7 +219,22 @@ async function installInstance(
     if (id === 'ranked') writeRankedConfigs(gameDir)
     else writeRsgConfigs(gameDir)
 
-    if (id === 'zsg') await installFsgMod(gameDir, id)
+    // Legal add-on mods: extra-options for RSG/ZSG, plus FSG for ZSG. Best-effort — a failed
+    // fetch must never fail the install; the prompt/manage button can add it later.
+    if (id === 'rsg' || id === 'zsg') {
+      try {
+        await installInstanceMod(gameDir, id, EXTRA_OPTIONS_MOD, 'extra-options')
+      } catch (e) {
+        pushLog('system', `extra-options install skipped: ${e instanceof Error ? e.message : e}`)
+      }
+    }
+    if (id === 'zsg') {
+      try {
+        await installInstanceMod(gameDir, id, FSG_MOD, 'FSG mod')
+      } catch (e) {
+        pushLog('system', `FSG mod install skipped: ${e instanceof Error ? e.message : e}`)
+      }
+    }
 
     // Ranked: always run the newest ranked mod from Modrinth, not the pack's pinned one.
     if (id === 'ranked') {
@@ -409,6 +441,28 @@ export function registerIpc(): void {
     const dir = join(gmll.gameDir(id), 'mods')
     setModEnabled(dir, file, enabled)
     return listMods(dir)
+  })
+  ipcMain.handle(IPC.instExtraOptionsPrompt, () => {
+    try {
+      const seen = store.getConfig().extraOptionsPromptSeen
+      const checks = (['rsg', 'zsg'] as InstanceId[]).map((id) => ({
+        id,
+        ready: states[id].state === 'ready',
+        hasExtraOptions: hasExtraOptions(join(gmll.gameDir(id), 'mods'))
+      }))
+      return shouldPromptExtraOptions(seen, checks)
+    } catch {
+      // Never nag on uncertainty.
+      return { show: false, instances: [] as InstanceId[] }
+    }
+  })
+  ipcMain.handle(IPC.instAddExtraOptions, async (_e, ids: InstanceId[]) => {
+    for (const id of ids) {
+      await installInstanceMod(gmll.gameDir(id), id, EXTRA_OPTIONS_MOD, 'extra-options')
+    }
+  })
+  ipcMain.handle(IPC.instDismissExtraOptionsPrompt, () => {
+    store.setConfig({ extraOptionsPromptSeen: true })
   })
   ipcMain.handle(IPC.instOpenFolder, (_e, id: InstanceId) => {
     const dir = paths.instanceDir(id)
