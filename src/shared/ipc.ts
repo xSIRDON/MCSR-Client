@@ -37,6 +37,9 @@ export const IPC = {
   instStateChanged: 'inst:stateChanged',
   instMods: 'inst:mods',
   instToggleMod: 'inst:toggleMod',
+  instExtraOptionsPrompt: 'inst:extraOptionsPrompt',
+  instAddExtraOptions: 'inst:addExtraOptions',
+  instDismissExtraOptionsPrompt: 'inst:dismissExtraOptionsPrompt',
   instOpenFolder: 'inst:openFolder',
   instStdGet: 'inst:stdGet',
   instStdSet: 'inst:stdSet',
@@ -111,6 +114,9 @@ export interface McsrApi {
     onStateChanged(cb: (s: InstanceStatus) => void): () => void
     mods(id: InstanceId): Promise<ModInfo[]>
     toggleMod(id: InstanceId, file: string, enabled: boolean): Promise<ModInfo[]>
+    extraOptionsPrompt(): Promise<{ show: boolean; instances: InstanceId[] }>
+    addExtraOptions(instances: InstanceId[]): Promise<void>
+    dismissExtraOptionsPrompt(): Promise<void>
     openFolder(id: InstanceId): Promise<void>
     getStandardSettings(id: InstanceId): Promise<StandardSettings>
     setStandardSettings(id: InstanceId, patch: StandardSettings): Promise<StandardSettings>
