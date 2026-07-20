@@ -458,6 +458,7 @@ export function registerIpc(): void {
   })
   ipcMain.handle(IPC.instAddExtraOptions, async (_e, ids: InstanceId[]) => {
     for (const id of ids) {
+      if (id !== 'rsg' && id !== 'zsg') continue
       await installInstanceMod(gmll.gameDir(id), id, EXTRA_OPTIONS_MOD, 'extra-options')
     }
   })

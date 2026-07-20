@@ -223,7 +223,8 @@ function ModsCard({ id }: { id: InstanceId }) {
     void window.mcsr.instances.toggleMod(id, file, enabled).then(setMods)
 
   const extraOptionsInstalled = !!mods?.some((m) => m.name.toLowerCase() === 'extra-options')
-  const canAddExtraOptions = (id === 'rsg' || id === 'zsg') && mods !== null && !extraOptionsInstalled
+  const canAddExtraOptions =
+    (id === 'rsg' || id === 'zsg') && !!mods && mods.length > 0 && !extraOptionsInstalled
 
   async function addExtraOptions() {
     setAdding(true)
