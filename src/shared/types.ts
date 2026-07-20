@@ -68,6 +68,8 @@ export interface AppConfig {
   /** Base URL of the friends/presence backend (see server/). Defaults to the official
    *  MCSR Client network so friends work out of the box; overridable via the config file. */
   friendsServerUrl: string | null
+  /** Whether the one-time "add extra-options to existing installs" prompt has been answered. */
+  extraOptionsPromptSeen: boolean
 }
 
 /** The official friends network, baked in so every client is on the same network by default.
@@ -137,7 +139,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   ninjabrain: true,
   toolscreen: true,
   favorites: [],
-  friendsServerUrl: DEFAULT_FRIENDS_SERVER
+  friendsServerUrl: DEFAULT_FRIENDS_SERVER,
+  extraOptionsPromptSeen: false
 }
 
 /** A single mod jar inside an instance's mods/ folder. */

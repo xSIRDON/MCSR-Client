@@ -16,6 +16,7 @@ type RawConfig = {
   toolscreen?: boolean
   favorites?: unknown[]
   friendsServerUrl?: string | null
+  extraOptionsPromptSeen?: boolean
 }
 
 /** Coerce a stored (possibly legacy) config into the current AppConfig shape. */
@@ -50,7 +51,11 @@ function normalizeConfig(raw: RawConfig): AppConfig {
     friendsServerUrl:
       typeof raw.friendsServerUrl === 'string' && raw.friendsServerUrl
         ? raw.friendsServerUrl
-        : DEFAULT_CONFIG.friendsServerUrl
+        : DEFAULT_CONFIG.friendsServerUrl,
+    extraOptionsPromptSeen:
+      typeof raw.extraOptionsPromptSeen === 'boolean'
+        ? raw.extraOptionsPromptSeen
+        : DEFAULT_CONFIG.extraOptionsPromptSeen
   }
 }
 
