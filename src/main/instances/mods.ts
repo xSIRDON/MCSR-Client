@@ -4,7 +4,7 @@
 
 import { existsSync, readdirSync, renameSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { ModInfo } from '../../shared/types'
+import type { InstanceId, ModInfo } from '../../shared/types'
 import { verifyBuffer } from './mrpack'
 
 const DISABLED = '.disabled'
@@ -97,4 +97,25 @@ export async function installModJar(
 /** True if an extra-options jar is present in `modsDir` (enabled or parked as .disabled). */
 export function hasExtraOptions(modsDir: string): boolean {
   return listMods(modsDir).some((m) => m.name.toLowerCase() === 'extra-options')
+}
+
+/** Precomputed per-instance facts the prompt-eligibility check needs. */
+export interface InstanceModState {
+  id: InstanceId
+  ready: boolean
+  hasExtraOptions: boolean
+}
+
+/**
+ * Decide whether to show the one-time "add extra-options" prompt. Show it when the prompt
+ * hasn't been answered and at least one installed (ready) instance is missing extra-options;
+ * `instances` is exactly those installed-and-missing instances.
+ */
+export function shouldPromptExtraOptions(
+  seen: boolean,
+  states: InstanceModState[]
+): { show: boolean; instances: InstanceId[] } {
+  if (seen) return { show: false, instances: [] }
+  const instances = states.filter((s) => s.ready && !s.hasExtraOptions).map((s) => s.id)
+  return { show: instances.length > 0, instances }
 }
