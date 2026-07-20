@@ -3,7 +3,14 @@ import { createHash } from 'node:crypto'
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseModFilename, listMods, setModEnabled, installModJar, hasExtraOptions } from './mods'
+import {
+  parseModFilename,
+  listMods,
+  setModEnabled,
+  installModJar,
+  hasExtraOptions,
+  shouldPromptExtraOptions
+} from './mods'
 
 describe('parseModFilename', () => {
   it('splits name and version at the first digit-led separator', () => {
@@ -191,5 +198,37 @@ describe('hasExtraOptions', () => {
     mkdirSync(dir, { recursive: true })
     writeFileSync(join(dir, 'sodium-2.5.1.jar'), '')
     expect(hasExtraOptions(dir)).toBe(false)
+  })
+})
+
+describe('shouldPromptExtraOptions', () => {
+  it('does not show once the prompt has been seen', () => {
+    expect(
+      shouldPromptExtraOptions(true, [{ id: 'rsg', ready: true, hasExtraOptions: false }])
+    ).toEqual({ show: false, instances: [] })
+  })
+
+  it('shows for installed instances missing extra-options', () => {
+    expect(
+      shouldPromptExtraOptions(false, [
+        { id: 'rsg', ready: true, hasExtraOptions: false },
+        { id: 'zsg', ready: true, hasExtraOptions: true }
+      ])
+    ).toEqual({ show: true, instances: ['rsg'] })
+  })
+
+  it('ignores instances that are not installed', () => {
+    expect(
+      shouldPromptExtraOptions(false, [{ id: 'rsg', ready: false, hasExtraOptions: false }])
+    ).toEqual({ show: false, instances: [] })
+  })
+
+  it('does not show when every installed instance already has it', () => {
+    expect(
+      shouldPromptExtraOptions(false, [
+        { id: 'rsg', ready: true, hasExtraOptions: true },
+        { id: 'zsg', ready: true, hasExtraOptions: true }
+      ])
+    ).toEqual({ show: false, instances: [] })
   })
 })
