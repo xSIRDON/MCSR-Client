@@ -1,6 +1,7 @@
-import { existsSync, readdirSync, renameSync } from 'node:fs'
+import { existsSync, readdirSync, renameSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { ModInfo } from '../../shared/types'
+import { verifyBuffer } from './mrpack'
 
 const DISABLED = '.disabled'
 
@@ -34,4 +35,44 @@ export function setModEnabled(modsDir: string, file: string, enabled: boolean): 
   } else {
     if (existsSync(jar)) renameSync(jar, disabled)
   }
+}
+
+export type FetchBuffer = (url: string) => Promise<Buffer>
+
+const nodeFetchBuffer: FetchBuffer = async (url) => {
+  const res = await fetch(url, { redirect: 'follow' })
+  if (!res.ok) throw new Error(`download failed ${res.status} for ${url}`)
+  return Buffer.from(await res.arrayBuffer())
+}
+
+export interface JarMod {
+  file: string
+  urls: string[]
+  sha512?: string
+}
+
+export async function installModJar(
+  modsDir: string,
+  mod: JarMod,
+  fetchBuffer: FetchBuffer = nodeFetchBuffer
+): Promise<boolean> {
+  mkdirSync(modsDir, { recursive: true })
+  const dest = join(modsDir, mod.file)
+  if (existsSync(dest) || existsSync(dest + DISABLED)) return false
+  let lastErr: unknown
+  for (const url of mod.urls) {
+    try {
+      const buf = await fetchBuffer(url)
+      if (mod.sha512) verifyBuffer(buf, { sha512: mod.sha512 })
+      writeFileSync(dest, buf)
+      return true
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  throw new Error(`Failed to install ${mod.file}: ${String(lastErr)}`)
+}
+
+export function hasExtraOptions(modsDir: string): boolean {
+  return listMods(modsDir).some((m) => m.name.toLowerCase() === 'extra-options')
 }
