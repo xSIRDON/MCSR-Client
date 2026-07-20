@@ -51,6 +51,7 @@ export interface AppConfig {
   toolscreen: boolean
   favorites: string[]
   friendsServerUrl: string | null
+  extraOptionsPromptSeen: boolean
 }
 
 export const DEFAULT_FRIENDS_SERVER = 'https://mcsrfriends.duckdns.org:8787'
@@ -102,7 +103,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   ninjabrain: true,
   toolscreen: true,
   favorites: [],
-  friendsServerUrl: DEFAULT_FRIENDS_SERVER
+  friendsServerUrl: DEFAULT_FRIENDS_SERVER,
+  extraOptionsPromptSeen: false
 }
 
 export interface ModInfo {
