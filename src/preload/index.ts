@@ -50,6 +50,10 @@ const api: McsrApi = {
     mods: (id: InstanceId) => ipcRenderer.invoke(IPC.instMods, id),
     toggleMod: (id: InstanceId, file: string, enabled: boolean) =>
       ipcRenderer.invoke(IPC.instToggleMod, id, file, enabled),
+    extraOptionsPrompt: () => ipcRenderer.invoke(IPC.instExtraOptionsPrompt),
+    addExtraOptions: (instances: InstanceId[]) =>
+      ipcRenderer.invoke(IPC.instAddExtraOptions, instances),
+    dismissExtraOptionsPrompt: () => ipcRenderer.invoke(IPC.instDismissExtraOptionsPrompt),
     openFolder: (id: InstanceId) => ipcRenderer.invoke(IPC.instOpenFolder, id),
     getStandardSettings: (id: InstanceId) => ipcRenderer.invoke(IPC.instStdGet, id),
     setStandardSettings: (id: InstanceId, patch: StandardSettings) =>
