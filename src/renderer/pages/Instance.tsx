@@ -213,6 +213,8 @@ function FilesCard({ id }: { id: InstanceId }) {
 
 function ModsCard({ id }: { id: InstanceId }) {
   const [mods, setMods] = useState<ModInfo[] | null>(null)
+  const [adding, setAdding] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   useEffect(() => {
     void window.mcsr.instances.mods(id).then(setMods)
   }, [id])
@@ -220,8 +222,40 @@ function ModsCard({ id }: { id: InstanceId }) {
   const toggle = (file: string, enabled: boolean) =>
     void window.mcsr.instances.toggleMod(id, file, enabled).then(setMods)
 
+  const extraOptionsInstalled = !!mods?.some((m) => m.name.toLowerCase() === 'extra-options')
+  const canAddExtraOptions = (id === 'rsg' || id === 'zsg') && mods !== null && !extraOptionsInstalled
+
+  async function addExtraOptions() {
+    setAdding(true)
+    setError(null)
+    try {
+      await window.mcsr.instances.addExtraOptions([id])
+      setMods(await window.mcsr.instances.mods(id))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not add extra-options.')
+    } finally {
+      setAdding(false)
+    }
+  }
+
   return (
     <Card title={`Mods${mods ? ` · ${mods.length}` : ''}`}>
+      {canAddExtraOptions && (
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-[var(--gold)]/30 bg-[var(--gold)]/[0.06] px-3 py-2">
+          <div className="min-w-0 text-sm text-muted">
+            <span className="text-text">extra-options</span> — a legal MCSR mod, not installed on
+            this instance.
+          </div>
+          <button
+            onClick={addExtraOptions}
+            disabled={adding}
+            className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted transition-colors hover:text-text disabled:opacity-50"
+          >
+            {adding ? 'Adding…' : 'Add extra-options'}
+          </button>
+        </div>
+      )}
+      {error && <div className="mb-2 text-xs text-[var(--loss)]">{error}</div>}
       {!mods ? (
         <div className="text-sm text-muted">Loading…</div>
       ) : mods.length === 0 ? (
