@@ -5,7 +5,7 @@
 <br />
 <br />
 
-[![Version](https://img.shields.io/badge/version-v1.5.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![Version](https://img.shields.io/badge/version-v1.6.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-3b82f6?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&labelColor=15151c)](LICENSE)
 
@@ -19,7 +19,7 @@ One app to sign in, install your instances, launch the game, and watch your rank
 
 ### [⬇  Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 
-<sub>Windows installer · auto-updates · v1.5.0</sub>
+<sub>Windows installer · auto-updates · v1.6.0</sub>
 
 </div>
 
@@ -44,7 +44,9 @@ Three curated, ready-to-run setups — each downloads and configures itself:
 - **RSG** — random-seed glitchless. The same legal mod set with the ranked mod removed, plus the **SeedQueue** wall for instant resets.
 - **ZSG** — the RSG mod set with the **FSG** mod added on top, for filtered-seed practice.
 
-SeedQueue wall resource packs come pre-installed for RSG and ZSG.
+SeedQueue wall resource packs come pre-installed for RSG and ZSG. The legal **extra-options**
+mod ships with RSG and ZSG too — and you can add or re-enable it any time from **Edit instance →
+Mods** (existing installs get a one-time prompt to add it).
 
 ### Launches Minecraft for you
 - Downloads and runs **Minecraft 1.16.1 + Fabric** directly — no external launcher required.
