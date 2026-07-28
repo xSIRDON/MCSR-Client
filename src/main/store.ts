@@ -86,7 +86,11 @@ export const store = {
     return config
   },
   setConfig(patch: Partial<AppConfig>): AppConfig {
-    config = { ...this.getConfig(), ...patch }
+    // Normalise on write, not just on read: this patch arrives straight from the renderer
+    // over cfg:set, and the config holds values the app later acts on (per-instance java
+    // path, SeedQueue jar path, friends server URL). Re-running the same coercion used on
+    // load keeps unknown keys and wrong-typed values out of the persisted file.
+    config = normalizeConfig({ ...this.getConfig(), ...patch } as RawConfig)
     writeJson(paths.configFile(), config)
     return config
   },

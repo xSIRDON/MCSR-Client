@@ -25,6 +25,10 @@ if (!SECRET) {
 if (DEV_UNVERIFIED) console.warn('!! DEV_ALLOW_UNVERIFIED is ON — identity checks are OFF. Never run like this in production.')
 
 const PORT = Number(process.env.PORT ?? 8787)
+// Set to 1 ONLY when a reverse proxy (Caddy/nginx) is the sole path to this port — i.e.
+// together with BIND=127.0.0.1. Otherwise a direct caller could spoof X-Forwarded-For and
+// hand themselves a fresh rate-limit bucket per request.
+const TRUST_PROXY = process.env.TRUST_PROXY === '1'
 const TOKEN_TTL_S = 30 * 24 * 3600 // 30 days
 const OFFLINE_AFTER_S = 3 * 60 // 3 missed minutes of heartbeats = offline
 
@@ -67,6 +71,14 @@ const q = {
   upsertUser: db.prepare(
     `INSERT INTO users (uuid, nickname, state, last_beat, created_at) VALUES (?, ?, 'offline', 0, ?)
      ON CONFLICT(uuid) DO UPDATE SET nickname = CASE WHEN excluded.nickname != '' THEN excluded.nickname ELSE users.nickname END`
+  ),
+  // Placeholder row for a target who has never signed in. Unlike upsertUser this can never
+  // overwrite an existing nickname: the caller-supplied name is unverified, so letting it
+  // update a real row would let anyone rename another player for all of their friends.
+  // Only /v1/auth/verify (where the name is Mojang-proven) may change a nickname.
+  placeholderUser: db.prepare(
+    `INSERT INTO users (uuid, nickname, state, last_beat, created_at) VALUES (?, ?, 'offline', 0, ?)
+     ON CONFLICT(uuid) DO NOTHING`
   ),
   beat: db.prepare(`UPDATE users SET state = ?, last_beat = ? WHERE uuid = ?`),
   pair: db.prepare(`SELECT * FROM friendships WHERE a = ? AND b = ?`),
@@ -211,7 +223,15 @@ async function hasJoined(username, serverId) {
 async function route(req, res) {
   const url = new URL(req.url, 'http://x')
   const path = url.pathname.replace(/\/+$/, '')
-  const ip = req.socket.remoteAddress ?? '?'
+  // Behind the documented Caddy/nginx deployment every request's socket address is the
+  // proxy's, so keying the auth rate limiters on it would put all clients in one bucket —
+  // letting a single caller lock every other user out of signing in. Trust a forwarded
+  // address ONLY when explicitly told we're behind a proxy (TRUST_PROXY=1, which must be
+  // set together with BIND=127.0.0.1 so nothing else can reach the port and spoof it).
+  const ip =
+    (TRUST_PROXY && String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim()) ||
+    req.socket.remoteAddress ||
+    '?'
 
   if (req.method === 'OPTIONS') return send(res, 204)
   if (path === '/v1/health') return send(res, 200, { ok: true })
@@ -294,8 +314,9 @@ async function route(req, res) {
       if (existing.status === 'pending' && existing.requested_by === target) q.acceptPair.run(a, b)
       return send(res, 204)
     }
-    // The target may never have signed in yet; the request waits for them.
-    q.upsertUser.run(target, nick, nowS())
+    // The target may never have signed in yet; the request waits for them. Never overwrite
+    // an existing (Mojang-verified) nickname with this unverified one.
+    q.placeholderUser.run(target, nick, nowS())
     q.insertPair.run(a, b, 'pending', me, nowS())
     return send(res, 204)
   }
@@ -388,9 +409,11 @@ async function route(req, res) {
 
 createServer((req, res) => {
   route(req, res).catch((e) => {
-    send(res, e instanceof SyntaxError || e.message === 'body too large' ? 400 : 500, {
-      error: e.message ?? 'error'
-    })
+    const badRequest = e instanceof SyntaxError || e.message === 'body too large'
+    if (badRequest) return send(res, 400, { error: e.message ?? 'error' })
+    // Don't hand internal error text (schema/query fragments) to the caller.
+    console.error('[500]', e)
+    send(res, 500, { error: 'internal error' })
   })
 }).listen(PORT, process.env.BIND || '0.0.0.0', () => {
   // BIND=127.0.0.1 when a TLS reverse proxy (Caddy) fronts this — keeps the raw HTTP
