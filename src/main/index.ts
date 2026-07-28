@@ -4,8 +4,12 @@ import { registerIpc, isGameRunning } from './ipc-handlers'
 import { setupUpdater } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
 import { removeDesktopShortcut } from './tools/ninjabrain'
+import { isSafeExternalUrl, isSameOrigin } from './security/url-safety'
 
-const isDev = !!process.env['ELECTRON_RENDERER_URL']
+// Dev-mode must never be reachable in a packaged build: ELECTRON_RENDERER_URL lives in the
+// user-writable environment, so keying off it alone would let a local process point the
+// installed app at remote HTML — with the preload (and all of window.mcsr) attached to it.
+const isDev = !app.isPackaged && !!process.env['ELECTRON_RENDERER_URL']
 
 // The paceman stats API doesn't send CORS headers, so a renderer-side fetch is
 // blocked. Inject an allow-origin header on its responses so the live-pace panel
@@ -49,10 +53,20 @@ function createWindow(): void {
 
   win.on('ready-to-show', () => win.show())
 
-  // Open external links in the system browser, never in-app.
+  // Open external links in the system browser, never in-app. http(s) only: openExternal
+  // hands the string to the Windows shell, so an unvetted scheme (file:, smb:, ms-msdt:)
+  // is a code-execution vector — and some of these URLs come from remote APIs.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url)
+    if (isSafeExternalUrl(url)) void shell.openExternal(url)
     return { action: 'deny' }
+  })
+
+  // The renderer is a HashRouter SPA and never performs a top-level navigation. Anything
+  // that did would re-run the preload on the destination and hand it window.mcsr.
+  // (will-navigate does not fire for hash changes, so in-app routing is unaffected;
+  // programmatic loadURL/loadFile don't emit it either.)
+  win.webContents.on('will-navigate', (e, url) => {
+    if (!isSameOrigin(url, win.webContents.getURL())) e.preventDefault()
   })
 
   // Minecraft runs in its own window; don't yank it away if the user hits X on the launcher.
