@@ -4,8 +4,9 @@ import { registerIpc, isGameRunning } from './ipc-handlers'
 import { setupUpdater } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
 import { removeDesktopShortcut } from './tools/ninjabrain'
+import { isSafeExternalUrl, isSameOrigin } from './security/url-safety'
 
-const isDev = !!process.env['ELECTRON_RENDERER_URL']
+const isDev = !app.isPackaged && !!process.env['ELECTRON_RENDERER_URL']
 
 function enablePacemanCors(): void {
   session.defaultSession.webRequest.onHeadersReceived(
@@ -43,8 +44,12 @@ function createWindow(): void {
   win.on('ready-to-show', () => win.show())
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url)
+    if (isSafeExternalUrl(url)) void shell.openExternal(url)
     return { action: 'deny' }
+  })
+
+  win.webContents.on('will-navigate', (e, url) => {
+    if (!isSameOrigin(url, win.webContents.getURL())) e.preventDefault()
   })
 
   let confirmedQuit = false
