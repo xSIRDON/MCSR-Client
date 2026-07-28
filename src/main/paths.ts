@@ -1,9 +1,21 @@
 import { app } from 'electron'
 import { existsSync, renameSync, mkdirSync, copyFileSync, unlinkSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import type { InstanceId } from '../shared/types'
+import { isInstanceId, type InstanceId } from '../shared/types'
 
 const DATA_DIR = 'data'
+
+/**
+ * Guard an instance id before it becomes a path segment.
+ *
+ * The InstanceId type is erased at runtime and these ids are join()ed into filesystem
+ * paths that get written, enumerated, and recursively deleted — so an unchecked value
+ * here is a path-traversal parameter. Enforced at the sink so no caller can forget.
+ */
+function assertId(id: InstanceId): InstanceId {
+  if (!isInstanceId(id)) throw new Error(`Unknown instance: ${String(id)}`)
+  return id
+}
 
 /** Where the client itself lives: the project root in dev, beside the exe when packaged. */
 function installBase(): string {
@@ -84,9 +96,9 @@ export const paths = {
   runtime: () => join(rootDir(), 'runtime'),
   shared: () => join(rootDir(), 'shared'),
   instances: () => join(rootDir(), 'instances'),
-  instanceDir: (id: InstanceId) => join(rootDir(), 'instances', id),
+  instanceDir: (id: InstanceId) => join(rootDir(), 'instances', assertId(id)),
   /** The .minecraft game directory for an instance. */
-  gameDir: (id: InstanceId) => join(rootDir(), 'instances', id, '.minecraft'),
+  gameDir: (id: InstanceId) => join(rootDir(), 'instances', assertId(id), '.minecraft'),
   tracker: () => join(rootDir(), 'tracker'),
   /** Bundled standalone tools (Ninjabrain Bot, etc.). */
   tools: () => join(rootDir(), 'tools'),

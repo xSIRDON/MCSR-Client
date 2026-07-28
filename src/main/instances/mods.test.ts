@@ -232,3 +232,47 @@ describe('shouldPromptExtraOptions', () => {
     ).toEqual({ show: false, instances: [] })
   })
 })
+
+
+describe('setModEnabled rejects non-basename files', () => {
+  const made: string[] = []
+  function tmpMods(): string {
+    const d = mkdtempSync(join(tmpdir(), 'mcsr-mods-'))
+    made.push(d)
+    return d
+  }
+  afterEach(() => {
+    for (const d of made.splice(0)) {
+      try {
+        rmSync(d, { recursive: true, force: true })
+      } catch {
+        /* best effort */
+      }
+    }
+  })
+
+  it('refuses a traversing path instead of renaming outside mods/', () => {
+    const dir = tmpMods()
+    mkdirSync(dir, { recursive: true })
+    const outside = join(dir, '..', 'victim.txt')
+    writeFileSync(outside, 'important')
+
+    expect(() => setModEnabled(dir, '../victim.txt', false)).toThrow(/Invalid mod file/)
+    expect(existsSync(outside)).toBe(true)
+    expect(existsSync(outside + '.disabled')).toBe(false)
+  })
+
+  it('refuses non-jar names', () => {
+    const dir = tmpMods()
+    mkdirSync(dir, { recursive: true })
+    expect(() => setModEnabled(dir, 'notes.txt', false)).toThrow(/Invalid mod file/)
+  })
+
+  it('still toggles an ordinary jar basename', () => {
+    const dir = tmpMods()
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'sodium-2.5.1.jar'), '')
+    setModEnabled(dir, 'sodium-2.5.1.jar', false)
+    expect(existsSync(join(dir, 'sodium-2.5.1.jar.disabled'))).toBe(true)
+  })
+})

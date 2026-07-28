@@ -4,6 +4,20 @@ import { ALL_MAP_IDS } from './maps'
 
 export type InstanceId = 'ranked' | 'rsg' | 'zsg'
 
+/** The only valid instance ids. */
+export const INSTANCE_IDS = ['ranked', 'rsg', 'zsg'] as const
+
+/**
+ * Runtime check that a value really is an InstanceId.
+ *
+ * The TypeScript type is erased at runtime, and instance ids are join()ed straight into
+ * filesystem paths — so an unchecked id crossing the IPC boundary is a path-traversal
+ * parameter, not just a type error.
+ */
+export function isInstanceId(value: unknown): value is InstanceId {
+  return value === 'ranked' || value === 'rsg' || value === 'zsg'
+}
+
 /** Minecraft account profile returned after Microsoft login. */
 export interface Profile {
   uuid: string // dashless

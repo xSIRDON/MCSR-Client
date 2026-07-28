@@ -2,7 +2,7 @@
 // first-time install ("import from another instance") and the Edit-instance page.
 
 import { existsSync, copyFileSync, cpSync, mkdirSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
 /** List the world folders (under saves/) in a game dir, for the import picker. */
 export function listWorlds(gameDir: string): string[] {
@@ -62,6 +62,9 @@ export function copyInstanceSettings(
 
   let worlds = 0
   for (const world of opts.worlds ?? []) {
+    // World names reach us over IPC and are joined onto both the source and destination
+    // saves/ dirs; anything but a bare folder name would escape them.
+    if (world !== basename(world) || world === '.' || world === '..') continue
     const src = join(srcGameDir, 'saves', world)
     if (existsSync(src)) {
       cpSync(src, join(dstGameDir, 'saves', world), { recursive: true })

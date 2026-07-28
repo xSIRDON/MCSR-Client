@@ -3,7 +3,7 @@
 // keep it on disk. Names/versions are derived heuristically from the filename.
 
 import { existsSync, readdirSync, renameSync, mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import type { InstanceId, ModInfo } from '../../shared/types'
 import { verifyBuffer } from './mrpack'
 
@@ -40,6 +40,12 @@ export function listMods(modsDir: string): ModInfo[] {
  * jar filename (no suffix). No-op if the target state is already in place.
  */
 export function setModEnabled(modsDir: string, file: string, enabled: boolean): void {
+  // `file` crosses the IPC boundary, and join() collapses "../" — without this an
+  // arbitrary path could be renamed to "<path>.disabled". listMods only ever yields
+  // bare ".jar" basenames, so legitimate callers are unaffected.
+  if (file !== basename(file) || !/\.jar$/i.test(file)) {
+    throw new Error(`Invalid mod file: ${file}`)
+  }
   const jar = join(modsDir, file)
   const disabled = jar + DISABLED
   if (enabled) {

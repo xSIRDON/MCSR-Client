@@ -4,7 +4,7 @@
 
 import { createHash } from 'node:crypto'
 import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync, cpSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import extract from 'extract-zip'
 
@@ -54,7 +54,29 @@ export function filterMods(files: PackFile[], excludePrefixes: string[]): PackFi
   })
 }
 
-/** Verify a downloaded buffer against the pack hashes (sha512 preferred). */
+/**
+ * Resolve a pack-supplied relative path inside `root`, refusing anything that escapes it.
+ *
+ * Paths in modrinth.index.json are remote input: `join()` happily collapses `../`, so
+ * without this a hostile or compromised pack could write outside the instance — e.g. into
+ * the Windows Startup folder, turning "mods run in the game JVM" into "native code at login".
+ */
+export function safeJoin(root: string, rel: string): string {
+  const dest = resolve(root, rel)
+  const rp = relative(root, dest)
+  if (rp === '' || rp.startsWith('..') || isAbsolute(rp)) {
+    throw new Error(`Refusing out-of-bounds pack path: ${rel}`)
+  }
+  return dest
+}
+
+/**
+ * Verify a downloaded buffer against the pack hashes (sha512 preferred).
+ *
+ * Fails closed: a file with no hash cannot be verified, so it is rejected rather than
+ * accepted. (Every file in the upstream pack ships a sha512, so this is not a real
+ * constraint in practice — it just removes "omit the hashes" as a bypass.)
+ */
 export function verifyBuffer(buf: Buffer, hashes: PackFile['hashes']): void {
   if (hashes.sha512) {
     const got = createHash('sha512').update(buf).digest('hex')
@@ -66,7 +88,7 @@ export function verifyBuffer(buf: Buffer, hashes: PackFile['hashes']): void {
     if (got !== hashes.sha1) throw new Error('sha1 mismatch')
     return
   }
-  // No hash to check against — accept.
+  throw new Error('no hash to verify against')
 }
 
 export function fabricVersionString(index: ModrinthIndex): string {
@@ -132,7 +154,7 @@ export async function installPackFiles(
   let done = 0
   for (const file of files) {
     opts.onProgress?.(done, total, file.path.split('/').pop() ?? file.path)
-    const dest = join(gameDir, file.path)
+    const dest = safeJoin(gameDir, file.path)
     mkdirSync(dirname(dest), { recursive: true })
 
     let lastErr: unknown
@@ -194,11 +216,17 @@ export async function installLatestRankedMod(
   verifyBuffer(buf, file.hashes)
   const modsDir = join(gameDir, 'mods')
   mkdirSync(modsDir, { recursive: true })
-  writeFileSync(join(modsDir, file.filename), buf)
+  // The filename comes from a remote API response; keep it a bare .jar basename so it
+  // cannot escape mods/.
+  const jarName = basename(file.filename)
+  if (!jarName || !/\.jar$/i.test(jarName)) {
+    throw new Error(`Unexpected mod filename from Modrinth: ${file.filename}`)
+  }
+  writeFileSync(join(modsDir, jarName), buf)
 
   // Drop the pack's pinned ranked jar(s) now that the latest is in place.
   for (const f of readdirSync(modsDir)) {
-    if (f !== file.filename && f.toLowerCase().startsWith('mcsrranked')) {
+    if (f !== jarName && f.toLowerCase().startsWith('mcsrranked')) {
       try {
         rmSync(join(modsDir, f), { force: true })
       } catch {
