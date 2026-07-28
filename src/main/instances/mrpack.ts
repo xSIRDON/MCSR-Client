@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync, cpSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import extract from 'extract-zip'
 
@@ -43,6 +43,15 @@ export function filterMods(files: PackFile[], excludePrefixes: string[]): PackFi
   })
 }
 
+export function safeJoin(root: string, rel: string): string {
+  const dest = resolve(root, rel)
+  const rp = relative(root, dest)
+  if (rp === '' || rp.startsWith('..') || isAbsolute(rp)) {
+    throw new Error(`Refusing out-of-bounds pack path: ${rel}`)
+  }
+  return dest
+}
+
 export function verifyBuffer(buf: Buffer, hashes: PackFile['hashes']): void {
   if (hashes.sha512) {
     const got = createHash('sha512').update(buf).digest('hex')
@@ -54,6 +63,7 @@ export function verifyBuffer(buf: Buffer, hashes: PackFile['hashes']): void {
     if (got !== hashes.sha1) throw new Error('sha1 mismatch')
     return
   }
+  throw new Error('no hash to verify against')
 }
 
 export function fabricVersionString(index: ModrinthIndex): string {
@@ -113,7 +123,7 @@ export async function installPackFiles(
   let done = 0
   for (const file of files) {
     opts.onProgress?.(done, total, file.path.split('/').pop() ?? file.path)
-    const dest = join(gameDir, file.path)
+    const dest = safeJoin(gameDir, file.path)
     mkdirSync(dirname(dest), { recursive: true })
 
     let lastErr: unknown
@@ -168,10 +178,14 @@ export async function installLatestRankedMod(
   verifyBuffer(buf, file.hashes)
   const modsDir = join(gameDir, 'mods')
   mkdirSync(modsDir, { recursive: true })
-  writeFileSync(join(modsDir, file.filename), buf)
+  const jarName = basename(file.filename)
+  if (!jarName || !/\.jar$/i.test(jarName)) {
+    throw new Error(`Unexpected mod filename from Modrinth: ${file.filename}`)
+  }
+  writeFileSync(join(modsDir, jarName), buf)
 
   for (const f of readdirSync(modsDir)) {
-    if (f !== file.filename && f.toLowerCase().startsWith('mcsrranked')) {
+    if (f !== jarName && f.toLowerCase().startsWith('mcsrranked')) {
       try {
         rmSync(join(modsDir, f), { force: true })
       } catch {

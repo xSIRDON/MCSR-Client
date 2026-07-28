@@ -4,6 +4,7 @@ import {
   parseIndex,
   filterMods,
   verifyBuffer,
+  safeJoin,
   fabricVersionString,
   RSG_EXCLUDE_PREFIXES,
   type ModrinthIndex,
@@ -68,5 +69,35 @@ describe('verifyBuffer', () => {
 describe('fabricVersionString', () => {
   it('builds the gmll fabric version id', () => {
     expect(fabricVersionString(sampleIndex)).toBe('fabric-loader-0.19.2-1.16.1')
+  })
+})
+
+
+describe('safeJoin (pack path containment)', () => {
+  const root = process.platform === 'win32' ? String.raw`C:\game` : '/game'
+
+  it('resolves ordinary pack paths inside the game dir', () => {
+    expect(safeJoin(root, 'mods/sodium.jar')).toContain('sodium.jar')
+    expect(safeJoin(root, 'config/mcsr/seedqueue.json')).toContain('seedqueue.json')
+  })
+
+  it('refuses paths that escape the game dir', () => {
+    expect(() => safeJoin(root, '../evil.bat')).toThrow(/out-of-bounds/)
+    expect(() =>
+      safeJoin(root, '../../../../AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/x.bat')
+    ).toThrow(/out-of-bounds/)
+  })
+
+  it('refuses absolute paths and the root itself', () => {
+    const abs =
+      process.platform === 'win32' ? String.raw`C:\Windows\system32\evil.dll` : '/etc/passwd'
+    expect(() => safeJoin(root, abs)).toThrow(/out-of-bounds/)
+    expect(() => safeJoin(root, '')).toThrow(/out-of-bounds/)
+  })
+})
+
+describe('verifyBuffer fails closed', () => {
+  it('rejects a file that carries no hash at all', () => {
+    expect(() => verifyBuffer(Buffer.from('anything'), {})).toThrow(/no hash/)
   })
 })

@@ -81,7 +81,9 @@ function hosts(raw: string, size: number, kind: SkinKind): string[] {
 
 export async function getSkin(idOrUuid: string, size: number, kind: SkinKind): Promise<string | null> {
   const raw = idOrUuid.replace(/-/g, '')
-  if (!raw) return null
+  if (!/^[A-Za-z0-9_]{1,36}$/.test(raw)) return null
+  if (!Number.isInteger(size) || size < 8 || size > 512) return null
+  if (kind !== 'avatar' && kind !== 'body') return null
   const key = `${kind}-${raw}-${size}`
 
   const now = Date.now()

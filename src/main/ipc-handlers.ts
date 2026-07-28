@@ -10,6 +10,7 @@ import type {
   ProgressEvent,
   StandardSettings
 } from '../shared/types'
+import { isInstanceId } from '../shared/types'
 import { store } from './store'
 import * as auth from './auth/msmc-auth'
 import * as gmll from './launcher/gmll-adapter'
@@ -47,6 +48,11 @@ const states: Record<InstanceId, InstanceStatus> = {
   ranked: { id: 'ranked', state: 'not-installed' },
   rsg: { id: 'rsg', state: 'not-installed' },
   zsg: { id: 'zsg', state: 'not-installed' }
+}
+
+function assertInstanceId(id: unknown): InstanceId {
+  if (!isInstanceId(id)) throw new Error('Unknown instance.')
+  return id
 }
 
 function win(): BrowserWindow | null {
@@ -389,21 +395,24 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.authSwitch, (_e, uuid: string) => auth.switchAccount(uuid))
   ipcMain.handle(IPC.authRemove, (_e, uuid: string) => auth.removeAccount(uuid))
 
-  ipcMain.handle(IPC.instStatus, (_e, id: InstanceId) => states[id])
-  ipcMain.handle(IPC.instInstall, (_e, id: InstanceId) => installInstance(id))
+  ipcMain.handle(IPC.instStatus, (_e, id: unknown) => states[assertInstanceId(id)])
+  ipcMain.handle(IPC.instInstall, (_e, id: unknown) => installInstance(assertInstanceId(id)))
   ipcMain.handle(
     IPC.instLaunch,
     (
       _e,
-      id: InstanceId,
+      id: unknown,
       opts?: { importFrom?: InstanceId | null; importFolder?: string | null; importWorlds?: string[] }
-    ) => launchInstance(id, opts)
+    ) => launchInstance(assertInstanceId(id), opts)
   )
-  ipcMain.handle(IPC.instVerify, (_e, id: InstanceId) => installInstance(id))
-  ipcMain.handle(IPC.instDelete, (_e, id: InstanceId) => deleteInstance(id))
-  ipcMain.handle(IPC.instSyncMaps, (_e, id: InstanceId) => runSyncMaps(id, 'Maps'))
-  ipcMain.handle(IPC.instMods, (_e, id: InstanceId) => listMods(join(gmll.gameDir(id), 'mods')))
-  ipcMain.handle(IPC.instToggleMod, (_e, id: InstanceId, file: string, enabled: boolean) => {
+  ipcMain.handle(IPC.instVerify, (_e, id: unknown) => installInstance(assertInstanceId(id)))
+  ipcMain.handle(IPC.instDelete, (_e, id: unknown) => deleteInstance(assertInstanceId(id)))
+  ipcMain.handle(IPC.instSyncMaps, (_e, id: unknown) => runSyncMaps(assertInstanceId(id), 'Maps'))
+  ipcMain.handle(IPC.instMods, (_e, id: unknown) =>
+    listMods(join(gmll.gameDir(assertInstanceId(id)), 'mods'))
+  )
+  ipcMain.handle(IPC.instToggleMod, (_e, rawId: unknown, file: string, enabled: boolean) => {
+    const id = assertInstanceId(rawId)
     const dir = join(gmll.gameDir(id), 'mods')
     setModEnabled(dir, file, enabled)
     return listMods(dir)
@@ -430,7 +439,8 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.instDismissExtraOptionsPrompt, () => {
     store.setConfig({ extraOptionsPromptSeen: true })
   })
-  ipcMain.handle(IPC.instOpenFolder, (_e, id: InstanceId) => {
+  ipcMain.handle(IPC.instOpenFolder, (_e, rawId: unknown) => {
+    const id = assertInstanceId(rawId)
     const dir = paths.instanceDir(id)
     mkdirSync(dir, { recursive: true })
     if (process.platform === 'win32') {
@@ -441,11 +451,14 @@ export function registerIpc(): void {
     }
     return shell.openPath(dir)
   })
-  ipcMain.handle(IPC.instStdGet, (_e, id: InstanceId) => readStandardSettings(gmll.gameDir(id)))
-  ipcMain.handle(IPC.instStdSet, (_e, id: InstanceId, patch: StandardSettings) =>
-    writeStandardSettings(gmll.gameDir(id), patch)
+  ipcMain.handle(IPC.instStdGet, (_e, id: unknown) =>
+    readStandardSettings(gmll.gameDir(assertInstanceId(id)))
   )
-  ipcMain.handle(IPC.instImportSettings, async (_e, id: InstanceId) => {
+  ipcMain.handle(IPC.instStdSet, (_e, id: unknown, patch: StandardSettings) =>
+    writeStandardSettings(gmll.gameDir(assertInstanceId(id)), patch)
+  )
+  ipcMain.handle(IPC.instImportSettings, async (_e, rawId: unknown) => {
+    const id = assertInstanceId(rawId)
     const res = await dialog.showOpenDialog({
       title: 'Import a Minecraft options.txt',
       filters: [{ name: 'Minecraft options', extensions: ['txt'] }],
@@ -461,7 +474,9 @@ export function registerIpc(): void {
   )
   ipcMain.handle(
     IPC.instImportFromInstance,
-    (_e, target: InstanceId, source: InstanceId, opts?: { worlds?: string[] }) => {
+    (_e, rawTarget: unknown, rawSource: unknown, opts?: { worlds?: string[] }) => {
+      const target = assertInstanceId(rawTarget)
+      const source = assertInstanceId(rawSource)
       const copied = copyInstanceSettings(gmll.gameDir(source), gmll.gameDir(target), {
         worlds: opts?.worlds ?? []
       })
@@ -471,7 +486,8 @@ export function registerIpc(): void {
   )
   ipcMain.handle(
     IPC.instImportFromFolderPath,
-    (_e, target: InstanceId, folder: string, opts?: { worlds?: string[] }) => {
+    (_e, rawTarget: unknown, folder: string, opts?: { worlds?: string[] }) => {
+      const target = assertInstanceId(rawTarget)
       const copied = copyInstanceSettings(resolveGameDir(folder), gmll.gameDir(target), {
         worlds: opts?.worlds ?? []
       })
@@ -479,7 +495,9 @@ export function registerIpc(): void {
       return { copied }
     }
   )
-  ipcMain.handle(IPC.instListWorlds, (_e, id: InstanceId) => listWorlds(gmll.gameDir(id)))
+  ipcMain.handle(IPC.instListWorlds, (_e, id: unknown) =>
+    listWorlds(gmll.gameDir(assertInstanceId(id)))
+  )
   ipcMain.handle(IPC.instListWorldsInFolder, (_e, folder: string) => listWorlds(resolveGameDir(folder)))
   ipcMain.handle(IPC.skinGet, (_e, idOrUuid: string, size: number, kind: 'avatar' | 'body') =>
     getSkin(idOrUuid, size, kind)

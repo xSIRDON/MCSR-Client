@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, renameSync, mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import type { InstanceId, ModInfo } from '../../shared/types'
 import { verifyBuffer } from './mrpack'
 
@@ -28,6 +28,9 @@ export function listMods(modsDir: string): ModInfo[] {
 }
 
 export function setModEnabled(modsDir: string, file: string, enabled: boolean): void {
+  if (file !== basename(file) || !/\.jar$/i.test(file)) {
+    throw new Error(`Invalid mod file: ${file}`)
+  }
   const jar = join(modsDir, file)
   const disabled = jar + DISABLED
   if (enabled) {

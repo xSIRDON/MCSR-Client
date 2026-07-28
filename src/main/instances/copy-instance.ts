@@ -1,5 +1,5 @@
 import { existsSync, copyFileSync, cpSync, mkdirSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
 export function listWorlds(gameDir: string): string[] {
   const saves = join(gameDir, 'saves')
@@ -43,6 +43,7 @@ export function copyInstanceSettings(
 
   let worlds = 0
   for (const world of opts.worlds ?? []) {
+    if (world !== basename(world) || world === '.' || world === '..') continue
     const src = join(srcGameDir, 'saves', world)
     if (existsSync(src)) {
       cpSync(src, join(dstGameDir, 'saves', world), { recursive: true })

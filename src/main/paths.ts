@@ -1,9 +1,14 @@
 import { app } from 'electron'
 import { existsSync, renameSync, mkdirSync, copyFileSync, unlinkSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import type { InstanceId } from '../shared/types'
+import { isInstanceId, type InstanceId } from '../shared/types'
 
 const DATA_DIR = 'data'
+
+function assertId(id: InstanceId): InstanceId {
+  if (!isInstanceId(id)) throw new Error(`Unknown instance: ${String(id)}`)
+  return id
+}
 
 function installBase(): string {
   return app.isPackaged ? dirname(app.getPath('exe')) : app.getAppPath()
@@ -64,8 +69,8 @@ export const paths = {
   runtime: () => join(rootDir(), 'runtime'),
   shared: () => join(rootDir(), 'shared'),
   instances: () => join(rootDir(), 'instances'),
-  instanceDir: (id: InstanceId) => join(rootDir(), 'instances', id),
-  gameDir: (id: InstanceId) => join(rootDir(), 'instances', id, '.minecraft'),
+  instanceDir: (id: InstanceId) => join(rootDir(), 'instances', assertId(id)),
+  gameDir: (id: InstanceId) => join(rootDir(), 'instances', assertId(id), '.minecraft'),
   tracker: () => join(rootDir(), 'tracker'),
   tools: () => join(rootDir(), 'tools'),
   configFile: () => join(sessionDir(), 'config.json'),

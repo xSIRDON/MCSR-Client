@@ -2,6 +2,12 @@ import { ALL_MAP_IDS } from './maps'
 
 export type InstanceId = 'ranked' | 'rsg' | 'zsg'
 
+export const INSTANCE_IDS = ['ranked', 'rsg', 'zsg'] as const
+
+export function isInstanceId(value: unknown): value is InstanceId {
+  return value === 'ranked' || value === 'rsg' || value === 'zsg'
+}
+
 export interface Profile {
   uuid: string
   name: string
