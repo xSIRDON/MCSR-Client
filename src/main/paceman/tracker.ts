@@ -8,6 +8,7 @@ import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { paths } from '../paths'
+import { fetchVerified } from '../security/verified-download'
 import { store } from '../store'
 import type { TrackerStatus } from '../../shared/types'
 
@@ -15,6 +16,9 @@ const KEY_SECRET = 'paceman-key'
 export const TRACKER_JAR = 'paceman-tracker-0.7.2.jar'
 const TRACKER_DOWNLOAD =
   'https://github.com/PaceMan-MCSR/PaceMan-Tracker/releases/download/v0.7.2/paceman-tracker-0.7.2.jar'
+// Pinned: this jar is executed with java alongside every RSG launch.
+const TRACKER_SHA512 =
+  '8956d5e7b48e536fd655a65f62aed12b3b9bb6168dadf8c3816f054774082b93875c59073cc98aab295ba27b4d042560779c56920360be16485982b2596e18cc'
 
 let proc: ChildProcess | null = null
 let statusSink: ((s: TrackerStatus) => void) | null = null
@@ -82,9 +86,7 @@ export function writeOptions(): void {
 export async function ensureJar(): Promise<void> {
   if (existsSync(jarPath())) return
   mkdirSync(paths.tracker(), { recursive: true })
-  const res = await fetch(TRACKER_DOWNLOAD, { redirect: 'follow' })
-  if (!res.ok) throw new Error(`Failed to download paceman-tracker (${res.status})`)
-  writeFileSync(jarPath(), Buffer.from(await res.arrayBuffer()))
+  writeFileSync(jarPath(), await fetchVerified(TRACKER_DOWNLOAD, TRACKER_SHA512, 'paceman-tracker'))
 }
 
 /** Start the tracker (idempotent). Requires an access key. */

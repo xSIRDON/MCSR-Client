@@ -6,10 +6,14 @@ import { spawn, execFile, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { paths } from '../paths'
+import { fetchVerified } from '../security/verified-download'
 
 export const NINJABRAIN_JAR = 'Ninjabrain-Bot-1.5.2.jar'
 const DOWNLOAD =
   'https://github.com/Ninjabrain1/Ninjabrain-Bot/releases/download/1.5.2/Ninjabrain-Bot-1.5.2.jar'
+// Pinned: this jar is executed with javaw (see launchNinjabrain).
+const DOWNLOAD_SHA512 =
+  'c07b5c9b63e066b9efd68225b05f05b31e48ce6c2921cac98f52b609d20deabbf7a263d37c6ca791edbf01b176e63c0e397bcabd177456a3ebd9b2eb2f647706'
 
 function jarPath(): string {
   return join(paths.tools(), NINJABRAIN_JAR)
@@ -17,9 +21,7 @@ function jarPath(): string {
 
 async function downloadJar(): Promise<void> {
   mkdirSync(paths.tools(), { recursive: true })
-  const res = await fetch(DOWNLOAD, { redirect: 'follow' })
-  if (!res.ok) throw new Error(`Ninjabrain Bot download failed (${res.status})`)
-  writeFileSync(jarPath(), Buffer.from(await res.arrayBuffer()))
+  writeFileSync(jarPath(), await fetchVerified(DOWNLOAD, DOWNLOAD_SHA512, 'Ninjabrain Bot'))
 }
 
 /** Download Ninjabrain Bot (once). It opens automatically with the game — no shortcut needed. */

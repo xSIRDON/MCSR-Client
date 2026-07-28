@@ -16,10 +16,15 @@ import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync, copyFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { paths } from '../paths'
+import { fetchVerified } from '../security/verified-download'
 
 const TOOLSCREEN_JAR = 'Toolscreen.jar'
 const JAR_URL =
   'https://github.com/jojoe77777/Toolscreen/releases/download/v1.4.4/Toolscreen-1.4.4-double-click-me.jar'
+// Pinned: this jar is executed with javaw, and a GitHub release asset can be replaced in
+// place. A swapped artifact must fail loudly rather than run.
+const JAR_SHA512 =
+  'f8f93edc11b0dff1e51990b4d641733d0a6fcde0d2b82b14cc650ae46484355d77816ccf6da55c389d67c4562ffc3906ba22d4ed5d06570537afd2a354c38e5f'
 
 /** Shared download cache so we fetch the jar once, then copy it into each instance. */
 function cachedJar(): string {
@@ -30,9 +35,7 @@ async function fetchCached(): Promise<string> {
   const dst = cachedJar()
   if (existsSync(dst)) return dst
   mkdirSync(paths.tools(), { recursive: true })
-  const res = await fetch(JAR_URL, { redirect: 'follow' })
-  if (!res.ok) throw new Error(`Toolscreen download failed (${res.status})`)
-  writeFileSync(dst, Buffer.from(await res.arrayBuffer()))
+  writeFileSync(dst, await fetchVerified(JAR_URL, JAR_SHA512, 'Toolscreen'))
   return dst
 }
 

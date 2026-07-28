@@ -66,6 +66,15 @@ function win(): BrowserWindow | null {
   return BrowserWindow.getAllWindows()[0] ?? null
 }
 
+/** Replace the live Minecraft access token (and account uuid) anywhere it appears in text. */
+function redactToken(text: string): string {
+  const t = auth.getLaunchToken() as { access_token?: string; profile?: { id?: string } } | null
+  let out = text
+  if (t?.access_token) out = out.split(t.access_token).join('«redacted»')
+  if (t?.profile?.id) out = out.split(t.profile.id).join('«redacted»')
+  return out
+}
+
 function setState(id: InstanceId, patch: Partial<InstanceStatus>): void {
   states[id] = { ...states[id], ...patch }
   win()?.webContents.send(IPC.instStateChanged, states[id])
@@ -178,7 +187,9 @@ const EXTRA_OPTIONS_MOD = {
 
 const FSG_MOD = {
   file: 'FSG-Mod-5.3.0+MC1.16.1.jar',
-  urls: ['https://cdn.modrinth.com/data/XZOGBIpM/versions/qc4OUmcd/FSG-Mod-5.3.0%2BMC1.16.1.jar']
+  urls: ['https://cdn.modrinth.com/data/XZOGBIpM/versions/qc4OUmcd/FSG-Mod-5.3.0%2BMC1.16.1.jar'],
+  sha512:
+    '93f8d9b30f828938b57737ed6ad0c7ac85d2af709e3f389bf829d986f81e2c50d252f1ea3142e9f3bf5226a597f432e878c75ab9794411d120e986842ceab11b'
 }
 
 /** Download one legal add-on mod jar into the instance's mods/, surfacing progress. */
@@ -366,8 +377,12 @@ async function launchInstance(
   setState(id, { state: 'running' })
   // The game opens its own window — step the launcher aside so the game is the focus.
   BrowserWindow.getAllWindows()[0]?.minimize()
-  child.stdout.on('data', (d: Buffer) => pushLog('game', d.toString()))
-  child.stderr.on('data', (d: Buffer) => pushLog('game', d.toString()))
+  // The Minecraft session token is passed to the game on its command line, so anything the
+  // game (or a mod, or a crash dump) echoes back can contain it. The console buffer is
+  // shown in the UI and handed to the renderer over IPC, and users paste it into Discord
+  // when asking for help — so scrub the live token before it ever reaches the log.
+  child.stdout.on('data', (d: Buffer) => pushLog('game', redactToken(d.toString())))
+  child.stderr.on('data', (d: Buffer) => pushLog('game', redactToken(d.toString())))
 
   if (id === 'rsg') void tracker.start()
 
