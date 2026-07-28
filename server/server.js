@@ -11,6 +11,7 @@ if (!SECRET) {
 if (DEV_UNVERIFIED) console.warn('!! DEV_ALLOW_UNVERIFIED is ON — identity checks are OFF. Never run like this in production.')
 
 const PORT = Number(process.env.PORT ?? 8787)
+const TRUST_PROXY = process.env.TRUST_PROXY === '1'
 const TOKEN_TTL_S = 30 * 24 * 3600
 const OFFLINE_AFTER_S = 3 * 60
 
@@ -51,6 +52,10 @@ const q = {
   upsertUser: db.prepare(
     `INSERT INTO users (uuid, nickname, state, last_beat, created_at) VALUES (?, ?, 'offline', 0, ?)
      ON CONFLICT(uuid) DO UPDATE SET nickname = CASE WHEN excluded.nickname != '' THEN excluded.nickname ELSE users.nickname END`
+  ),
+  placeholderUser: db.prepare(
+    `INSERT INTO users (uuid, nickname, state, last_beat, created_at) VALUES (?, ?, 'offline', 0, ?)
+     ON CONFLICT(uuid) DO NOTHING`
   ),
   beat: db.prepare(`UPDATE users SET state = ?, last_beat = ? WHERE uuid = ?`),
   pair: db.prepare(`SELECT * FROM friendships WHERE a = ? AND b = ?`),
@@ -182,7 +187,10 @@ async function hasJoined(username, serverId) {
 async function route(req, res) {
   const url = new URL(req.url, 'http://x')
   const path = url.pathname.replace(/\/+$/, '')
-  const ip = req.socket.remoteAddress ?? '?'
+  const ip =
+    (TRUST_PROXY && String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim()) ||
+    req.socket.remoteAddress ||
+    '?'
 
   if (req.method === 'OPTIONS') return send(res, 204)
   if (path === '/v1/health') return send(res, 200, { ok: true })
@@ -257,7 +265,7 @@ async function route(req, res) {
       if (existing.status === 'pending' && existing.requested_by === target) q.acceptPair.run(a, b)
       return send(res, 204)
     }
-    q.upsertUser.run(target, nick, nowS())
+    q.placeholderUser.run(target, nick, nowS())
     q.insertPair.run(a, b, 'pending', me, nowS())
     return send(res, 204)
   }
@@ -341,9 +349,10 @@ async function route(req, res) {
 
 createServer((req, res) => {
   route(req, res).catch((e) => {
-    send(res, e instanceof SyntaxError || e.message === 'body too large' ? 400 : 500, {
-      error: e.message ?? 'error'
-    })
+    const badRequest = e instanceof SyntaxError || e.message === 'body too large'
+    if (badRequest) return send(res, 400, { error: e.message ?? 'error' })
+    console.error('[500]', e)
+    send(res, 500, { error: 'internal error' })
   })
 }).listen(PORT, process.env.BIND || '0.0.0.0', () => {
   console.log(

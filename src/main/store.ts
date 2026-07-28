@@ -83,7 +83,7 @@ export const store = {
     return config
   },
   setConfig(patch: Partial<AppConfig>): AppConfig {
-    config = { ...this.getConfig(), ...patch }
+    config = normalizeConfig({ ...this.getConfig(), ...patch } as RawConfig)
     writeJson(paths.configFile(), config)
     return config
   },

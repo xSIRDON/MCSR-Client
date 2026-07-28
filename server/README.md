@@ -17,6 +17,8 @@ SERVER_SECRET="any-long-random-string" node server.js
 | `PORT` | `8787` | |
 | `DB_PATH` | `./friends.db` | SQLite file; put it on a persistent volume. |
 | `DEV_ALLOW_UNVERIFIED` | off | `1` skips Mojang verification. Local testing only — never in production. |
+| `BIND` | `0.0.0.0` | Set to `127.0.0.1` when a TLS proxy fronts this, so the raw HTTP port isn't reachable from the internet. |
+| `TRUST_PROXY` | off | `1` makes the auth rate limiter read `X-Forwarded-For`. **Set this whenever you run behind a proxy** — otherwise every client shares one rate-limit bucket and a single caller can block all sign-ins. Only enable together with `BIND=127.0.0.1`, or a direct caller could spoof the header. |
 
 ## Deploy (Railway / Fly / any VPS)
 
@@ -24,7 +26,9 @@ SERVER_SECRET="any-long-random-string" node server.js
   add `SERVER_SECRET`, attach a volume mounted where `DB_PATH` points.
 - **Fly.io**: `fly launch` in `server/`, `fly secrets set SERVER_SECRET=...`, add a
   volume for the database.
-- **VPS**: `node server.js` under systemd behind Caddy/nginx for TLS.
+- **VPS**: `node server.js` under systemd behind Caddy/nginx for TLS, with
+  `BIND=127.0.0.1` and `TRUST_PROXY=1` so the raw port stays private and rate limiting
+  still sees real client addresses.
 
 Put TLS in front of it (Railway/Fly do this automatically). Then paste the public URL
 into **Settings → Friends network** in the client and hit Connect.
