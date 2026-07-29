@@ -64,11 +64,15 @@ const q = {
   ),
   acceptPair: db.prepare(`UPDATE friendships SET status = 'accepted' WHERE a = ? AND b = ?`),
   deletePair: db.prepare(`DELETE FROM friendships WHERE a = ? AND b = ?`),
+  declinePair: db.prepare(`UPDATE friendships SET status = 'declined' WHERE a = ? AND b = ?`),
+  reopenPair: db.prepare(
+    `UPDATE friendships SET status = 'pending', requested_by = ?, created_at = ? WHERE a = ? AND b = ?`
+  ),
   mine: db.prepare(
     `SELECT f.status, f.requested_by, u.uuid, u.nickname, u.state, u.last_beat
      FROM friendships f
      JOIN users u ON u.uuid = CASE WHEN f.a = ? THEN f.b ELSE f.a END
-     WHERE f.a = ? OR f.b = ?`
+     WHERE (f.a = ? OR f.b = ?) AND f.status != 'declined'`
   ),
   insertMsg: db.prepare(
     `INSERT INTO messages (sender, recipient, body, created_at) VALUES (?, ?, ?, ?)`
@@ -267,6 +271,9 @@ async function route(req, res) {
     const existing = q.pair.get(a, b)
     if (existing) {
       if (existing.status === 'pending' && existing.requested_by === target) q.acceptPair.run(a, b)
+      else if (existing.status === 'declined' && existing.requested_by === target) {
+        q.reopenPair.run(me, nowS(), a, b)
+      }
       return send(res, 204)
     }
     q.placeholderUser.run(target, nick, nowS())
@@ -283,7 +290,7 @@ async function route(req, res) {
       return send(res, 404, { error: 'no such request' })
     }
     if (reqMatch[2] === 'accept') q.acceptPair.run(a, b)
-    else q.deletePair.run(a, b)
+    else q.declinePair.run(a, b)
     return send(res, 204)
   }
 
