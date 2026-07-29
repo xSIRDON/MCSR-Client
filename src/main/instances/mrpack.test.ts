@@ -1,11 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import { createHash } from 'node:crypto'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import {
   parseIndex,
   filterMods,
   verifyBuffer,
   safeJoin,
   fabricVersionString,
+  assertTrustedDownloadUrl,
+  installPackFiles,
   RSG_EXCLUDE_PREFIXES,
   type ModrinthIndex,
   type PackFile
@@ -99,5 +104,81 @@ describe('safeJoin (pack path containment)', () => {
 describe('verifyBuffer fails closed', () => {
   it('rejects a file that carries no hash at all', () => {
     expect(() => verifyBuffer(Buffer.from('anything'), {})).toThrow(/no hash/)
+  })
+})
+
+describe('assertTrustedDownloadUrl', () => {
+  it('accepts the hosts the pack actually uses', () => {
+    expect(() =>
+      assertTrustedDownloadUrl('https://cdn.modrinth.com/data/x/versions/y/sodium.jar')
+    ).not.toThrow()
+    expect(() =>
+      assertTrustedDownloadUrl('https://redlime.github.io/MCSRMods/modpacks/v4/pack.mrpack')
+    ).not.toThrow()
+    expect(() => assertTrustedDownloadUrl('https://api.modrinth.com/v2/project/x')).not.toThrow()
+  })
+
+  it('refuses plain http even on a trusted host', () => {
+    expect(() => assertTrustedDownloadUrl('http://cdn.modrinth.com/x.jar')).toThrow(/untrusted/i)
+  })
+
+  it('refuses unknown hosts, lookalikes, and garbage', () => {
+    expect(() => assertTrustedDownloadUrl('https://evil.example/x.jar')).toThrow(/untrusted/i)
+    expect(() => assertTrustedDownloadUrl('https://cdn.modrinth.com.evil.example/x.jar')).toThrow(
+      /untrusted/i
+    )
+    expect(() => assertTrustedDownloadUrl('not a url')).toThrow(/malformed/i)
+    expect(() => assertTrustedDownloadUrl('file:///C:/x.jar')).toThrow(/untrusted/i)
+  })
+})
+
+describe('installPackFiles URL containment', () => {
+  function indexWith(files: PackFile[]): ModrinthIndex {
+    return { ...sampleIndex, files }
+  }
+
+  it('never fetches an untrusted mirror and succeeds via the trusted one', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mcsr-test-'))
+    const body = Buffer.from('jar-bytes')
+    const sha512 = createHash('sha512').update(body).digest('hex')
+    const fetched: string[] = []
+    try {
+      await installPackFiles(
+        indexWith([
+          {
+            path: 'mods/a.jar',
+            hashes: { sha512 },
+            downloads: ['https://evil.example/a.jar', 'https://cdn.modrinth.com/data/a.jar']
+          }
+        ]),
+        dir,
+        {
+          fetchBuffer: async (url) => {
+            fetched.push(url)
+            return body
+          }
+        }
+      )
+      expect(fetched).toEqual(['https://cdn.modrinth.com/data/a.jar'])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails the install when every mirror is untrusted', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mcsr-test-'))
+    try {
+      await expect(
+        installPackFiles(
+          indexWith([
+            { path: 'mods/a.jar', hashes: { sha512: 'ab' }, downloads: ['http://cdn.modrinth.com/a.jar'] }
+          ]),
+          dir,
+          { fetchBuffer: async () => Buffer.from('x') }
+        )
+      ).rejects.toThrow(/untrusted/i)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
