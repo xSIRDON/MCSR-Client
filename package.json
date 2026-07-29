@@ -16,7 +16,7 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "test": "vitest run",
     "test:watch": "vitest",
-    "predist": "node scripts/check-publish.mjs",
+    "predist": "node scripts/check-publish.mjs && npm run typecheck && npm test",
     "dist": "electron-vite build && electron-builder --win",
     "postinstall": "electron-builder install-app-deps"
   },
