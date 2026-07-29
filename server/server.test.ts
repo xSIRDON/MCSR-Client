@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { spawn, type ChildProcess } from 'node:child_process'
+import { connect } from 'node:net'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -163,5 +164,60 @@ describe('message visibility', () => {
     // A non-friend cannot message either of them.
     const blocked = await api(s.base, carol, 'POST', '/v1/messages', { to: U.alice, body: 'spam' })
     expect(blocked.status).toBe(403)
+  })
+})
+
+/**
+ * POST raw bytes over a bare socket in two writes split at `splitAt`, so the server sees
+ * the body in two chunks. This is the only way to force the chunk boundary that breaks
+ * string-concatenated UTF-8 decoding.
+ */
+function rawSplitPost(
+  port: number,
+  path: string,
+  token: string,
+  bodyBuf: Buffer,
+  splitAt: number
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const sock = connect(port, '127.0.0.1')
+    sock.setNoDelay(true)
+    sock.resume() // discard the response; a paused socket never reaches 'close'
+    const head =
+      `POST ${path} HTTP/1.1\r\n` +
+      `Host: 127.0.0.1\r\n` +
+      `Authorization: Bearer ${token}\r\n` +
+      `Content-Type: application/json\r\n` +
+      `Content-Length: ${bodyBuf.length}\r\n` +
+      `Connection: close\r\n\r\n`
+    sock.on('error', reject)
+    sock.on('close', () => resolve())
+    sock.write(head)
+    sock.write(bodyBuf.subarray(0, splitAt))
+    setTimeout(() => sock.write(bodyBuf.subarray(splitAt)), 60)
+  })
+}
+
+describe('request body decoding', () => {
+  let s: TestServer
+  beforeAll(async () => {
+    s = await startServer()
+  })
+  afterAll(() => s.stop())
+
+  it('survives a multi-byte character split across TCP chunks', async () => {
+    const alice = await signIn(s.base, U.alice, 'Alice')
+    const bob = await signIn(s.base, U.bob, 'Bob')
+    await api(s.base, alice, 'POST', '/v1/friends/requests', { to: U.bob, nickname: '' })
+    await api(s.base, bob, 'POST', `/v1/friends/requests/${U.alice}/accept`)
+
+    const body = Buffer.from(JSON.stringify({ to: U.bob, body: 'héllo 😀 wörld' }), 'utf8')
+    // Split inside the emoji: find its first byte (0xf0) and cut one byte after it.
+    const emojiStart = body.indexOf(0xf0)
+    expect(emojiStart).toBeGreaterThan(0)
+    await rawSplitPost(s.port, '/v1/messages', alice, body, emojiStart + 1)
+
+    const bobView = await api(s.base, bob, 'GET', '/v1/messages?since=0')
+    expect(bobView.json.messages.map((m: any) => m.body)).toContain('héllo 😀 wörld')
   })
 })
