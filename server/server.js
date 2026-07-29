@@ -66,6 +66,7 @@ db.prepare(
   )`
 ).run()
 db.prepare(`CREATE INDEX IF NOT EXISTS idx_messages_parties ON messages (sender, recipient, id)`).run()
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages (recipient, id)`).run()
 
 const q = {
   upsertUser: db.prepare(
@@ -103,8 +104,12 @@ const q = {
     `INSERT INTO messages (sender, recipient, body, created_at) VALUES (?, ?, ?, ?)`
   ),
   msgsSince: db.prepare(
-    `SELECT id, sender, recipient, body, created_at, read_at FROM messages
-     WHERE (sender = ? OR recipient = ?) AND id > ? ORDER BY id ASC LIMIT 500`
+    // UNION ALL instead of OR so each branch uses its own index — (sender, recipient, id)
+    // for sent, (recipient, id) for received. No overlap: self-messages are rejected.
+    `SELECT id, sender, recipient, body, created_at, read_at FROM messages WHERE sender = ? AND id > ?
+     UNION ALL
+     SELECT id, sender, recipient, body, created_at, read_at FROM messages WHERE recipient = ? AND id > ?
+     ORDER BY id ASC LIMIT 500`
   ),
   markRead: db.prepare(
     `UPDATE messages SET read_at = ? WHERE recipient = ? AND sender = ? AND id <= ? AND read_at IS NULL`
@@ -381,7 +386,7 @@ async function route(req, res) {
     // Incremental pull: everything involving me newer than the client's cursor. A row is only
     // ever returned to its two participants, so no message leaks past the pair.
     const since = Number(url.searchParams.get('since') ?? 0) || 0
-    const rows = q.msgsSince.all(me, me, since)
+    const rows = q.msgsSince.all(me, since, me, since)
     const messages = rows.map((r) => ({
       id: r.id,
       from: r.sender,
