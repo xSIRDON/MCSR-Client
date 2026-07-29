@@ -221,3 +221,24 @@ describe('request body decoding', () => {
     expect(bobView.json.messages.map((m: any) => m.body)).toContain('héllo 😀 wörld')
   })
 })
+
+describe('friend-request rate limiting', () => {
+  let s: TestServer
+  beforeAll(async () => {
+    s = await startServer()
+  })
+  afterAll(() => s.stop())
+
+  it('cuts off a request flood at its own bucket, well under the generic 120/min', async () => {
+    const alice = await signIn(s.base, U.alice, 'Alice')
+    const statuses: number[] = []
+    for (let i = 0; i < 12; i++) {
+      const uuid = i.toString(16).padStart(32, '0')
+      const res = await api(s.base, alice, 'POST', '/v1/friends/requests', { to: uuid, nickname: '' })
+      statuses.push(res.status)
+    }
+    expect(statuses.slice(0, 10)).toEqual(Array(10).fill(204))
+    expect(statuses[10]).toBe(429)
+    expect(statuses[11]).toBe(429)
+  })
+})

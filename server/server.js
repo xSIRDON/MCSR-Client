@@ -306,6 +306,9 @@ async function route(req, res) {
   }
 
   if (path === '/v1/friends/requests' && req.method === 'POST') {
+    // Own bucket, far below the generic one: each request may insert a user row for an
+    // arbitrary UUID, so this is the endpoint you'd use to bloat the users table.
+    if (limited(`fr:${me}`, 10)) return send(res, 429, { error: 'slow down' })
     const { to, nickname } = await readJson(req)
     const target = normUuid(to)
     if (!isUuid(target) || target === me) return send(res, 400, { error: 'bad target' })
