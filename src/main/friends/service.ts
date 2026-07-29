@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { store } from '../store'
 import { paths } from '../paths'
 import { getLaunchToken } from '../auth/msmc-auth'
+import { nextReceiptBatch } from './receipt-batch'
 import { DEFAULT_FRIENDS_SERVER } from '../../shared/types'
 import type {
   FriendsNetState,
@@ -44,6 +45,7 @@ let heartbeatTimer: NodeJS.Timeout | null = null
 let pollTimer: NodeJS.Timeout | null = null
 let stateProvider: StateProvider = () => 'idle'
 let sink: ChangeSink | null = null
+let receiptCursor = 0
 
 export function onChanged(cb: ChangeSink): void {
   sink = cb
@@ -461,9 +463,11 @@ async function pollReceipts(): Promise<void> {
     for (const m of list) if (m.from === me && !m.read) pending.push(m.id)
   }
   if (pending.length === 0) return
+  const { batch, nextCursor } = nextReceiptBatch(pending, receiptCursor)
+  receiptCursor = nextCursor
   try {
     const raw = await api<{ receipts?: unknown[] }>(
-      `/v1/messages/receipts?ids=${pending.slice(0, 100).join(',')}`
+      `/v1/messages/receipts?ids=${batch.join(',')}`
     )
     const receipts = Array.isArray(raw?.receipts) ? raw.receipts : []
     let changed = false
