@@ -187,12 +187,17 @@ pruneMessages()
 setInterval(pruneMessages, 24 * 3600 * 1000).unref()
 
 async function readJson(req) {
-  let raw = ''
+  // Collect Buffers and decode once: per-chunk stringification corrupts any multi-byte
+  // character that straddles a TCP chunk boundary. The cap is a byte cap.
+  const chunks = []
+  let size = 0
   for await (const chunk of req) {
-    raw += chunk
-    if (raw.length > 4096) throw new Error('body too large')
+    size += chunk.length
+    if (size > 4096) throw new Error('body too large')
+    chunks.push(chunk)
   }
-  return raw ? JSON.parse(raw) : {}
+  if (size === 0) return {}
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'))
 }
 
 function send(res, status, body) {
