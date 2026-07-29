@@ -48,3 +48,7 @@ GET  /v1/health
 
 Presence is only ever visible to accepted mutual friends. The database stores nothing
 but uuids, nicknames, friendships, and last-heartbeat times.
+
+Declining keeps the pair blocked: the declined sender's re-requests are silent no-ops
+until the decliner either sends their own request (reopening it) or the pair row is
+removed via `DELETE /v1/friends/:uuid`.

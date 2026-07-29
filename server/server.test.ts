@@ -242,3 +242,49 @@ describe('friend-request rate limiting', () => {
     expect(statuses[11]).toBe(429)
   })
 })
+
+describe('declined requests', () => {
+  let s: TestServer
+  beforeAll(async () => {
+    s = await startServer()
+  })
+  afterAll(() => s.stop())
+
+  it('a declined sender cannot reappear in the incoming list by re-sending', async () => {
+    const alice = await signIn(s.base, U.alice, 'Alice')
+    const bob = await signIn(s.base, U.bob, 'Bob')
+
+    await api(s.base, alice, 'POST', '/v1/friends/requests', { to: U.bob, nickname: '' })
+    let bobList = await api(s.base, bob, 'GET', '/v1/friends')
+    expect(bobList.json.incoming.map((f: any) => f.uuid)).toContain(U.alice)
+
+    await api(s.base, bob, 'POST', `/v1/friends/requests/${U.alice}/decline`)
+    bobList = await api(s.base, bob, 'GET', '/v1/friends')
+    expect(bobList.json.incoming).toHaveLength(0)
+
+    // Alice re-sends: silently swallowed, Bob's incoming stays empty, Alice sees no outgoing row.
+    const again = await api(s.base, alice, 'POST', '/v1/friends/requests', { to: U.bob, nickname: '' })
+    expect(again.status).toBe(204)
+    bobList = await api(s.base, bob, 'GET', '/v1/friends')
+    expect(bobList.json.incoming).toHaveLength(0)
+    const aliceList = await api(s.base, alice, 'GET', '/v1/friends')
+    expect(aliceList.json.outgoing).toHaveLength(0)
+  })
+
+  it('the decliner can reopen the pair, and it can then be accepted', async () => {
+    const carol = await signIn(s.base, U.carol, 'Carol')
+    const dave = await signIn(s.base, U.dave, 'Dave')
+
+    await api(s.base, carol, 'POST', '/v1/friends/requests', { to: U.dave, nickname: '' })
+    await api(s.base, dave, 'POST', `/v1/friends/requests/${U.carol}/decline`)
+
+    // Dave (the decliner) changes his mind and asks Carol himself.
+    await api(s.base, dave, 'POST', '/v1/friends/requests', { to: U.carol, nickname: '' })
+    const carolList = await api(s.base, carol, 'GET', '/v1/friends')
+    expect(carolList.json.incoming.map((f: any) => f.uuid)).toContain(U.dave)
+
+    await api(s.base, carol, 'POST', `/v1/friends/requests/${U.dave}/accept`)
+    const daveList = await api(s.base, dave, 'GET', '/v1/friends')
+    expect(daveList.json.friends.map((f: any) => f.uuid)).toContain(U.carol)
+  })
+})
