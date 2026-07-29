@@ -3,7 +3,7 @@
 // excludePrefixes to drop the ranked-only jars.
 
 import { createHash } from 'node:crypto'
-import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync, cpSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync, cpSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import extract from 'extract-zip'
@@ -16,6 +16,31 @@ export const MCSR_MRPACK_URL =
 
 /** Mod id/filename prefixes that are ranked-only and must be excluded from RSG. */
 export const RSG_EXCLUDE_PREFIXES = ['mcsrranked', 'mcsrfairplay']
+
+/**
+ * The only origins pack and mod bytes may come from. The .mrpack itself carries no hash
+ * (upstream re-publishes it freely — pinning would break every pack update until an app
+ * release), so the fetch is the trust root: HTTPS to one of these hosts, checked again on
+ * the post-redirect URL. Per-file sha512s and safeJoin containment take it from there.
+ */
+export const TRUSTED_DOWNLOAD_HOSTS: ReadonlySet<string> = new Set([
+  'redlime.github.io', // the MCSR modpack
+  'cdn.modrinth.com', // pack files + ranked mod jars
+  'api.modrinth.com' // Modrinth version metadata
+])
+
+export function assertTrustedDownloadUrl(url: string): string {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    throw new Error(`Refusing malformed download URL: ${url}`)
+  }
+  if (u.protocol !== 'https:' || !TRUSTED_DOWNLOAD_HOSTS.has(u.hostname)) {
+    throw new Error(`Refusing untrusted download URL: ${url}`)
+  }
+  return url
+}
 
 export interface PackFile {
   path: string
@@ -103,8 +128,10 @@ export function fabricVersionString(index: ModrinthIndex): string {
 type FetchBuffer = (url: string) => Promise<Buffer>
 
 const nodeFetchBuffer: FetchBuffer = async (url) => {
+  assertTrustedDownloadUrl(url)
   const res = await fetch(url, { redirect: 'follow' })
   if (!res.ok) throw new Error(`download failed ${res.status} for ${url}`)
+  if (res.url) assertTrustedDownloadUrl(res.url) // a redirect must not escape the allowlist
   return Buffer.from(await res.arrayBuffer())
 }
 
@@ -113,10 +140,12 @@ export async function fetchPack(
   url = MCSR_MRPACK_URL,
   fetchBuffer: FetchBuffer = nodeFetchBuffer
 ): Promise<ModrinthIndex> {
+  assertTrustedDownloadUrl(url)
   const buf = await fetchBuffer(url)
-  const work = join(tmpdir(), `mcsr-mrpack-${Date.now()}`)
+  // mkdtemp: a fixed Date.now() name is guessable and mkdirSync(recursive) happily reuses
+  // a directory someone else pre-created, letting them own/replace files mid-extract.
+  const work = mkdtempSync(join(tmpdir(), 'mcsr-mrpack-'))
   const zipPath = join(work, 'pack.mrpack')
-  mkdirSync(work, { recursive: true })
   writeFileSync(zipPath, buf)
   try {
     await extract(zipPath, { dir: work })
@@ -161,6 +190,7 @@ export async function installPackFiles(
     let ok = false
     for (const url of file.downloads) {
       try {
+        assertTrustedDownloadUrl(url)
         const buf = await fetchBuffer(url)
         verifyBuffer(buf, file.hashes)
         writeFileSync(dest, buf)
@@ -212,6 +242,7 @@ export async function installLatestRankedMod(
   const file = latest.files.find((f) => f.primary) ?? latest.files[0]
   if (!file) throw new Error('MCSR Ranked release has no downloadable file')
 
+  assertTrustedDownloadUrl(file.url)
   const buf = await fetchBuffer(file.url)
   verifyBuffer(buf, file.hashes)
   const modsDir = join(gameDir, 'mods')
