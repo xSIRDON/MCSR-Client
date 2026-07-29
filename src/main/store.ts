@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { paths } from './paths'
 import { DEFAULT_CONFIG, type AppConfig, type InstanceId } from '../shared/types'
+import { encodeSecret, decodeSecret } from './secret-codec'
 
 type RawConfig = {
   ram?: Partial<Record<InstanceId, number>>
@@ -99,24 +100,14 @@ export const store = {
   secret: {
     set(key: string, value: string): void {
       const all = readJson<Record<string, string>>(paths.secretsFile(), {})
-      const enc = safeStorage.isEncryptionAvailable()
-        ? safeStorage.encryptString(value).toString('base64')
-        : Buffer.from(value, 'utf8').toString('base64')
-      all[key] = enc
+      all[key] = encodeSecret(value, safeStorage)
       writeJson(paths.secretsFile(), all)
     },
     get(key: string): string | null {
       const all = readJson<Record<string, string>>(paths.secretsFile(), {})
       const raw = all[key]
       if (!raw) return null
-      try {
-        const buf = Buffer.from(raw, 'base64')
-        return safeStorage.isEncryptionAvailable()
-          ? safeStorage.decryptString(buf)
-          : buf.toString('utf8')
-      } catch {
-        return null
-      }
+      return decodeSecret(raw, safeStorage)
     },
     delete(key: string): void {
       const all = readJson<Record<string, string>>(paths.secretsFile(), {})
