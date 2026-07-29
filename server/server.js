@@ -155,12 +155,15 @@ pruneMessages()
 setInterval(pruneMessages, 24 * 3600 * 1000).unref()
 
 async function readJson(req) {
-  let raw = ''
+  const chunks = []
+  let size = 0
   for await (const chunk of req) {
-    raw += chunk
-    if (raw.length > 4096) throw new Error('body too large')
+    size += chunk.length
+    if (size > 4096) throw new Error('body too large')
+    chunks.push(chunk)
   }
-  return raw ? JSON.parse(raw) : {}
+  if (size === 0) return {}
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'))
 }
 
 function send(res, status, body) {
