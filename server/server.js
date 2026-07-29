@@ -258,6 +258,7 @@ async function route(req, res) {
   }
 
   if (path === '/v1/friends/requests' && req.method === 'POST') {
+    if (limited(`fr:${me}`, 10)) return send(res, 429, { error: 'slow down' })
     const { to, nickname } = await readJson(req)
     const target = normUuid(to)
     if (!isUuid(target) || target === me) return send(res, 400, { error: 'bad target' })
