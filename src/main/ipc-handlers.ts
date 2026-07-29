@@ -43,6 +43,7 @@ import { detectJava } from './system/java'
 import { removeLinkIfPresent } from './launcher/links'
 import { pushLog, onLog, logHistory, clearLog } from './log'
 import { paths } from './paths'
+import { createKeyedQueue } from './keyed-queue'
 
 const states: Record<InstanceId, InstanceStatus> = {
   ranked: { id: 'ranked', state: 'not-installed' },
@@ -77,14 +78,11 @@ function sendProgress(e: ProgressEvent): void {
   pushLog('system', `[${e.instance}] ${e.message}`)
 }
 
-const syncChains: Record<InstanceId, Promise<unknown>> = {
-  ranked: Promise.resolve(),
-  rsg: Promise.resolve(),
-  zsg: Promise.resolve()
-}
+const syncQueue = createKeyedQueue<InstanceId>(['ranked', 'rsg', 'zsg'])
+const installQueue = createKeyedQueue<InstanceId>(['ranked', 'rsg', 'zsg'])
 
 function runSyncMaps(id: InstanceId, label: string): Promise<void> {
-  const run = syncChains[id].then(() =>
+  return syncQueue.run(id, () =>
     syncMaps(join(gmll.gameDir(id), 'saves'), store.getConfig().maps[id], (done, total, lbl) =>
       sendProgress({
         instance: id,
@@ -94,8 +92,6 @@ function runSyncMaps(id: InstanceId, label: string): Promise<void> {
       })
     )
   )
-  syncChains[id] = run.catch(() => undefined)
-  return run
 }
 
 function versionFile(id: InstanceId): string {
@@ -185,7 +181,16 @@ async function installInstanceMod(
   await installModJar(join(gameDir, 'mods'), mod)
 }
 
-async function installInstance(
+function installInstance(
+  id: InstanceId,
+  importFrom: InstanceId | null = null,
+  importFolder: string | null = null,
+  importWorlds: string[] = []
+): Promise<void> {
+  return installQueue.run(id, () => doInstallInstance(id, importFrom, importFolder, importWorlds))
+}
+
+async function doInstallInstance(
   id: InstanceId,
   importFrom: InstanceId | null = null,
   importFolder: string | null = null,
@@ -443,7 +448,9 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.instAddExtraOptions, async (_e, ids: InstanceId[]) => {
     for (const id of ids) {
       if (id !== 'rsg' && id !== 'zsg') continue
-      await installInstanceMod(gmll.gameDir(id), id, EXTRA_OPTIONS_MOD, 'extra-options')
+      await installQueue.run(id, () =>
+        installInstanceMod(gmll.gameDir(id), id, EXTRA_OPTIONS_MOD, 'extra-options')
+      )
     }
   })
   ipcMain.handle(IPC.instDismissExtraOptionsPrompt, () => {
