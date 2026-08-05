@@ -26,7 +26,14 @@ export const RSG_EXCLUDE_PREFIXES = ['mcsrranked', 'mcsrfairplay']
 export const TRUSTED_DOWNLOAD_HOSTS: ReadonlySet<string> = new Set([
   'redlime.github.io', // the MCSR modpack
   'cdn.modrinth.com', // pack files + ranked mod jars
-  'api.modrinth.com' // Modrinth version metadata
+  'api.modrinth.com', // Modrinth version metadata
+  // The MCSR pack hosts almost every mod in the legal-mods GitHub repo: the index links
+  // github.com/.../raw/... URLs, which 302 to raw.githubusercontent.com — both the link and its
+  // redirect target must pass. objects/release-assets cover mods served as GitHub release assets.
+  'github.com',
+  'raw.githubusercontent.com',
+  'objects.githubusercontent.com',
+  'release-assets.githubusercontent.com'
 ])
 
 export function assertTrustedDownloadUrl(url: string): string {
