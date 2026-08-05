@@ -12,7 +12,11 @@ export const RSG_EXCLUDE_PREFIXES = ['mcsrranked', 'mcsrfairplay']
 export const TRUSTED_DOWNLOAD_HOSTS: ReadonlySet<string> = new Set([
   'redlime.github.io',
   'cdn.modrinth.com',
-  'api.modrinth.com'
+  'api.modrinth.com',
+  'github.com',
+  'raw.githubusercontent.com',
+  'objects.githubusercontent.com',
+  'release-assets.githubusercontent.com'
 ])
 
 export function assertTrustedDownloadUrl(url: string): string {

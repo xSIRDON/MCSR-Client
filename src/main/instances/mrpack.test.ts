@@ -77,7 +77,6 @@ describe('fabricVersionString', () => {
   })
 })
 
-
 describe('safeJoin (pack path containment)', () => {
   const root = process.platform === 'win32' ? String.raw`C:\game` : '/game'
 
@@ -116,6 +115,20 @@ describe('assertTrustedDownloadUrl', () => {
       assertTrustedDownloadUrl('https://redlime.github.io/MCSRMods/modpacks/v4/pack.mrpack')
     ).not.toThrow()
     expect(() => assertTrustedDownloadUrl('https://api.modrinth.com/v2/project/x')).not.toThrow()
+    expect(() =>
+      assertTrustedDownloadUrl(
+        'https://github.com/Minecraft-Java-Edition-Speedrunning/legal-mods/raw/abc/legal-mods/sodium/1.16.1/sodium.jar'
+      )
+    ).not.toThrow()
+    expect(() =>
+      assertTrustedDownloadUrl('https://raw.githubusercontent.com/x/legal-mods/abc/mod.jar')
+    ).not.toThrow()
+    expect(() =>
+      assertTrustedDownloadUrl('https://objects.githubusercontent.com/github-production-release/x')
+    ).not.toThrow()
+    expect(() =>
+      assertTrustedDownloadUrl('https://release-assets.githubusercontent.com/x')
+    ).not.toThrow()
   })
 
   it('refuses plain http even on a trusted host', () => {
