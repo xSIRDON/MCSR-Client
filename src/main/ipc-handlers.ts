@@ -41,6 +41,7 @@ import { setupNinjabrain, launchNinjabrain, killNinjabrain } from './tools/ninja
 import { ensureToolscreenJar, spawnToolscreenWatcher } from './tools/toolscreen'
 import { detectJava } from './system/java'
 import { removeLinkIfPresent } from './launcher/links'
+import { gameWindowReady } from './launcher/game-ready'
 import { pushLog, onLog, logHistory, clearLog } from './log'
 import { paths } from './paths'
 import { createKeyedQueue } from './keyed-queue'
@@ -346,9 +347,25 @@ async function launchInstance(
   pushLog('system', `Launching ${id}…`)
   const child = await gmll.launch(id, token, fabric, sendProgress)
   setState(id, { state: 'running' })
-  BrowserWindow.getAllWindows()[0]?.minimize()
-  child.stdout.on('data', (d: Buffer) => pushLog('game', redactToken(d.toString())))
-  child.stderr.on('data', (d: Buffer) => pushLog('game', redactToken(d.toString())))
+
+  let steppedAside = false
+  let fallbackTimer: NodeJS.Timeout | null = null
+  const stepAside = (): void => {
+    if (steppedAside) return
+    steppedAside = true
+    if (fallbackTimer) clearTimeout(fallbackTimer)
+    const w = win()
+    if (w && !w.isMinimized()) w.minimize()
+  }
+  fallbackTimer = setTimeout(stepAside, 45_000)
+
+  const onGameOutput = (d: Buffer): void => {
+    const text = redactToken(d.toString())
+    pushLog('game', text)
+    if (!steppedAside && gameWindowReady(text)) stepAside()
+  }
+  child.stdout.on('data', onGameOutput)
+  child.stderr.on('data', onGameOutput)
 
   if (id === 'rsg') void tracker.start()
 
