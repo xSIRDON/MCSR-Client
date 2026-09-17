@@ -84,6 +84,29 @@ export interface AppConfig {
   friendsServerUrl: string | null
   /** Whether the one-time "add extra-options to existing installs" prompt has been answered. */
   extraOptionsPromptSeen: boolean
+  /** Keep RSG/ZSG SeedQueue sizing (and RAM) within what this PC can run, before each launch. */
+  seedQueueAutoTune: boolean
+}
+
+/** The SeedQueue settings that decide how hard the wall works the CPU and heap. */
+export interface SeedQueueSizing {
+  /** Max Queued Seeds. */
+  maxCapacity: number
+  /** Max Generating Seeds while in a world. */
+  maxConcurrently: number
+  /** Max Generating Seeds while on the wall. */
+  maxConcurrentlyOnWall: number
+}
+
+/** An instance's SeedQueue sizing next to what this PC can handle, for the Edit page. */
+export interface SeedQueueInfo {
+  current: SeedQueueSizing
+  /** The MCSR tech-support formula for this PC; auto-tune treats it as a ceiling. */
+  recommended: SeedQueueSizing
+  ramMb: number
+  /** Heap the current queue needs (2000 MB + 250 MB per queued seed). */
+  neededRamMb: number
+  cpuThreads: number
 }
 
 /** The official friends network, baked in so every client is on the same network by default.
@@ -154,7 +177,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   toolscreen: true,
   favorites: [],
   friendsServerUrl: DEFAULT_FRIENDS_SERVER,
-  extraOptionsPromptSeen: false
+  extraOptionsPromptSeen: false,
+  seedQueueAutoTune: true
 }
 
 /** A single mod jar inside an instance's mods/ folder. */
@@ -169,13 +193,15 @@ export interface ModInfo {
   enabled: boolean
 }
 
-/** System Java detection. The bundled tools (paceman, later Ninjabrain) need Java 17+. */
+/** System Java detection. The companion tools need Java 17+ when the bundled one isn't there yet. */
 export interface JavaInfo {
   found: boolean
   version: string | null
   major: number | null
   /** True when Java is present and major >= 17. */
   ok: boolean
+  /** The client's own Java 21 (used by the game and the tools) is downloaded. */
+  bundled?: boolean
 }
 
 /** StandardSettings config as key->value pairs (mirrors standardoptions.txt on disk). */

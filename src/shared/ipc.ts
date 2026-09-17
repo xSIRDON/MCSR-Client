@@ -13,6 +13,7 @@ import type {
   ModInfo,
   Profile,
   ProgressEvent,
+  SeedQueueInfo,
   StandardSettings,
   TrackerStatus,
   UpdateStatus
@@ -53,6 +54,8 @@ export const IPC = {
   instInstalledIds: 'inst:installedIds',
   instListWorlds: 'inst:listWorlds',
   instListWorldsInFolder: 'inst:listWorldsInFolder',
+  instSeedQueue: 'inst:seedQueue',
+  instTuneSeedQueue: 'inst:tuneSeedQueue',
   // system
   sysJava: 'sys:java',
   // app updates
@@ -157,6 +160,10 @@ export interface McsrApi {
     listWorlds(id: InstanceId): Promise<string[]>
     /** World folder names available in an arbitrary folder (resolving its game dir). */
     listWorldsInFolder(folder: string): Promise<string[]>
+    /** RSG/ZSG SeedQueue sizing vs. what this PC can run; null before SeedQueue has a config. */
+    seedQueue(id: InstanceId): Promise<SeedQueueInfo | null>
+    /** Apply the auto-tune now (the game must be closed); resolves the updated info. */
+    tuneSeedQueue(id: InstanceId): Promise<SeedQueueInfo | null>
   }
   system: {
     java(): Promise<JavaInfo>

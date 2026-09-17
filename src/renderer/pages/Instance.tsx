@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import type { AppConfig, InstanceId, ModInfo } from '@shared/types'
+import type { AppConfig, InstanceId, ModInfo, SeedQueueInfo } from '@shared/types'
 import { MAP_CATALOG, ALL_MAP_IDS } from '@shared/maps'
 
 const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
@@ -9,6 +9,8 @@ const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 
 export function Instance() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  // Bumped when the wall tune changes RAM, so the Memory card re-reads the config.
+  const [memoryKey, setMemoryKey] = useState(0)
   const instanceId: InstanceId | null =
     id === 'ranked' || id === 'rsg' || id === 'zsg' ? id : null
 
@@ -31,7 +33,10 @@ export function Instance() {
         </h1>
       </header>
 
-      <MemoryCard id={instanceId} />
+      <MemoryCard key={memoryKey} id={instanceId} />
+      {instanceId !== 'ranked' && (
+        <WallCard id={instanceId} onTuned={() => setMemoryKey((k) => k + 1)} />
+      )}
       <JavaCard id={instanceId} />
       <FilesCard id={instanceId} />
       <SettingsImportCard id={instanceId} />
@@ -127,8 +132,120 @@ function MemoryCard({ id }: { id: InstanceId }) {
         className="w-full accent-[var(--gold)]"
       />
       <div className="mt-1 text-xs text-faint">
-        3–4 GB is plenty for 1.16.1 + SeedQueue. Applies to this instance only.
+        {id === 'ranked'
+          ? '3–4 GB is plenty for Ranked.'
+          : 'SeedQueue needs about 2 GB plus 250 MB per queued seed — Wall performance below keeps them in step.'}{' '}
+        Applies to this instance only.
       </div>
+    </Card>
+  )
+}
+
+/** SeedQueue sizing vs. what this PC can run, with the auto-tune switch (RSG/ZSG). */
+function WallCard({ id, onTuned }: { id: InstanceId; onTuned: () => void }) {
+  const [info, setInfo] = useState<SeedQueueInfo | null | undefined>(undefined)
+  const [config, setConfig] = useState<AppConfig | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    void window.mcsr.instances.seedQueue(id).then(setInfo)
+    void window.mcsr.config.get().then(setConfig)
+  }, [id])
+  if (info === undefined || !config) return null
+
+  const setAuto = (on: boolean) =>
+    void window.mcsr.config.set({ seedQueueAutoTune: on }).then(setConfig)
+
+  async function tune() {
+    setBusy(true)
+    setError(null)
+    try {
+      setInfo(await window.mcsr.instances.tuneSeedQueue(id))
+      onTuned()
+    } catch (e) {
+      // Drop Electron's "Error invoking remote method …" wrapper; the main-process message is the useful part.
+      const msg = e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : ''
+      setError(msg || 'Could not tune SeedQueue.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const rows = info
+    ? [
+        { label: 'Queued seeds', value: info.current.maxCapacity, max: info.recommended.maxCapacity },
+        {
+          label: 'Generating on the wall',
+          value: info.current.maxConcurrentlyOnWall,
+          max: info.recommended.maxConcurrentlyOnWall
+        },
+        { label: 'Generating in a world', value: info.current.maxConcurrently, max: info.recommended.maxConcurrently }
+      ]
+    : []
+  const ramShort = !!info && info.ramMb < info.neededRamMb
+  const needsTune = ramShort || rows.some((r) => r.value > r.max)
+
+  return (
+    <Card title="Wall performance">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="min-w-0 text-sm">
+          <div className="text-text">Auto-tune before each launch</div>
+          <div className="text-xs text-faint">
+            Keeps SeedQueue and RAM within what this PC can run. Values under the limits stay as you set
+            them.
+          </div>
+        </div>
+        <Toggle on={config.seedQueueAutoTune} onChange={setAuto} />
+      </div>
+
+      {!info ? (
+        <div className="text-sm text-muted">SeedQueue’s settings show up here after the first launch.</div>
+      ) : (
+        <>
+          <div className="space-y-1.5">
+            {rows.map((r) => (
+              <div
+                key={r.label}
+                className="flex items-center justify-between gap-3 rounded-md border border-[var(--line)] px-3 py-1.5 text-sm"
+              >
+                <span className="text-muted">{r.label}</span>
+                <span className="flex items-baseline gap-2">
+                  <span className={r.value > r.max ? 'text-[var(--loss)]' : 'text-text'}>{r.value}</span>
+                  <span className="text-xs text-faint">up to {r.max}</span>
+                </span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between gap-3 rounded-md border border-[var(--line)] px-3 py-1.5 text-sm">
+              <span className="text-muted">RAM</span>
+              <span className="flex items-baseline gap-2">
+                <span className={ramShort ? 'text-[var(--loss)]' : 'text-text'}>
+                  {(info.ramMb / 1024).toFixed(1)} GB
+                </span>
+                <span className="text-xs text-faint">
+                  {info.current.maxCapacity} seeds need {(info.neededRamMb / 1024).toFixed(1)} GB
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <p className="min-w-0 text-xs text-faint">
+              Limits for your {info.cpuThreads}-thread CPU, from SeedQueue’s docs and the MCSR
+              tech-support formula.
+            </p>
+            {needsTune && (
+              <button
+                onClick={tune}
+                disabled={busy}
+                className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted transition-colors hover:text-text disabled:opacity-50"
+              >
+                {busy ? 'Tuning…' : 'Tune now'}
+              </button>
+            )}
+          </div>
+          {error && <div className="mt-2 text-xs text-[var(--loss)]">{error}</div>}
+        </>
+      )}
     </Card>
   )
 }
@@ -160,7 +277,7 @@ function JavaCard({ id }: { id: InstanceId }) {
             className="accent-[var(--gold)]"
           />
           <span className={java === null ? 'text-text' : 'text-muted'}>Automatic</span>
-          <span className="text-xs text-faint">— bundled Java 8, recommended for 1.16.1</span>
+          <span className="text-xs text-faint">— bundled Java 21 with ZGC, recommended</span>
         </label>
         <label className="flex cursor-pointer items-center gap-2 text-sm">
           <input
@@ -186,8 +303,8 @@ function JavaCard({ id }: { id: InstanceId }) {
         )}
       </div>
       <p className="mt-2 text-xs text-faint">
-        Pick a custom Java (e.g. your own Java 17) only if you know the args you need — the game
-        targets Java 8 by default.
+        A custom Java 17+ (e.g. GraalVM 21) also runs with ZGC; anything older gets G1. The console
+        log notes which Java the game started on.
       </p>
     </Card>
   )

@@ -65,7 +65,9 @@ const api: McsrApi = {
     importFromFolderPath: (target: InstanceId, folder: string, opts?: { worlds?: string[] }) =>
       ipcRenderer.invoke(IPC.instImportFromFolderPath, target, folder, opts),
     listWorlds: (id: InstanceId) => ipcRenderer.invoke(IPC.instListWorlds, id),
-    listWorldsInFolder: (folder: string) => ipcRenderer.invoke(IPC.instListWorldsInFolder, folder)
+    listWorldsInFolder: (folder: string) => ipcRenderer.invoke(IPC.instListWorldsInFolder, folder),
+    seedQueue: (id: InstanceId) => ipcRenderer.invoke(IPC.instSeedQueue, id),
+    tuneSeedQueue: (id: InstanceId) => ipcRenderer.invoke(IPC.instTuneSeedQueue, id)
   },
   system: {
     java: () => ipcRenderer.invoke(IPC.sysJava)

@@ -1,6 +1,7 @@
 import { ipcMain, BrowserWindow, dialog, shell } from 'electron'
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, rmSync } from 'node:fs'
 import { spawn } from 'node:child_process'
+import { availableParallelism, totalmem } from 'node:os'
 import { join } from 'node:path'
 import { IPC } from '../shared/ipc'
 import type {
@@ -8,6 +9,7 @@ import type {
   InstanceId,
   InstanceStatus,
   ProgressEvent,
+  SeedQueueInfo,
   StandardSettings
 } from '../shared/types'
 import { isInstanceId } from '../shared/types'
@@ -21,17 +23,27 @@ import {
   installPackFiles,
   installLatestRankedMod,
   fabricVersionString,
+  PACK_MOD_UPGRADES,
   RSG_EXCLUDE_PREFIXES,
   type ModrinthIndex
 } from './instances/mrpack'
 import { writeRankedConfigs, writeRsgConfigs } from './instances/configs'
+import {
+  planTune,
+  readSeedQueue,
+  recommendedRamMb,
+  recommendedSeedQueue,
+  writeSeedQueue
+} from './instances/seedqueue'
 import { syncMaps } from './instances/maps'
 import {
   listMods,
   setModEnabled,
   installModJar,
   hasExtraOptions,
-  shouldPromptExtraOptions
+  shouldPromptExtraOptions,
+  pruneSupersededMods,
+  upgradeInstalledMods
 } from './instances/mods'
 import { readStandardSettings, writeStandardSettings, importOptionsFile } from './instances/standard-settings'
 import { copyInstanceSettings, resolveGameDir, listWorlds } from './instances/copy-instance'
@@ -202,6 +214,58 @@ async function installInstanceMod(
   await installModJar(join(gameDir, 'mods'), mod)
 }
 
+// SeedQueue runs in RSG and ZSG. The Ranked mod locks SeedQueue's config, so Ranked is left alone.
+const SEEDQUEUE_INSTANCES: readonly InstanceId[] = ['rsg', 'zsg']
+
+function machine(): { threads: number; memMb: number } {
+  return { threads: availableParallelism(), memMb: Math.round(totalmem() / 1048576) }
+}
+
+function seedQueueInfo(id: InstanceId): SeedQueueInfo | null {
+  if (!SEEDQUEUE_INSTANCES.includes(id)) return null
+  const current = readSeedQueue(gmll.gameDir(id))
+  if (!current) return null
+  const { threads, memMb } = machine()
+  return {
+    current,
+    recommended: recommendedSeedQueue(threads, memMb),
+    ramMb: store.getConfig().ram[id],
+    neededRamMb: recommendedRamMb(current.maxCapacity),
+    cpuThreads: threads
+  }
+}
+
+/**
+ * Bring an instance's SeedQueue sizing — and its RAM — within what this PC can run (see
+ * instances/seedqueue.ts). Returns a note per change; empty when nothing needed changing.
+ */
+function tuneSeedQueue(id: InstanceId): string[] {
+  if (!SEEDQUEUE_INSTANCES.includes(id)) return []
+  const gameDir = gmll.gameDir(id)
+  const current = readSeedQueue(gameDir)
+  if (!current) return []
+  const cfg = store.getConfig()
+  const { threads, memMb } = machine()
+  const plan = planTune(current, cfg.ram[id], threads, memMb)
+  const s = plan.settings
+  if (
+    s.maxCapacity !== current.maxCapacity ||
+    s.maxConcurrently !== current.maxConcurrently ||
+    s.maxConcurrentlyOnWall !== current.maxConcurrentlyOnWall
+  ) {
+    writeSeedQueue(gameDir, s)
+  }
+  if (plan.ramMb !== cfg.ram[id]) store.setConfig({ ram: { ...cfg.ram, [id]: plan.ramMb } })
+  return plan.changes
+}
+
+/** A Java 17+ javaw for the companion tools: the client's bundled Java 21, else one on PATH. */
+async function companionJavaw(): Promise<string | null> {
+  const bundled = await gmll.ensureManagedJava()
+  if (bundled) return bundled
+  return (await detectJava()).ok ? 'javaw' : null
+}
+
 /** All installs of one instance run strictly one at a time (see installQueue above). */
 function installInstance(
   id: InstanceId,
@@ -236,8 +300,9 @@ async function doInstallInstance(
     }
 
     sendProgress({ instance: id, phase: 'mods', fraction: 0, message: 'Installing mods…' })
-    await installPackFiles(index, gameDir, {
+    const packPaths = await installPackFiles(index, gameDir, {
       excludePrefixes: id === 'rsg' || id === 'zsg' ? RSG_EXCLUDE_PREFIXES : [],
+      upgrades: id === 'ranked' ? [] : PACK_MOD_UPGRADES,
       seedQueueOverride: store.getConfig().seedQueueOverride,
       onProgress: (done, total, label) =>
         sendProgress({
@@ -247,6 +312,10 @@ async function doInstallInstance(
           message: `Mods: ${label} (${done}/${total})`
         })
     })
+    // A pack update rewrites mods/ without clearing it; drop the versions it just replaced.
+    const packJars = packPaths.filter((p) => /^mods\/[^/]+\.jar$/i.test(p)).map((p) => p.slice('mods/'.length))
+    const pruned = pruneSupersededMods(join(gameDir, 'mods'), packJars)
+    if (pruned.length > 0) pushLog('system', `Removed replaced mod versions: ${pruned.join(', ')}.`)
 
     sendProgress({ instance: id, phase: 'configs', fraction: null, message: 'Writing configs…' })
     if (id === 'ranked') writeRankedConfigs(gameDir)
@@ -353,16 +422,46 @@ async function launchInstance(
   await ensureInstanceExtras(id, gmll.gameDir(id))
   setState(id, { state: 'launching' })
 
-  // Companion tools that run alongside the game (both need a Java 17+ runtime). Spawn them now,
-  // before the game, so Toolscreen's watcher catches the window and Ninjabrain is ready. All
-  // best-effort — never block the launch.
+  // Newer legal builds of pack mods reach existing installs here, without a full reinstall.
+  if (id !== 'ranked') {
+    try {
+      const updated = await upgradeInstalledMods(join(gmll.gameDir(id), 'mods'), PACK_MOD_UPGRADES)
+      if (updated.length > 0) {
+        sendProgress({ instance: id, phase: 'mods', fraction: null, message: `Updated ${updated.join(', ')}` })
+      }
+    } catch (e) {
+      pushLog('system', `Mod update skipped: ${e instanceof Error ? e.message : e}`)
+    }
+  }
+
+  // Oversized SeedQueue settings stall the wall however good the JVM is; trim them to this PC first
+  // (RAM included, which is why it runs before the JVM is set up).
+  if (store.getConfig().seedQueueAutoTune) {
+    try {
+      const changes = tuneSeedQueue(id)
+      if (changes.length > 0) {
+        sendProgress({
+          instance: id,
+          phase: 'configs',
+          fraction: null,
+          message: `Tuned SeedQueue for this PC: ${changes.join(', ')}`
+        })
+      }
+    } catch (e) {
+      pushLog('system', `SeedQueue tuning skipped: ${e instanceof Error ? e.message : e}`)
+    }
+  }
+
+  // Companion tools that run alongside the game (all need Java 17+). Spawn them now, before the
+  // game, so Toolscreen's watcher catches the window and Ninjabrain is ready. All best-effort —
+  // never block the launch.
   const cfg = store.getConfig()
+  const javaw = await companionJavaw()
   if (cfg.toolscreen || cfg.ninjabrain) {
-    const java = await detectJava()
-    if (java.ok) {
+    if (javaw) {
       if (cfg.toolscreen) {
         try {
-          await spawnToolscreenWatcher(gmll.gameDir(id))
+          await spawnToolscreenWatcher(gmll.gameDir(id), javaw)
           pushLog('system', 'Toolscreen watcher started — it will inject once the game window opens.')
         } catch (e) {
           pushLog('system', `Toolscreen skipped: ${e instanceof Error ? e.message : e}`)
@@ -370,19 +469,26 @@ async function launchInstance(
       }
       if (cfg.ninjabrain) {
         try {
-          const opened = await launchNinjabrain()
+          const opened = await launchNinjabrain(javaw)
           if (opened) pushLog('system', 'Ninjabrain Bot opened.')
         } catch (e) {
           pushLog('system', `Ninjabrain Bot skipped: ${e instanceof Error ? e.message : e}`)
         }
       }
     } else {
-      pushLog('system', 'Companion tools (Toolscreen / Ninjabrain) need Java 17+ on PATH; skipped this launch.')
+      pushLog('system', 'Companion tools (Toolscreen / Ninjabrain) need Java 17+; skipped this launch.')
     }
   }
 
   pushLog('system', `Launching ${id}…`)
-  const child = await gmll.launch(id, token, fabric, sendProgress)
+  let child: Awaited<ReturnType<typeof gmll.launch>>
+  try {
+    child = await gmll.launch(id, token, fabric, sendProgress, (line) => pushLog('system', line))
+  } catch (e) {
+    // Don't strand the instance in "launching" — the player can fix the cause and try again.
+    setState(id, { state: 'ready' })
+    throw e
+  }
   setState(id, { state: 'running' })
 
   // Step the launcher aside only once the GAME WINDOW is actually up — not the instant the JVM is
@@ -411,7 +517,11 @@ async function launchInstance(
   child.stdout.on('data', onGameOutput)
   child.stderr.on('data', onGameOutput)
 
-  if (id === 'rsg') void tracker.start()
+  if (id === 'rsg') {
+    tracker.start(javaw ?? undefined).catch((e) =>
+      pushLog('system', `paceman tracker skipped: ${e instanceof Error ? e.message : e}`)
+    )
+  }
 
   child.on('close', () => {
     if (id === 'rsg') tracker.stop()
@@ -587,10 +697,21 @@ export function registerIpc(): void {
     listWorlds(gmll.gameDir(assertInstanceId(id)))
   )
   ipcMain.handle(IPC.instListWorldsInFolder, (_e, folder: string) => listWorlds(resolveGameDir(folder)))
+  ipcMain.handle(IPC.instSeedQueue, (_e, id: InstanceId) => seedQueueInfo(assertInstanceId(id)))
+  ipcMain.handle(IPC.instTuneSeedQueue, (_e, id: InstanceId) => {
+    const iid = assertInstanceId(id)
+    // SeedQueue rewrites its own config while the game runs, so an edit now would be lost.
+    if (BUSY_STATES.includes(states[iid].state)) {
+      throw new Error('Close the game first — SeedQueue settings can’t change while it’s running.')
+    }
+    const changes = tuneSeedQueue(iid)
+    if (changes.length > 0) pushLog('system', `[${iid}] Tuned SeedQueue for this PC: ${changes.join(', ')}`)
+    return seedQueueInfo(iid)
+  })
   ipcMain.handle(IPC.skinGet, (_e, idOrUuid: string, size: number, kind: 'avatar' | 'body') =>
     getSkin(idOrUuid, size, kind)
   )
-  ipcMain.handle(IPC.sysJava, () => detectJava())
+  ipcMain.handle(IPC.sysJava, async () => ({ ...(await detectJava()), bundled: gmll.managedJavaOnDisk() }))
 
   ipcMain.handle(IPC.updCheck, () => checkForUpdates())
   ipcMain.handle(IPC.updStatus, () => currentUpdateStatus())

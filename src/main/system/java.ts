@@ -1,6 +1,6 @@
-// Detects the system Java the bundled tools run on (paceman tracker today,
-// Ninjabrain Bot later) — these need Java 17+. The game itself uses GMLL's own
-// bundled JRE, so this check is purely for the companion tools.
+// Detects a system Java on PATH. The game and the companion tools (paceman tracker, Toolscreen,
+// Ninjabrain Bot) run on the client's bundled Java 21; a system Java 17+ is only the tools'
+// fallback until that download exists. Also parses `-version` output for the launch probe.
 
 import { spawn } from 'node:child_process'
 import type { JavaInfo } from '../../shared/types'

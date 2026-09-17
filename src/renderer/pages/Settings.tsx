@@ -148,32 +148,38 @@ export function Settings() {
         </button>
       </Card>
 
-      {/* Java runtime for the bundled tools */}
-      <Card title="Java runtime (for tools)">
+      {/* Java runtime for the game and the bundled tools */}
+      <Card title="Java runtime">
         <div className="flex items-center gap-2 text-sm">
-          <Dot ok={!!java?.ok} />
+          <Dot ok={!!java && (!!java.bundled || java.ok)} />
           <span className="text-muted">
             {java === null
               ? 'Checking…'
-              : !java.found
-                ? 'No system Java found on PATH'
-                : `Java ${java.version}`}
+              : java.bundled
+                ? 'Bundled Java 21 — ready'
+                : 'Bundled Java 21 downloads with your next launch'}
           </span>
         </div>
+        {java && (
+          <div className="mt-1 pl-4 text-xs text-faint">
+            {java.found ? `System Java ${java.version} on PATH` : 'No system Java on PATH (not needed)'}
+          </div>
+        )}
         <p className="mt-2 text-xs text-faint">
-          The bundled tools (paceman tracker — Ninjabrain Bot later) need Java 17+. The game itself is
-          unaffected; it runs on its own bundled Java 8.
-          {java && !java.ok && (
+          The game runs on Mojang’s own Java 21 with the ZGC garbage collector — the setup SeedQueue
+          recommends — and the paceman tracker, Toolscreen and Ninjabrain Bot run on it too. A system
+          Java 17+ is only a fallback for the tools until that download is done.
+          {java && !java.bundled && !java.ok && (
             <>
               {' '}
-              Install{' '}
+              To use the tools before then, install{' '}
               <a
-                href="https://adoptium.net/temurin/releases/?version=17"
+                href="https://adoptium.net/temurin/releases/?version=21"
                 target="_blank"
                 rel="noreferrer"
                 className="text-[var(--gold)] underline"
               >
-                Temurin 17
+                Temurin 21
               </a>
               .
             </>
