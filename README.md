@@ -5,7 +5,7 @@
 <br />
 <br />
 
-[![Version](https://img.shields.io/badge/version-v1.6.3-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![Version](https://img.shields.io/badge/version-v1.7.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-3b82f6?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&labelColor=15151c)](LICENSE)
 
@@ -19,7 +19,7 @@ One app to sign in, install your instances, launch the game, and watch your rank
 
 ### [⬇  Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 
-<sub>Windows installer · auto-updates · v1.6.3</sub>
+<sub>Windows installer · auto-updates · v1.7.0</sub>
 
 </div>
 
@@ -50,8 +50,16 @@ Mods** (existing installs get a one-time prompt to add it).
 
 ### Launches Minecraft for you
 - Downloads and runs **Minecraft 1.16.1 + Fabric** directly — no external launcher required.
-- **Java is fetched and managed** automatically.
+- **Java is fetched and managed** automatically: the game runs on **Mojang's Java 21 with the ZGC
+  garbage collector** — the setup SeedQueue recommends — instead of 1.16.1's stock Java 8, whose
+  multi-second garbage-collection pauses freeze the wall.
 - Sign in with your **Microsoft account**, add as many as you like, and switch between them in a click.
+
+### A wall that doesn't stall
+RSG and ZSG get a **Wall performance** check before every launch: queued seeds, seeds generating on
+the wall and in a world, and RAM are kept within what your PC can run — using SeedQueue's own
+guidance and the MCSR tech-support formula for your CPU and memory. Anything already under those
+limits stays exactly as you set it, and you can switch it off in **Edit instance**.
 
 ### Live MCSR Ranked dashboard
 Your stats, front and center:
@@ -112,11 +120,12 @@ split funnel.
 ### Bundled tools, set up on install
 - **Ninjabrain Bot** — the stronghold calculator, opened automatically alongside the game.
 - **Toolscreen** — ready to go out of the box.
+- Both — and the paceman tracker — run on the client's bundled Java, so there's nothing extra to install.
 
 ### Per-instance control
 Open **Edit instance** to fine-tune anything:
 
-- RAM and Java settings.
+- RAM and Java settings, plus the SeedQueue **Wall performance** card (RSG/ZSG).
 - Mod toggles and a practice-map picker.
 - Open the game folder directly.
 - **Import settings** — copy `options.txt`, `hotbar.nbt`, `config/`, and your `resourcepacks/` (your **seedwall**) from another instance, or pull in an external `options.txt`. Offered on the Edit page and during a first-time install.
