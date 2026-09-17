@@ -352,7 +352,7 @@ function SeedCard({
           <div className="mb-1 grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-3 text-[10px] uppercase tracking-wider text-faint">
             <span>Split</span>
             <span className="text-right">Them</span>
-            <span className="text-right">Your avg</span>
+            <span className="text-right">You (typical)</span>
             <span className="text-right">Gap</span>
             <span />
           </div>
@@ -396,8 +396,8 @@ function SeedCard({
             {!myUuid
               ? 'Sign in to compare against your own splits.'
               : typed
-                ? `Your avg over ${typed} ${seedStructureLabel(seed.seedType)} run${typed === 1 ? '' : 's'}`
-                : 'Your overall avg — not enough of this seed type yet'}
+                ? `Your median over ${typed} ${seedStructureLabel(seed.seedType)} run${typed === 1 ? '' : 's'} — a bad run doesn’t skew it`
+                : 'Your overall median — not enough of this seed type yet'}
           </p>
         </div>
       )}

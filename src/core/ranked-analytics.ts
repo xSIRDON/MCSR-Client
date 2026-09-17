@@ -377,6 +377,8 @@ export interface SplitStat {
   label: string
   best: number | null // fastest ms reaching this split
   average: number | null // mean ms
+  /** Middle ms — what a typical run looks like. Two disasters don't drag it the way a mean does. */
+  median: number | null
   count: number // matches contributing
 }
 
@@ -392,11 +394,13 @@ const CUMULATIVE_SPLITS: { key: string; label: string; type: string }[] = [
 
 function splitStat(key: string, label: string, times: number[]): SplitStat {
   const valid = times.filter((t) => typeof t === 'number' && t > 0)
+  const mid = median(valid)
   return {
     key,
     label,
     best: valid.length ? Math.min(...valid) : null,
     average: valid.length ? Math.round(valid.reduce((a, b) => a + b, 0) / valid.length) : null,
+    median: mid == null ? null : Math.round(mid),
     count: valid.length
   }
 }
@@ -491,13 +495,18 @@ export interface GapRow {
 /**
  * The split-by-split gap between a top runner's run on a seed and your own typical splits. Feed it
  * `analyzeSplits(runnerUuid, [theirMatch])` (their times on that one seed) and
- * `analyzeSplits(yourUuid, yourRecentMatches)` (your averages). Rows follow the runner's splits, so
+ * `analyzeSplits(yourUuid, yourRecentMatches)` (your history). Rows follow the runner's splits, so
  * a split they never reached drops out; `youMs`/`delta` are null where you have no baseline yet.
+ *
+ * Your side is the MEDIAN, not the mean: over a handful of runs of one seed type, a single 5-minute
+ * disaster pulls a mean minutes off your real pace (measured: five shipwreck enters of 2:09, 2:11,
+ * 2:12, 4:11, 5:45 average to 3:18 but sit at 2:12), which reads as a gap you don't actually have.
  */
 export function buildSplitGap(runner: SplitStat[], you: SplitStat[]): GapRow[] {
   const youBy = new Map(you.map((s) => [s.key, s]))
   return runner.map((r) => {
-    const youMs = youBy.get(r.key)?.average ?? null
+    const mine = youBy.get(r.key)
+    const youMs = mine?.median ?? mine?.average ?? null
     return {
       key: r.key,
       label: r.label,

@@ -295,7 +295,12 @@ describe('analyzeSplits', () => {
         ])
       })
     ])
-    expect(get(splits, 'overworld')).toMatchObject({ best: 100_000, average: 120_000, count: 2 })
+    expect(get(splits, 'overworld')).toMatchObject({
+      best: 100_000,
+      average: 120_000,
+      median: 120_000,
+      count: 2
+    })
     expect(get(splits, 'bastion').count).toBe(2)
     expect(get(splits, 'fortress')).toMatchObject({ best: 250_000, count: 1 })
   })
@@ -907,6 +912,7 @@ describe('buildSplitGap', () => {
     label,
     best: average,
     average,
+    median: average,
     count: average == null ? 0 : 3
   })
 
@@ -938,5 +944,30 @@ describe('seedStructureLabel', () => {
     expect(seedStructureLabel('BRIDGE')).toBe('Bridge')
     expect(seedStructureLabel(null)).toBe('—')
     expect(seedStructureLabel(undefined)).toBe('—')
+  })
+})
+
+describe('buildSplitGap uses your median, not your mean', () => {
+  // Real numbers from a 5-run shipwreck sample: 2:09.6, 2:11.9, 2:12.6, 4:11.0, 5:45.6.
+  // Their mean is 3:18 — over a minute above every normal run in the set.
+  const enters = [129_646, 131_951, 132_610, 251_053, 345_606]
+  const run = (uuid: string, time: number): MatchInfo => ({
+    id: nextId++,
+    type: 2,
+    players: [{ uuid, nickname: uuid }],
+    result: { uuid: null, time: null },
+    timelines: [{ uuid, time, type: 'story.enter_the_nether' }]
+  })
+
+  it('reports the middle run, so two disasters do not invent a gap', () => {
+    const mine = analyzeSplits(ME, enters.map((t) => run(ME, t)))
+    const overworld = mine.find((s) => s.key === 'overworld')!
+    expect(overworld.average).toBe(198_173) // 3:18.173 — the misleading figure
+    expect(overworld.median).toBe(132_610) // 2:12.610 — a typical run
+
+    const runner = analyzeSplits(OPP, [run(OPP, 117_277)])
+    const row = buildSplitGap(runner, mine).find((r) => r.key === 'overworld')!
+    expect(row.youMs).toBe(132_610)
+    expect(row.delta).toBe(132_610 - 117_277) // ~15s behind, not ~81s
   })
 })
