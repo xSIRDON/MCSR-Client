@@ -259,9 +259,12 @@ function tuneSeedQueue(id: InstanceId): string[] {
   return plan.changes
 }
 
-/** A Java 17+ javaw for the companion tools: the client's bundled Java 21, else one on PATH. */
-async function companionJavaw(): Promise<string | null> {
-  const bundled = await gmll.ensureManagedJava()
+/**
+ * A Java 17+ javaw for the companion tools: the client's bundled Java 21 (fetched now if this is
+ * its first use, with progress on `id`'s card), else one on PATH.
+ */
+async function companionJavaw(id: InstanceId): Promise<string | null> {
+  const bundled = await gmll.ensureManagedJava(id, sendProgress)
   if (bundled) return bundled
   return (await detectJava()).ok ? 'javaw' : null
 }
@@ -456,7 +459,7 @@ async function launchInstance(
   // game, so Toolscreen's watcher catches the window and Ninjabrain is ready. All best-effort —
   // never block the launch.
   const cfg = store.getConfig()
-  const javaw = await companionJavaw()
+  const javaw = await companionJavaw(id)
   if (cfg.toolscreen || cfg.ninjabrain) {
     if (javaw) {
       if (cfg.toolscreen) {

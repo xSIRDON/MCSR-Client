@@ -108,9 +108,14 @@ let managedJava: Promise<string | null> | null = null
  * Path to the managed Java 21 (javaw.exe), downloading it through GMLL on first use — the files
  * come from Mojang's CDN and are size- and sha1-checked. Resolves null when it can't be provisioned
  * (offline on first run, disk trouble); launches then fall back to GMLL's Java 8, and the next call
- * tries again.
+ * tries again. Download progress is reported against `id` when given.
  */
-export function ensureManagedJava(id?: InstanceId): Promise<string | null> {
+export function ensureManagedJava(
+  id?: InstanceId,
+  onProgress?: (e: ProgressEvent) => void
+): Promise<string | null> {
+  if (onProgress) progressSink = onProgress
+  if (id) activePhaseInstance = id
   const pending = (managedJava ??= provisionManagedJava(id).catch(() => null))
   return pending.then((javaw) => {
     if (!javaw && managedJava === pending) managedJava = null
