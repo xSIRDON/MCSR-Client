@@ -144,6 +144,43 @@ export interface JavaInfo {
   bundled?: boolean
 }
 
+export interface GapCheckFilters {
+  seedType?: string | null
+  bastionType?: string | null
+  maxTimeSeconds?: number | null
+  minTimeSeconds?: number | null
+  minRank?: number | null
+  players?: string[]
+}
+
+export interface GapCheckCounts {
+  total: number
+  byType: Record<string, number>
+}
+
+export interface GapCheckSeedPlayer {
+  uuid: string
+  nickname: string
+  eloRank: number | null
+  elo: number | null
+  timeMs: number | null
+  splits: { type: string; timeMs: number }[]
+  vod: { url: string; runStartSeconds: number } | null
+}
+
+export interface GapCheckSeed {
+  matchId: number
+  url: string
+  date: number | null
+  seedType: string | null
+  bastionType: string | null
+  endTowers: number[]
+  seeds: { overworld: string | null; nether: string | null; end: string | null; rng: string | null }
+  rngConfidence: { matches: number; total: number } | null
+  players: GapCheckSeedPlayer[]
+  finalTimeMs: number | null
+}
+
 export type StandardSettings = Record<string, string>
 
 export interface UpdateStatus {
