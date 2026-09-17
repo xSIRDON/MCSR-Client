@@ -123,6 +123,42 @@ export function verifyBuffer(buf: Buffer, hashes: PackFile['hashes']): void {
   throw new Error('no hash to verify against')
 }
 
+/**
+ * A newer legal build of a pack mod. The upstream pack is rebuilt by hand and can trail the
+ * legal-mods list for weeks, so RSG/ZSG take these in its place. Each entry names the exact pack
+ * file it supersedes: once the pack ships anything else for that mod, the entry stops matching and
+ * the pack's file wins again.
+ */
+export interface PackModUpgrade {
+  /** The pack path this replaces, e.g. "mods/hermes-0.12.5+MC1.16.1.jar". */
+  replaces: string
+  /** The replacement's pack-style path. */
+  path: string
+  urls: string[]
+  sha512: string
+}
+
+// Ranked keeps the pack exactly as published — the pack is what Ranked is built and checked against.
+export const PACK_MOD_UPGRADES: readonly PackModUpgrade[] = [
+  {
+    replaces: 'mods/hermes-0.12.5+MC1.16.1.jar',
+    path: 'mods/hermes-0.15.1+MC1.16.1.jar',
+    urls: [
+      'https://github.com/Minecraft-Java-Edition-Speedrunning/legal-mods/raw/d6ed9613e0cf3a2291b8e756ed10a0b127ce632f/legal-mods/hermes/1.16.1/hermes-0.15.1+MC1.16.1.jar'
+    ],
+    sha512:
+      '2924a72bfc55b4b911a6b5920ff88e2c1a3bc2747da806b4be019eb56a3612233e83f948a43f1f6d8d2fecd57124c8a4573e051659525a312f84536b0c26a94c'
+  }
+]
+
+/** Swap superseded pack files for their newer builds. */
+export function applyModUpgrades(files: PackFile[], upgrades: readonly PackModUpgrade[]): PackFile[] {
+  return files.map((f) => {
+    const up = upgrades.find((u) => u.replaces === f.path)
+    return up ? { ...f, path: up.path, hashes: { sha512: up.sha512 }, downloads: [...up.urls] } : f
+  })
+}
+
 export function fabricVersionString(index: ModrinthIndex): string {
   const loader = index.dependencies['fabric-loader']
   const mc = index.dependencies['minecraft']
@@ -166,20 +202,25 @@ export async function fetchPack(
 
 export interface InstallOpts {
   excludePrefixes?: string[]
+  /** Newer builds to install in place of the pack's (see PACK_MOD_UPGRADES). */
+  upgrades?: readonly PackModUpgrade[]
   /** Absolute path to a SeedQueue jar to substitute for the pack's. */
   seedQueueOverride?: string | null
   onProgress?: (done: number, total: number, label: string) => void
   fetchBuffer?: FetchBuffer
 }
 
-/** Download every (filtered) pack file into the game directory, verifying hashes. */
+/**
+ * Download every (filtered) pack file into the game directory, verifying hashes. Resolves the
+ * pack-relative paths it wrote.
+ */
 export async function installPackFiles(
   index: ModrinthIndex,
   gameDir: string,
   opts: InstallOpts = {}
-): Promise<void> {
+): Promise<string[]> {
   const fetchBuffer = opts.fetchBuffer ?? nodeFetchBuffer
-  let files = filterMods(index.files, opts.excludePrefixes ?? [])
+  let files = applyModUpgrades(filterMods(index.files, opts.excludePrefixes ?? []), opts.upgrades ?? [])
 
   // If overriding SeedQueue, drop the pack's seedqueue jar; we copy the user's after.
   if (opts.seedQueueOverride) {
@@ -217,6 +258,7 @@ export async function installPackFiles(
   }
 
   opts.onProgress?.(total, total, 'done')
+  return files.map((f) => f.path)
 }
 
 // Latest MCSR Ranked mod, straight from Modrinth (newest 1.16.1 Fabric release).

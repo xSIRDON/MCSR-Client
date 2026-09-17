@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync, readdirSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -9,7 +9,9 @@ import {
   setModEnabled,
   installModJar,
   hasExtraOptions,
-  shouldPromptExtraOptions
+  shouldPromptExtraOptions,
+  pruneSupersededMods,
+  upgradeInstalledMods
 } from './mods'
 
 describe('parseModFilename', () => {
@@ -274,5 +276,109 @@ describe('setModEnabled rejects non-basename files', () => {
     writeFileSync(join(dir, 'sodium-2.5.1.jar'), '')
     setModEnabled(dir, 'sodium-2.5.1.jar', false)
     expect(existsSync(join(dir, 'sodium-2.5.1.jar.disabled'))).toBe(true)
+  })
+})
+
+describe('pruneSupersededMods', () => {
+  const made: string[] = []
+  function tmpMods(files: string[]): string {
+    const d = mkdtempSync(join(tmpdir(), 'mcsr-mods-'))
+    made.push(d)
+    for (const f of files) writeFileSync(join(d, f), '')
+    return d
+  }
+  afterEach(() => {
+    for (const d of made.splice(0)) rmSync(d, { recursive: true, force: true })
+  })
+
+  it('removes older versions of freshly installed mods, parked copies included', () => {
+    const dir = tmpMods([
+      'hermes-0.12.5+MC1.16.1.jar',
+      'hermes-0.15.1+MC1.16.1.jar',
+      'seedqueue-1.7.0+1.16.1.jar.disabled',
+      'seedqueue-1.7.1+1.16.1.jar'
+    ])
+    const removed = pruneSupersededMods(dir, ['hermes-0.15.1+MC1.16.1.jar', 'seedqueue-1.7.1+1.16.1.jar'])
+    expect(removed.sort()).toEqual(['hermes-0.12.5+MC1.16.1.jar', 'seedqueue-1.7.0+1.16.1.jar.disabled'])
+    expect(readdirSync(dir).sort()).toEqual(['hermes-0.15.1+MC1.16.1.jar', 'seedqueue-1.7.1+1.16.1.jar'])
+  })
+
+  it('leaves mods the pack did not install, even with similar names', () => {
+    const dir = tmpMods([
+      'hermes-0.15.1+MC1.16.1.jar',
+      'hermes-core-0.3.2.jar',
+      'extra-options-2.2.1+1.16.1.jar',
+      'FSG-Mod-5.3.0+MC1.16.1.jar'
+    ])
+    expect(pruneSupersededMods(dir, ['hermes-0.15.1+MC1.16.1.jar'])).toEqual([])
+    expect(readdirSync(dir)).toHaveLength(4)
+  })
+
+  it('keeps a parked copy of the exact version just installed', () => {
+    const dir = tmpMods(['sodium-2.5.1+1.16.1.jar.disabled'])
+    expect(pruneSupersededMods(dir, ['sodium-2.5.1+1.16.1.jar'])).toEqual([])
+  })
+})
+
+describe('upgradeInstalledMods', () => {
+  const made: string[] = []
+  function tmpMods(files: string[]): string {
+    const d = mkdtempSync(join(tmpdir(), 'mcsr-mods-'))
+    made.push(d)
+    for (const f of files) writeFileSync(join(d, f), 'old')
+    return d
+  }
+  afterEach(() => {
+    for (const d of made.splice(0)) rmSync(d, { recursive: true, force: true })
+  })
+
+  const body = Buffer.from('hermes-0.15.1')
+  const upgrade = {
+    replaces: 'mods/hermes-0.12.5+MC1.16.1.jar',
+    path: 'mods/hermes-0.15.1+MC1.16.1.jar',
+    urls: ['https://github.com/x/hermes-0.15.1+MC1.16.1.jar'],
+    sha512: createHash('sha512').update(body).digest('hex')
+  }
+
+  it('replaces the superseded jar with the verified new build', async () => {
+    const dir = tmpMods(['hermes-0.12.5+MC1.16.1.jar', 'sodium-2.5.1+1.16.1.jar'])
+    expect(await upgradeInstalledMods(dir, [upgrade], async () => body)).toEqual(['hermes-0.15.1+MC1.16.1.jar'])
+    expect(readdirSync(dir).sort()).toEqual(['hermes-0.15.1+MC1.16.1.jar', 'sodium-2.5.1+1.16.1.jar'])
+    expect(readFileSync(join(dir, 'hermes-0.15.1+MC1.16.1.jar'), 'utf8')).toBe('hermes-0.15.1')
+  })
+
+  it('keeps a disabled mod disabled', async () => {
+    const dir = tmpMods(['hermes-0.12.5+MC1.16.1.jar.disabled'])
+    await upgradeInstalledMods(dir, [upgrade], async () => body)
+    expect(readdirSync(dir)).toEqual(['hermes-0.15.1+MC1.16.1.jar.disabled'])
+  })
+
+  it('does nothing when the old jar is gone', async () => {
+    const dir = tmpMods(['sodium-2.5.1+1.16.1.jar'])
+    let calls = 0
+    const done = await upgradeInstalledMods(dir, [upgrade], async () => {
+      calls++
+      return body
+    })
+    expect(done).toEqual([])
+    expect(calls).toBe(0)
+  })
+
+  it('keeps the old jar when the download fails verification', async () => {
+    const dir = tmpMods(['hermes-0.12.5+MC1.16.1.jar'])
+    await expect(upgradeInstalledMods(dir, [upgrade], async () => Buffer.from('tampered'))).rejects.toThrow()
+    expect(readdirSync(dir)).toEqual(['hermes-0.12.5+MC1.16.1.jar'])
+  })
+
+  it('refuses untrusted hosts before fetching', async () => {
+    const dir = tmpMods(['hermes-0.12.5+MC1.16.1.jar'])
+    let calls = 0
+    await expect(
+      upgradeInstalledMods(dir, [{ ...upgrade, urls: ['https://evil.example/hermes.jar'] }], async () => {
+        calls++
+        return body
+      })
+    ).rejects.toThrow()
+    expect(calls).toBe(0)
   })
 })

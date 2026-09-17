@@ -11,6 +11,8 @@ import {
   fabricVersionString,
   assertTrustedDownloadUrl,
   installPackFiles,
+  applyModUpgrades,
+  PACK_MOD_UPGRADES,
   RSG_EXCLUDE_PREFIXES,
   type ModrinthIndex,
   type PackFile
@@ -149,6 +151,44 @@ describe('assertTrustedDownloadUrl', () => {
   })
 })
 
+describe('applyModUpgrades', () => {
+  const upgrade = {
+    replaces: 'mods/hermes-0.12.5+MC1.16.1.jar',
+    path: 'mods/hermes-0.15.1+MC1.16.1.jar',
+    urls: ['https://github.com/x/hermes-0.15.1+MC1.16.1.jar'],
+    sha512: 'abc'
+  }
+
+  it('swaps only the exact file an upgrade supersedes', () => {
+    const files: PackFile[] = [
+      { path: 'mods/hermes-0.12.5+MC1.16.1.jar', hashes: { sha512: 'old' }, downloads: ['https://x/old'] },
+      { path: 'mods/hermes-core-0.3.2.jar', hashes: { sha512: 'core' }, downloads: ['https://x/core'] }
+    ]
+    expect(applyModUpgrades(files, [upgrade])).toEqual([
+      {
+        path: 'mods/hermes-0.15.1+MC1.16.1.jar',
+        hashes: { sha512: 'abc' },
+        downloads: ['https://github.com/x/hermes-0.15.1+MC1.16.1.jar']
+      },
+      files[1]
+    ])
+  })
+
+  it('retires itself once the pack ships something else for that mod', () => {
+    const files: PackFile[] = [
+      { path: 'mods/hermes-0.16.0+MC1.16.1.jar', hashes: { sha512: 'newer' }, downloads: ['https://x/newer'] }
+    ]
+    expect(applyModUpgrades(files, [upgrade])).toEqual(files)
+  })
+
+  it('only pins trusted HTTPS sources with a sha512', () => {
+    for (const up of PACK_MOD_UPGRADES) {
+      expect(up.sha512).toMatch(/^[0-9a-f]{128}$/)
+      for (const url of up.urls) expect(() => assertTrustedDownloadUrl(url)).not.toThrow()
+    }
+  })
+})
+
 describe('installPackFiles URL containment', () => {
   function indexWith(files: PackFile[]): ModrinthIndex {
     return { ...sampleIndex, files }
@@ -177,6 +217,39 @@ describe('installPackFiles URL containment', () => {
         }
       )
       expect(fetched).toEqual(['https://cdn.modrinth.com/data/a.jar'])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('installs an upgrade in place of the file it supersedes and reports what it wrote', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mcsr-test-'))
+    const body = Buffer.from('new-hermes')
+    const sha512 = createHash('sha512').update(body).digest('hex')
+    const fetched: string[] = []
+    try {
+      const written = await installPackFiles(
+        indexWith([
+          { path: 'mods/hermes-0.12.5+MC1.16.1.jar', hashes: { sha512: 'old' }, downloads: ['https://github.com/old'] }
+        ]),
+        dir,
+        {
+          upgrades: [
+            {
+              replaces: 'mods/hermes-0.12.5+MC1.16.1.jar',
+              path: 'mods/hermes-0.15.1+MC1.16.1.jar',
+              urls: ['https://github.com/new'],
+              sha512
+            }
+          ],
+          fetchBuffer: async (url) => {
+            fetched.push(url)
+            return body
+          }
+        }
+      )
+      expect(fetched).toEqual(['https://github.com/new'])
+      expect(written).toEqual(['mods/hermes-0.15.1+MC1.16.1.jar'])
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
