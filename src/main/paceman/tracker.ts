@@ -1,10 +1,10 @@
 // Manages the standalone paceman-tracker — no Julti/Jingle required.
 // The tracker reads SpeedRunIGT records and uploads splits to paceman.gg.
-// We write the access key into its options.json and run the jar with `nogui`,
+// We write the access key into its options.json and run the jar with `--nogui`,
 // starting it alongside an RSG launch and stopping it when the game closes.
 
 import { spawn, type ChildProcess } from 'node:child_process'
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { paths } from '../paths'
@@ -13,12 +13,20 @@ import { store } from '../store'
 import type { TrackerStatus } from '../../shared/types'
 
 const KEY_SECRET = 'paceman-key'
-export const TRACKER_JAR = 'paceman-tracker-0.7.2.jar'
+export const TRACKER_JAR = 'paceman-tracker-0.7.3.jar'
 const TRACKER_DOWNLOAD =
-  'https://github.com/PaceMan-MCSR/PaceMan-Tracker/releases/download/v0.7.2/paceman-tracker-0.7.2.jar'
+  'https://github.com/PaceMan-MCSR/PaceMan-Tracker/releases/download/v0.7.3/paceman-tracker-0.7.3.jar'
 // Pinned: this jar is executed with java alongside every RSG launch.
 const TRACKER_SHA512 =
-  '8956d5e7b48e536fd655a65f62aed12b3b9bb6168dadf8c3816f054774082b93875c59073cc98aab295ba27b4d042560779c56920360be16485982b2596e18cc'
+  'fe756f6b1f97ae4f32952701f58e9150a579c7ef1278959f77eadd5707a64c6dbc9597a1039f65b60b530281a069fa59aba546e17a7a44082497f3b0741bcb07'
+
+/**
+ * The tracker's command line. It matches flags literally, so headless mode is `--nogui` — a bare
+ * `nogui` opens its window (and its update prompt) on every launch.
+ */
+export function trackerArgs(jar: string): string[] {
+  return ['-jar', jar, '--nogui']
+}
 
 let proc: ChildProcess | null = null
 let statusSink: ((s: TrackerStatus) => void) | null = null
@@ -82,28 +90,47 @@ export function writeOptions(): void {
   writeFileSync(file, JSON.stringify(merged, null, 2), 'utf8')
 }
 
-/** Download the tracker jar if it isn't bundled/present. */
+/** Download the tracker jar if it isn't bundled/present, and drop the jars of older versions. */
 export async function ensureJar(): Promise<void> {
-  if (existsSync(jarPath())) return
-  mkdirSync(paths.tracker(), { recursive: true })
-  writeFileSync(jarPath(), await fetchVerified(TRACKER_DOWNLOAD, TRACKER_SHA512, 'paceman-tracker'))
+  if (!existsSync(jarPath())) {
+    mkdirSync(paths.tracker(), { recursive: true })
+    writeFileSync(jarPath(), await fetchVerified(TRACKER_DOWNLOAD, TRACKER_SHA512, 'paceman-tracker'))
+  }
+  for (const f of readdirSync(paths.tracker())) {
+    if (f !== TRACKER_JAR && /^paceman-tracker-.*\.jar$/i.test(f)) {
+      try {
+        rmSync(join(paths.tracker(), f), { force: true })
+      } catch {
+        // still open from an earlier session — try again next time
+      }
+    }
+  }
 }
 
-/** Start the tracker (idempotent). Requires an access key. */
-export async function start(): Promise<void> {
+/**
+ * Start the tracker (idempotent). Requires an access key. `javaw` is the Java to run it on —
+ * the client's bundled one when available, else whatever is on PATH.
+ */
+export async function start(javaw = 'javaw'): Promise<void> {
   if (proc) return
   if (!hasKey()) return
   await ensureJar()
   writeOptions()
-  proc = spawn('java', ['-jar', jarPath(), 'nogui'], {
+  const child = spawn(javaw, trackerArgs(jarPath()), {
     cwd: paths.tracker(),
     stdio: 'ignore',
-    detached: false
+    detached: false,
+    windowsHide: true
   })
-  proc.on('exit', () => {
+  proc = child
+  const gone = (): void => {
+    if (proc !== child) return
     proc = null
     emit()
-  })
+  }
+  // No Java at that path: report "not running" instead of an unhandled error event.
+  child.on('error', gone)
+  child.on('exit', gone)
   emit()
 }
 
