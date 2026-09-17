@@ -12,6 +12,7 @@ import type {
   ModInfo,
   Profile,
   ProgressEvent,
+  SeedQueueInfo,
   StandardSettings,
   TrackerStatus,
   UpdateStatus
@@ -49,6 +50,8 @@ export const IPC = {
   instInstalledIds: 'inst:installedIds',
   instListWorlds: 'inst:listWorlds',
   instListWorldsInFolder: 'inst:listWorldsInFolder',
+  instSeedQueue: 'inst:seedQueue',
+  instTuneSeedQueue: 'inst:tuneSeedQueue',
   sysJava: 'sys:java',
   updCheck: 'upd:check',
   updStatus: 'upd:status',
@@ -134,6 +137,8 @@ export interface McsrApi {
     ): Promise<{ copied: string[] }>
     listWorlds(id: InstanceId): Promise<string[]>
     listWorldsInFolder(folder: string): Promise<string[]>
+    seedQueue(id: InstanceId): Promise<SeedQueueInfo | null>
+    tuneSeedQueue(id: InstanceId): Promise<SeedQueueInfo | null>
   }
   system: {
     java(): Promise<JavaInfo>

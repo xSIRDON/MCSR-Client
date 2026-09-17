@@ -58,6 +58,21 @@ export interface AppConfig {
   favorites: string[]
   friendsServerUrl: string | null
   extraOptionsPromptSeen: boolean
+  seedQueueAutoTune: boolean
+}
+
+export interface SeedQueueSizing {
+  maxCapacity: number
+  maxConcurrently: number
+  maxConcurrentlyOnWall: number
+}
+
+export interface SeedQueueInfo {
+  current: SeedQueueSizing
+  recommended: SeedQueueSizing
+  ramMb: number
+  neededRamMb: number
+  cpuThreads: number
 }
 
 export const DEFAULT_FRIENDS_SERVER = 'https://mcsrfriends.duckdns.org:8787'
@@ -110,7 +125,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   toolscreen: true,
   favorites: [],
   friendsServerUrl: DEFAULT_FRIENDS_SERVER,
-  extraOptionsPromptSeen: false
+  extraOptionsPromptSeen: false,
+  seedQueueAutoTune: true
 }
 
 export interface ModInfo {
@@ -125,6 +141,7 @@ export interface JavaInfo {
   version: string | null
   major: number | null
   ok: boolean
+  bundled?: boolean
 }
 
 export type StandardSettings = Record<string, string>

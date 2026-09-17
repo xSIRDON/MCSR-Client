@@ -17,6 +17,7 @@ type RawConfig = {
   favorites?: unknown[]
   friendsServerUrl?: string | null
   extraOptionsPromptSeen?: boolean
+  seedQueueAutoTune?: boolean
 }
 
 function normalizeConfig(raw: RawConfig): AppConfig {
@@ -54,7 +55,9 @@ function normalizeConfig(raw: RawConfig): AppConfig {
     extraOptionsPromptSeen:
       typeof raw.extraOptionsPromptSeen === 'boolean'
         ? raw.extraOptionsPromptSeen
-        : DEFAULT_CONFIG.extraOptionsPromptSeen
+        : DEFAULT_CONFIG.extraOptionsPromptSeen,
+    seedQueueAutoTune:
+      typeof raw.seedQueueAutoTune === 'boolean' ? raw.seedQueueAutoTune : DEFAULT_CONFIG.seedQueueAutoTune
   }
 }
 
