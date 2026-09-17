@@ -4,6 +4,7 @@ import type { McsrApi } from '../shared/ipc'
 import type {
   AppConfig,
   FriendsNetState,
+  GapCheckFilters,
   InstanceId,
   InstanceStatus,
   LogLine,
@@ -68,6 +69,10 @@ const api: McsrApi = {
     listWorldsInFolder: (folder: string) => ipcRenderer.invoke(IPC.instListWorldsInFolder, folder),
     seedQueue: (id: InstanceId) => ipcRenderer.invoke(IPC.instSeedQueue, id),
     tuneSeedQueue: (id: InstanceId) => ipcRenderer.invoke(IPC.instTuneSeedQueue, id)
+  },
+  gapcheck: {
+    counts: (filters: GapCheckFilters) => ipcRenderer.invoke(IPC.gapcheckCounts, filters),
+    seed: (filters: GapCheckFilters) => ipcRenderer.invoke(IPC.gapcheckSeed, filters)
   },
   system: {
     java: () => ipcRenderer.invoke(IPC.sysJava)

@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { IPC } from '../shared/ipc'
 import type {
   AppConfig,
+  GapCheckFilters,
   InstanceId,
   InstanceStatus,
   ProgressEvent,
@@ -17,6 +18,7 @@ import { store } from './store'
 import * as auth from './auth/msmc-auth'
 import * as gmll from './launcher/gmll-adapter'
 import * as tracker from './paceman/tracker'
+import * as gapcheck from './gapcheck'
 import * as friends from './friends/service'
 import {
   fetchPack,
@@ -74,6 +76,20 @@ const states: Record<InstanceId, InstanceStatus> = {
 function assertInstanceId(id: unknown): InstanceId {
   if (!isInstanceId(id)) throw new Error('Unknown instance.')
   return id
+}
+
+/** Coerce renderer-supplied GapCheck filters; gapcheck.ts allowlists the values themselves. */
+function asGapCheckFilters(raw: unknown): GapCheckFilters {
+  const f = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+  return {
+    seedType: typeof f.seedType === 'string' ? f.seedType : null,
+    bastionType: typeof f.bastionType === 'string' ? f.bastionType : null,
+    maxTimeSeconds: num(f.maxTimeSeconds),
+    minTimeSeconds: num(f.minTimeSeconds),
+    minRank: num(f.minRank),
+    players: Array.isArray(f.players) ? f.players.filter((p): p is string => typeof p === 'string') : []
+  }
 }
 
 function win(): BrowserWindow | null {
@@ -714,6 +730,9 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.skinGet, (_e, idOrUuid: string, size: number, kind: 'avatar' | 'body') =>
     getSkin(idOrUuid, size, kind)
   )
+  // GapCheck's API sends no CORS headers, so these run here rather than in the renderer.
+  ipcMain.handle(IPC.gapcheckCounts, (_e, filters: unknown) => gapcheck.counts(asGapCheckFilters(filters)))
+  ipcMain.handle(IPC.gapcheckSeed, (_e, filters: unknown) => gapcheck.randomSeed(asGapCheckFilters(filters)))
   ipcMain.handle(IPC.sysJava, async () => ({ ...(await detectJava()), bundled: gmll.managedJavaOnDisk() }))
 
   ipcMain.handle(IPC.updCheck, () => checkForUpdates())

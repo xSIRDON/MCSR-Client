@@ -204,6 +204,65 @@ export interface JavaInfo {
   bundled?: boolean
 }
 
+// ---- GapCheck (gapcheck.gg): top-runner seeds you can actually replay ----
+
+/** Which of their curated matches to draw from. */
+export interface GapCheckFilters {
+  /** Overworld structure, e.g. "VILLAGE"; omit for any. */
+  seedType?: string | null
+  /** Bastion type, e.g. "TREASURE"; omit for any. */
+  bastionType?: string | null
+  /** Only matches finished faster than this (seconds). */
+  maxTimeSeconds?: number | null
+  /** Only matches slower than this (seconds). */
+  minTimeSeconds?: number | null
+  /** Only matches where a player was at least this high on the leaderboard (e.g. 300 = top 300). */
+  minRank?: number | null
+  /** Only matches played by these runners (dashless uuids). */
+  players?: string[]
+}
+
+/** How many curated seeds match the filters, in total and per overworld structure. */
+export interface GapCheckCounts {
+  total: number
+  byType: Record<string, number>
+}
+
+/** One player in a GapCheck match. */
+export interface GapCheckSeedPlayer {
+  uuid: string
+  nickname: string
+  /** Their leaderboard rank at the time, if known. */
+  eloRank: number | null
+  elo: number | null
+  /** Their finish time (ms) when they won the match. */
+  timeMs: number | null
+  /** Their timeline, ascending — the same event names MCSR Ranked uses. */
+  splits: { type: string; timeMs: number }[]
+  /** Twitch VOD plus the offset (seconds) where the run starts. */
+  vod: { url: string; runStartSeconds: number } | null
+}
+
+/** A practice seed: a real ranked match with the four seeds needed to replay it. */
+export interface GapCheckSeed {
+  matchId: number
+  /** The match on gapcheck.gg, where their video comparison lives. */
+  url: string
+  /** Unix seconds the match was played. */
+  date: number | null
+  seedType: string | null
+  bastionType: string | null
+  endTowers: number[]
+  /** The numeric seeds for a private room. */
+  seeds: { overworld: string | null; nether: string | null; end: string | null; rng: string | null }
+  /** GapCheck's confidence in the RNG seed, e.g. 20 of 20 events matched. */
+  rngConfidence: { matches: number; total: number } | null
+  /** Winner first. */
+  players: GapCheckSeedPlayer[]
+  /** The match's winning time (ms). */
+  finalTimeMs: number | null
+}
+
 /** StandardSettings config as key->value pairs (mirrors standardoptions.txt on disk). */
 export type StandardSettings = Record<string, string>
 

@@ -1,92 +1,85 @@
-// Practice seeds: a top runner's fastest recent completed seeds, each with their splits, so you
-// can replay the seed (private room → Set Seed) and see your gap. Seed detail (structure + splits)
-// comes from the match-detail endpoint, cached forever since a played match never changes.
-import { useMemo } from 'react'
-import { useQuery, useQueries } from '@tanstack/react-query'
-import { mcsr } from '../lib/clients'
-import { analyzeSplits } from '@core/ranked-analytics'
-import type { SplitStat } from '@core/ranked-analytics'
+// Practice seeds come from GapCheck (gapcheck.gg): curated top-runner ranked matches published
+// with their real overworld/nether/end/RNG seeds, so a seed can actually be replayed in a private
+// room. MCSR Ranked's own API only exposes a seed id, which is why this isn't built on it.
+// The requests run in the main process (their API sends no CORS headers) — see main/gapcheck.ts.
+import { useCallback, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import type { GapCheckFilters, GapCheckSeed } from '@shared/types'
 
-export interface PracticeSeed {
-  matchId: number
-  seedId: string | null
-  overworld: string | null
-  nether: string | null
-  endTowers: number[]
-  date: number | null
-  /** The runner's completion time on this seed (ms). */
-  finishMs: number | null
-  /** The runner's splits on this seed — your targets. */
-  splits: SplitStat[]
+export interface PracticeFilters {
+  /** Overworld structure code, or null for any. */
+  seedType: string | null
+  /** Bastion type code, or null for any. */
+  bastionType: string | null
+  /** Only runs finished under this many minutes. */
+  maxMinutes: number | null
+  /** Only runs slower than this many minutes. */
+  minMinutes: number | null
+  /** Only matches with a player at least this high on the leaderboard. */
+  minRank: number | null
+  /** Only this runner's matches (dashless uuid). */
+  runnerUuid: string | null
 }
 
-/** How many of the runner's fastest recent seeds to surface. */
-const MAX_SEEDS = 6
+export const DEFAULT_PRACTICE_FILTERS: PracticeFilters = {
+  seedType: null,
+  bastionType: null,
+  maxMinutes: 15,
+  minMinutes: null,
+  minRank: 300,
+  runnerUuid: null
+}
 
-export function usePractice(runnerUuid: string | null | undefined) {
-  const enabled = !!runnerUuid
-  const uuid = (runnerUuid ?? '').toLowerCase()
-
-  const { data: matches, isLoading: matchesLoading } = useQuery({
-    queryKey: ['practice-matches', uuid],
-    queryFn: () => mcsr.getMatches(runnerUuid!, { type: 2, count: 50 }),
-    enabled
-  })
-
-  // Their fastest recent wins that actually completed — a forfeit time isn't a run.
-  const winIds = useMemo(() => {
-    return (matches ?? [])
-      .filter(
-        (m) =>
-          m.type === 2 &&
-          !m.forfeited &&
-          m.result?.uuid?.toLowerCase() === uuid &&
-          typeof m.result?.time === 'number' &&
-          m.result.time > 0
-      )
-      .sort((a, b) => (a.result!.time as number) - (b.result!.time as number))
-      .slice(0, MAX_SEEDS)
-      .map((m) => m.id)
-  }, [matches, uuid])
-
-  const details = useQueries({
-    queries: winIds.map((id) => ({
-      queryKey: ['match-detail', id],
-      queryFn: () => mcsr.getMatch(id),
-      enabled,
-      staleTime: Infinity,
-      gcTime: Infinity,
-      refetchOnMount: false
-    }))
-  })
-
-  const seeds = useMemo<PracticeSeed[]>(() => {
-    const out: PracticeSeed[] = []
-    for (const q of details) {
-      const m = q.data
-      if (!m) continue
-      const finish =
-        m.completions?.find((c) => c.uuid.toLowerCase() === uuid)?.time ?? m.result?.time ?? null
-      out.push({
-        matchId: m.id,
-        seedId: m.seed?.id ?? null,
-        overworld: m.seed?.overworld ?? m.seedType ?? null,
-        nether: m.seed?.nether ?? m.bastionType ?? null,
-        endTowers: Array.isArray(m.seed?.endTowers) ? (m.seed!.endTowers as number[]) : [],
-        date: m.date ?? null,
-        finishMs: finish,
-        splits: analyzeSplits(uuid, [m])
-      })
-    }
-    return out.sort((a, b) => (a.finishMs ?? Infinity) - (b.finishMs ?? Infinity))
-  }, [details, uuid])
-
-  const detailsLoading = winIds.length > 0 && details.some((d) => d.isLoading && !d.data)
-
+/** The shape the main process takes — minutes become seconds, the runner becomes a player list. */
+export function toGapCheckFilters(f: PracticeFilters): GapCheckFilters {
   return {
-    seeds,
-    loading: enabled && (matchesLoading || detailsLoading),
-    /** The runner has no qualifying completed seeds to practice. */
-    empty: enabled && !matchesLoading && winIds.length === 0
+    seedType: f.seedType,
+    bastionType: f.bastionType,
+    maxTimeSeconds: f.maxMinutes ? Math.round(f.maxMinutes * 60) : null,
+    minTimeSeconds: f.minMinutes ? Math.round(f.minMinutes * 60) : null,
+    minRank: f.minRank,
+    players: f.runnerUuid ? [f.runnerUuid] : []
   }
+}
+
+export function usePractice(filters: PracticeFilters) {
+  const query = useMemo(() => toGapCheckFilters(filters), [filters])
+  // Counts drive the seed-type tiles, so they follow every filter except the type itself.
+  const countsKey = useMemo(() => ({ ...query, seedType: null }), [query])
+
+  const { data: counts, isLoading: countsLoading } = useQuery({
+    queryKey: ['gapcheck-counts', countsKey],
+    queryFn: () => window.mcsr.gapcheck.counts(countsKey),
+    staleTime: 10 * 60_000
+  })
+
+  const [seeds, setSeeds] = useState<GapCheckSeed[]>([])
+  const [drawing, setDrawing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const draw = useCallback(async () => {
+    setDrawing(true)
+    setError(null)
+    try {
+      const seed = await window.mcsr.gapcheck.seed(query)
+      if (!seed) {
+        setError('No seed matches those filters — try loosening them.')
+        return
+      }
+      // Drawing the same match twice is possible; show it once, newest first.
+      setSeeds((prev) => [seed, ...prev.filter((s) => s.matchId !== seed.matchId)].slice(0, 12))
+    } catch (e) {
+      const msg = e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : ''
+      setError(msg || 'Could not reach GapCheck.')
+    } finally {
+      setDrawing(false)
+    }
+  }, [query])
+
+  const clear = useCallback(() => {
+    setSeeds([])
+    setError(null)
+  }, [])
+
+  return { counts, countsLoading, seeds, draw, drawing, error, clear }
 }

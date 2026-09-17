@@ -454,6 +454,27 @@ export function analyzeSplits(uuid: string, details: MatchInfo[]): SplitStat[] {
   return out
 }
 
+/**
+ * Split stats for a single run given just its timeline — the shape a GapCheck seed hands us
+ * (one player's events for one match). Wrapping it as a ranked match means a practice seed goes
+ * through exactly the same split analysis as your own history, so the two are comparable.
+ */
+export function splitsFromTimeline(
+  uuid: string,
+  splits: { type: string; timeMs: number }[],
+  finishMs: number | null = null
+): SplitStat[] {
+  const match: MatchInfo = {
+    id: 0,
+    type: 2,
+    players: [],
+    result: { uuid, time: finishMs },
+    forfeited: false,
+    timelines: splits.map((s): TimelineEvent => ({ uuid, time: s.timeMs, type: s.type }))
+  }
+  return analyzeSplits(uuid, [match])
+}
+
 // ---- Practice: gap between a top runner's seed run and your typical splits ----
 
 export interface GapRow {

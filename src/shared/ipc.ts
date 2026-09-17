@@ -12,6 +12,9 @@ import type {
   MessageStore,
   ModInfo,
   Profile,
+  GapCheckCounts,
+  GapCheckFilters,
+  GapCheckSeed,
   ProgressEvent,
   SeedQueueInfo,
   StandardSettings,
@@ -56,6 +59,9 @@ export const IPC = {
   instListWorldsInFolder: 'inst:listWorldsInFolder',
   instSeedQueue: 'inst:seedQueue',
   instTuneSeedQueue: 'inst:tuneSeedQueue',
+  // gapcheck (practice seeds)
+  gapcheckCounts: 'gapcheck:counts',
+  gapcheckSeed: 'gapcheck:seed',
   // system
   sysJava: 'sys:java',
   // app updates
@@ -164,6 +170,12 @@ export interface McsrApi {
     seedQueue(id: InstanceId): Promise<SeedQueueInfo | null>
     /** Apply the auto-tune now (the game must be closed); resolves the updated info. */
     tuneSeedQueue(id: InstanceId): Promise<SeedQueueInfo | null>
+  }
+  gapcheck: {
+    /** How many curated seeds match these filters, per overworld structure. */
+    counts(filters: GapCheckFilters): Promise<GapCheckCounts>
+    /** Draw one seed matching the filters; null when nothing matches. */
+    seed(filters: GapCheckFilters): Promise<GapCheckSeed | null>
   }
   system: {
     java(): Promise<JavaInfo>
