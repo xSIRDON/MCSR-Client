@@ -1,84 +1,72 @@
-import { useMemo } from 'react'
-import { useQuery, useQueries } from '@tanstack/react-query'
-import { mcsr } from '../lib/clients'
-import { analyzeSplits } from '@core/ranked-analytics'
-import type { SplitStat } from '@core/ranked-analytics'
+import { useCallback, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import type { GapCheckFilters, GapCheckSeed } from '@shared/types'
 
-export interface PracticeSeed {
-  matchId: number
-  seedId: string | null
-  overworld: string | null
-  nether: string | null
-  endTowers: number[]
-  date: number | null
-  finishMs: number | null
-  splits: SplitStat[]
+export interface PracticeFilters {
+  seedType: string | null
+  bastionType: string | null
+  maxMinutes: number | null
+  minMinutes: number | null
+  minRank: number | null
+  runnerUuid: string | null
 }
 
-const MAX_SEEDS = 6
+export const DEFAULT_PRACTICE_FILTERS: PracticeFilters = {
+  seedType: null,
+  bastionType: null,
+  maxMinutes: 15,
+  minMinutes: null,
+  minRank: 300,
+  runnerUuid: null
+}
 
-export function usePractice(runnerUuid: string | null | undefined) {
-  const enabled = !!runnerUuid
-  const uuid = (runnerUuid ?? '').toLowerCase()
-
-  const { data: matches, isLoading: matchesLoading } = useQuery({
-    queryKey: ['practice-matches', uuid],
-    queryFn: () => mcsr.getMatches(runnerUuid!, { type: 2, count: 50 }),
-    enabled
-  })
-
-  const winIds = useMemo(() => {
-    return (matches ?? [])
-      .filter(
-        (m) =>
-          m.type === 2 &&
-          !m.forfeited &&
-          m.result?.uuid?.toLowerCase() === uuid &&
-          typeof m.result?.time === 'number' &&
-          m.result.time > 0
-      )
-      .sort((a, b) => (a.result!.time as number) - (b.result!.time as number))
-      .slice(0, MAX_SEEDS)
-      .map((m) => m.id)
-  }, [matches, uuid])
-
-  const details = useQueries({
-    queries: winIds.map((id) => ({
-      queryKey: ['match-detail', id],
-      queryFn: () => mcsr.getMatch(id),
-      enabled,
-      staleTime: Infinity,
-      gcTime: Infinity,
-      refetchOnMount: false
-    }))
-  })
-
-  const seeds = useMemo<PracticeSeed[]>(() => {
-    const out: PracticeSeed[] = []
-    for (const q of details) {
-      const m = q.data
-      if (!m) continue
-      const finish =
-        m.completions?.find((c) => c.uuid.toLowerCase() === uuid)?.time ?? m.result?.time ?? null
-      out.push({
-        matchId: m.id,
-        seedId: m.seed?.id ?? null,
-        overworld: m.seed?.overworld ?? m.seedType ?? null,
-        nether: m.seed?.nether ?? m.bastionType ?? null,
-        endTowers: Array.isArray(m.seed?.endTowers) ? (m.seed!.endTowers as number[]) : [],
-        date: m.date ?? null,
-        finishMs: finish,
-        splits: analyzeSplits(uuid, [m])
-      })
-    }
-    return out.sort((a, b) => (a.finishMs ?? Infinity) - (b.finishMs ?? Infinity))
-  }, [details, uuid])
-
-  const detailsLoading = winIds.length > 0 && details.some((d) => d.isLoading && !d.data)
-
+export function toGapCheckFilters(f: PracticeFilters): GapCheckFilters {
   return {
-    seeds,
-    loading: enabled && (matchesLoading || detailsLoading),
-    empty: enabled && !matchesLoading && winIds.length === 0
+    seedType: f.seedType,
+    bastionType: f.bastionType,
+    maxTimeSeconds: f.maxMinutes ? Math.round(f.maxMinutes * 60) : null,
+    minTimeSeconds: f.minMinutes ? Math.round(f.minMinutes * 60) : null,
+    minRank: f.minRank,
+    players: f.runnerUuid ? [f.runnerUuid] : []
   }
+}
+
+export function usePractice(filters: PracticeFilters) {
+  const query = useMemo(() => toGapCheckFilters(filters), [filters])
+  const countsKey = useMemo(() => ({ ...query, seedType: null }), [query])
+
+  const { data: counts, isLoading: countsLoading } = useQuery({
+    queryKey: ['gapcheck-counts', countsKey],
+    queryFn: () => window.mcsr.gapcheck.counts(countsKey),
+    staleTime: 10 * 60_000
+  })
+
+  const [seeds, setSeeds] = useState<GapCheckSeed[]>([])
+  const [drawing, setDrawing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const draw = useCallback(async () => {
+    setDrawing(true)
+    setError(null)
+    try {
+      const seed = await window.mcsr.gapcheck.seed(query)
+      if (!seed) {
+        setError('No seed matches those filters — try loosening them.')
+        return
+      }
+      setSeeds((prev) => [seed, ...prev.filter((s) => s.matchId !== seed.matchId)].slice(0, 12))
+    } catch (e) {
+      const msg = e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : ''
+      setError(msg || 'Could not reach GapCheck.')
+    } finally {
+      setDrawing(false)
+    }
+  }, [query])
+
+  const clear = useCallback(() => {
+    setSeeds([])
+    setError(null)
+  }, [])
+
+  return { counts, countsLoading, seeds, draw, drawing, error, clear }
 }
