@@ -412,6 +412,22 @@ export function analyzeSplits(uuid: string, details: MatchInfo[]): SplitStat[] {
   return out
 }
 
+export function splitsFromTimeline(
+  uuid: string,
+  splits: { type: string; timeMs: number }[],
+  finishMs: number | null = null
+): SplitStat[] {
+  const match: MatchInfo = {
+    id: 0,
+    type: 2,
+    players: [],
+    result: { uuid, time: finishMs },
+    forfeited: false,
+    timelines: splits.map((s): TimelineEvent => ({ uuid, time: s.timeMs, type: s.type }))
+  }
+  return analyzeSplits(uuid, [match])
+}
+
 export interface GapRow {
   key: string
   label: string
