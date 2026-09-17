@@ -5,7 +5,7 @@
 <br />
 <br />
 
-[![Version](https://img.shields.io/badge/version-v1.7.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
+[![Version](https://img.shields.io/badge/version-v1.8.0-f5c842?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-3b82f6?style=for-the-badge&labelColor=15151c)](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge&labelColor=15151c)](LICENSE)
 
@@ -19,7 +19,7 @@ One app to sign in, install your instances, launch the game, and watch your rank
 
 ### [⬇  Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)
 
-<sub>Windows installer · auto-updates · v1.7.0</sub>
+<sub>Windows installer · auto-updates · v1.8.0</sub>
 
 </div>
 
@@ -88,11 +88,18 @@ and paceman RSG PBs. A **composite win-chance** meter blends the Elo gap with sp
 finishing pace, and recent form — and shows which factors tip the matchup. Every searched profile
 also gets the full radar treatment, plus a one-click **Compare with me**.
 
-### Practice off the best
-A **Practice** tab for learning from top runners: pick a runner, browse their fastest recent seeds
-(overworld/bastion structure, end towers, and their splits), **copy a seed** into a private-room
-Set Seed, and after you play it, see a **split-by-split gap** — exactly where you lose time versus
-their run.
+### Practice off the best — with GapCheck's seeds
+The **Practice** tab draws real top-runner ranked matches from [GapCheck](https://gapcheck.gg):
+thousands of curated seeds, filtered by overworld structure, bastion, finish time, leaderboard rank,
+or one specific runner.
+
+- **All four seeds** — overworld, nether, end and RNG, each with a copy button, so the seed actually
+  loads in a ranked private room. (MCSR Ranked's own API only exposes a seed id, which can't be
+  pasted anywhere.)
+- **Split-by-split gap** against your own average on that kind of seed, kept behind a spoiler
+  toggle until you've played it.
+- **Their POV at any split** — one click into the runner's Twitch VOD at that exact moment.
+- **Compare on GapCheck** opens the match there for their side-by-side video comparison.
 
 ### Friends, DMs & watchlist
 An Epic-style rail on the right edge of the app, on by default:
@@ -179,6 +186,8 @@ Made possible by the tools and communities that power Minecraft speedrunning:
 - **Ninjabrain Bot**
 - **paceman**
 - **Modrinth**
+- **[GapCheck](https://gapcheck.gg)** — the practice seeds, timelines and VODs behind the Practice
+  tab, built by cylorun, Luxvored and marmarounos
 
 Huge thanks to everyone in the MCSR community who builds, tests, and runs.
 
