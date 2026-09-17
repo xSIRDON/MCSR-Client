@@ -7,6 +7,7 @@ import { analyzeSplits, buildSplitGap, seedStructureLabel } from '@core/ranked-a
 import { usePlayerAnalytics } from '../hooks/usePlayerAnalytics'
 import { usePractice } from '../hooks/usePractice'
 import type { PracticeSeed } from '../hooks/usePractice'
+import type { MatchInfo } from '@services/mcsr-ranked'
 import { PlayerAutocomplete } from '../components/PlayerAutocomplete'
 import { PlayerHead } from '../components/PlayerHead'
 
@@ -37,10 +38,6 @@ export function Practice() {
   })
 
   const mine = usePlayerAnalytics(profile?.uuid)
-  const mySplits = useMemo(
-    () => analyzeSplits(profile?.uuid ?? '', mine.details),
-    [profile?.uuid, mine.details]
-  )
 
   const { seeds, loading, empty } = usePractice(runner?.uuid)
 
@@ -110,7 +107,8 @@ export function Practice() {
             <SeedCard
               key={seed.matchId}
               seed={seed}
-              mySplits={mySplits}
+              myUuid={profile.uuid}
+              myDetails={mine.details}
               runnerName={runner?.nickname ?? 'Runner'}
               delay={i * 40}
             />
@@ -123,16 +121,26 @@ export function Practice() {
 
 function SeedCard({
   seed,
-  mySplits,
+  myUuid,
+  myDetails,
   runnerName,
   delay
 }: {
   seed: PracticeSeed
-  mySplits: ReturnType<typeof analyzeSplits>
+  myUuid: string
+  myDetails: MatchInfo[]
   runnerName: string
   delay: number
 }) {
   const [copied, setCopied] = useState(false)
+
+  const { mySplits, typed } = useMemo(() => {
+    const sameType = myDetails.filter((m) => (m.seedType ?? m.seed?.overworld) === seed.overworld)
+    return sameType.length >= 3
+      ? { mySplits: analyzeSplits(myUuid, sameType), typed: sameType.length }
+      : { mySplits: analyzeSplits(myUuid, myDetails), typed: 0 }
+  }, [myUuid, myDetails, seed.overworld])
+
   const gap = useMemo(() => buildSplitGap(seed.splits, mySplits), [seed.splits, mySplits])
   const finishRow = gap.find((r) => r.key === 'finish')
 
@@ -196,7 +204,7 @@ function SeedCard({
         <div className="mb-1 grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 text-[10px] uppercase tracking-wider text-faint">
           <span>Split</span>
           <span className="text-right">Them</span>
-          <span className="text-right">You</span>
+          <span className="text-right">Your avg</span>
           <span className="text-right">Gap</span>
         </div>
         <ul className="space-y-0.5">
@@ -216,6 +224,11 @@ function SeedCard({
               </li>
             ))}
         </ul>
+        <p className="mt-1.5 text-[10px] text-faint">
+          {typed
+            ? `Your avg over ${typed} ${seedStructureLabel(seed.overworld)} run${typed === 1 ? '' : 's'}`
+            : 'Your overall avg — not enough of this seed type yet'}
+        </p>
       </div>
     </section>
   )

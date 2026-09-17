@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process'
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { paths } from '../paths'
@@ -8,11 +8,15 @@ import { store } from '../store'
 import type { TrackerStatus } from '../../shared/types'
 
 const KEY_SECRET = 'paceman-key'
-export const TRACKER_JAR = 'paceman-tracker-0.7.2.jar'
+export const TRACKER_JAR = 'paceman-tracker-0.7.3.jar'
 const TRACKER_DOWNLOAD =
-  'https://github.com/PaceMan-MCSR/PaceMan-Tracker/releases/download/v0.7.2/paceman-tracker-0.7.2.jar'
+  'https://github.com/PaceMan-MCSR/PaceMan-Tracker/releases/download/v0.7.3/paceman-tracker-0.7.3.jar'
 const TRACKER_SHA512 =
-  '8956d5e7b48e536fd655a65f62aed12b3b9bb6168dadf8c3816f054774082b93875c59073cc98aab295ba27b4d042560779c56920360be16485982b2596e18cc'
+  'fe756f6b1f97ae4f32952701f58e9150a579c7ef1278959f77eadd5707a64c6dbc9597a1039f65b60b530281a069fa59aba546e17a7a44082497f3b0741bcb07'
+
+export function trackerArgs(jar: string): string[] {
+  return ['-jar', jar, '--nogui']
+}
 
 let proc: ChildProcess | null = null
 let statusSink: ((s: TrackerStatus) => void) | null = null
@@ -72,25 +76,39 @@ export function writeOptions(): void {
 }
 
 export async function ensureJar(): Promise<void> {
-  if (existsSync(jarPath())) return
-  mkdirSync(paths.tracker(), { recursive: true })
-  writeFileSync(jarPath(), await fetchVerified(TRACKER_DOWNLOAD, TRACKER_SHA512, 'paceman-tracker'))
+  if (!existsSync(jarPath())) {
+    mkdirSync(paths.tracker(), { recursive: true })
+    writeFileSync(jarPath(), await fetchVerified(TRACKER_DOWNLOAD, TRACKER_SHA512, 'paceman-tracker'))
+  }
+  for (const f of readdirSync(paths.tracker())) {
+    if (f !== TRACKER_JAR && /^paceman-tracker-.*\.jar$/i.test(f)) {
+      try {
+        rmSync(join(paths.tracker(), f), { force: true })
+      } catch {
+      }
+    }
+  }
 }
 
-export async function start(): Promise<void> {
+export async function start(javaw = 'javaw'): Promise<void> {
   if (proc) return
   if (!hasKey()) return
   await ensureJar()
   writeOptions()
-  proc = spawn('java', ['-jar', jarPath(), 'nogui'], {
+  const child = spawn(javaw, trackerArgs(jarPath()), {
     cwd: paths.tracker(),
     stdio: 'ignore',
-    detached: false
+    detached: false,
+    windowsHide: true
   })
-  proc.on('exit', () => {
+  proc = child
+  const gone = (): void => {
+    if (proc !== child) return
     proc = null
     emit()
-  })
+  }
+  child.on('error', gone)
+  child.on('exit', gone)
   emit()
 }
 

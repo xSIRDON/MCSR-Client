@@ -1,7 +1,7 @@
-import { existsSync, readdirSync, renameSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, renameSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import type { InstanceId, ModInfo } from '../../shared/types'
-import { verifyBuffer } from './mrpack'
+import { assertTrustedDownloadUrl, verifyBuffer, type PackModUpgrade } from './mrpack'
 
 const DISABLED = '.disabled'
 
@@ -74,6 +74,59 @@ export async function installModJar(
     }
   }
   throw new Error(`Failed to install ${mod.file}: ${String(lastErr)}`)
+}
+
+export function pruneSupersededMods(modsDir: string, installed: string[]): string[] {
+  if (!existsSync(modsDir)) return []
+  const keep = new Set(installed.map((f) => f.toLowerCase()))
+  const names = new Set(installed.map((f) => parseModFilename(f).name.toLowerCase()))
+  const removed: string[] = []
+  for (const entry of readdirSync(modsDir)) {
+    if (!/\.jar(\.disabled)?$/i.test(entry)) continue
+    const mod = modFromFile(entry)
+    if (keep.has(mod.file.toLowerCase()) || !names.has(mod.name.toLowerCase())) continue
+    try {
+      rmSync(join(modsDir, entry), { force: true })
+      removed.push(entry)
+    } catch {
+    }
+  }
+  return removed
+}
+
+export async function upgradeInstalledMods(
+  modsDir: string,
+  upgrades: readonly PackModUpgrade[],
+  fetchBuffer: FetchBuffer = nodeFetchBuffer
+): Promise<string[]> {
+  const done: string[] = []
+  for (const up of upgrades) {
+    const oldJar = join(modsDir, basename(up.replaces))
+    const wasEnabled = existsSync(oldJar)
+    if (!wasEnabled && !existsSync(oldJar + DISABLED)) continue
+    const file = basename(up.path)
+    const dest = join(modsDir, file) + (wasEnabled ? '' : DISABLED)
+    if (!existsSync(join(modsDir, file)) && !existsSync(join(modsDir, file) + DISABLED)) {
+      let buf: Buffer | null = null
+      let lastErr: unknown
+      for (const url of up.urls) {
+        try {
+          const got = await fetchBuffer(assertTrustedDownloadUrl(url))
+          verifyBuffer(got, { sha512: up.sha512 })
+          buf = got
+          break
+        } catch (e) {
+          lastErr = e
+        }
+      }
+      if (!buf) throw new Error(`Failed to update to ${file}: ${String(lastErr)}`)
+      writeFileSync(dest, buf)
+      done.push(file)
+    }
+    rmSync(oldJar, { force: true })
+    rmSync(oldJar + DISABLED, { force: true })
+  }
+  return done
 }
 
 export function hasExtraOptions(modsDir: string): boolean {

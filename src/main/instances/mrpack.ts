@@ -89,6 +89,32 @@ export function verifyBuffer(buf: Buffer, hashes: PackFile['hashes']): void {
   throw new Error('no hash to verify against')
 }
 
+export interface PackModUpgrade {
+  replaces: string
+  path: string
+  urls: string[]
+  sha512: string
+}
+
+export const PACK_MOD_UPGRADES: readonly PackModUpgrade[] = [
+  {
+    replaces: 'mods/hermes-0.12.5+MC1.16.1.jar',
+    path: 'mods/hermes-0.15.1+MC1.16.1.jar',
+    urls: [
+      'https://github.com/Minecraft-Java-Edition-Speedrunning/legal-mods/raw/d6ed9613e0cf3a2291b8e756ed10a0b127ce632f/legal-mods/hermes/1.16.1/hermes-0.15.1+MC1.16.1.jar'
+    ],
+    sha512:
+      '2924a72bfc55b4b911a6b5920ff88e2c1a3bc2747da806b4be019eb56a3612233e83f948a43f1f6d8d2fecd57124c8a4573e051659525a312f84536b0c26a94c'
+  }
+]
+
+export function applyModUpgrades(files: PackFile[], upgrades: readonly PackModUpgrade[]): PackFile[] {
+  return files.map((f) => {
+    const up = upgrades.find((u) => u.replaces === f.path)
+    return up ? { ...f, path: up.path, hashes: { sha512: up.sha512 }, downloads: [...up.urls] } : f
+  })
+}
+
 export function fabricVersionString(index: ModrinthIndex): string {
   const loader = index.dependencies['fabric-loader']
   const mc = index.dependencies['minecraft']
@@ -127,6 +153,7 @@ export async function fetchPack(
 
 export interface InstallOpts {
   excludePrefixes?: string[]
+  upgrades?: readonly PackModUpgrade[]
   seedQueueOverride?: string | null
   onProgress?: (done: number, total: number, label: string) => void
   fetchBuffer?: FetchBuffer
@@ -136,9 +163,9 @@ export async function installPackFiles(
   index: ModrinthIndex,
   gameDir: string,
   opts: InstallOpts = {}
-): Promise<void> {
+): Promise<string[]> {
   const fetchBuffer = opts.fetchBuffer ?? nodeFetchBuffer
-  let files = filterMods(index.files, opts.excludePrefixes ?? [])
+  let files = applyModUpgrades(filterMods(index.files, opts.excludePrefixes ?? []), opts.upgrades ?? [])
 
   if (opts.seedQueueOverride) {
     files = files.filter((f) => !(f.path.split('/').pop() ?? '').toLowerCase().startsWith('seedqueue'))
@@ -175,6 +202,7 @@ export async function installPackFiles(
   }
 
   opts.onProgress?.(total, total, 'done')
+  return files.map((f) => f.path)
 }
 
 const RANKED_MODRINTH_VERSIONS =
