@@ -345,6 +345,7 @@ export interface SplitStat {
   label: string
   best: number | null
   average: number | null
+  median: number | null
   count: number
 }
 
@@ -359,11 +360,13 @@ const CUMULATIVE_SPLITS: { key: string; label: string; type: string }[] = [
 
 function splitStat(key: string, label: string, times: number[]): SplitStat {
   const valid = times.filter((t) => typeof t === 'number' && t > 0)
+  const mid = median(valid)
   return {
     key,
     label,
     best: valid.length ? Math.min(...valid) : null,
     average: valid.length ? Math.round(valid.reduce((a, b) => a + b, 0) / valid.length) : null,
+    median: mid == null ? null : Math.round(mid),
     count: valid.length
   }
 }
@@ -439,7 +442,8 @@ export interface GapRow {
 export function buildSplitGap(runner: SplitStat[], you: SplitStat[]): GapRow[] {
   const youBy = new Map(you.map((s) => [s.key, s]))
   return runner.map((r) => {
-    const youMs = youBy.get(r.key)?.average ?? null
+    const mine = youBy.get(r.key)
+    const youMs = mine?.median ?? mine?.average ?? null
     return {
       key: r.key,
       label: r.label,
