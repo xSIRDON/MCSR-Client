@@ -84,7 +84,12 @@ export function makeInstance(
 
 let managedJava: Promise<string | null> | null = null
 
-export function ensureManagedJava(id?: InstanceId): Promise<string | null> {
+export function ensureManagedJava(
+  id?: InstanceId,
+  onProgress?: (e: ProgressEvent) => void
+): Promise<string | null> {
+  if (onProgress) progressSink = onProgress
+  if (id) activePhaseInstance = id
   const pending = (managedJava ??= provisionManagedJava(id).catch(() => null))
   return pending.then((javaw) => {
     if (!javaw && managedJava === pending) managedJava = null

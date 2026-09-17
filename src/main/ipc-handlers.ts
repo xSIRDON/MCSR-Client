@@ -234,8 +234,8 @@ function tuneSeedQueue(id: InstanceId): string[] {
   return plan.changes
 }
 
-async function companionJavaw(): Promise<string | null> {
-  const bundled = await gmll.ensureManagedJava()
+async function companionJavaw(id: InstanceId): Promise<string | null> {
+  const bundled = await gmll.ensureManagedJava(id, sendProgress)
   if (bundled) return bundled
   return (await detectJava()).ok ? 'javaw' : null
 }
@@ -409,7 +409,7 @@ async function launchInstance(
   }
 
   const cfg = store.getConfig()
-  const javaw = await companionJavaw()
+  const javaw = await companionJavaw(id)
   if (cfg.toolscreen || cfg.ninjabrain) {
     if (javaw) {
       if (cfg.toolscreen) {
