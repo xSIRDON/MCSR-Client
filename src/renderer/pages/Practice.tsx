@@ -40,12 +40,18 @@ export function Practice() {
   const [runnerName, setRunnerName] = useState('')
 
   // A runner filter needs their uuid; GapCheck matches players by uuid, not name.
-  const { data: runner } = useQuery({
+  const {
+    data: runner,
+    isPending: runnerPending,
+    isError: runnerMissing
+  } = useQuery({
     queryKey: ['user', runnerName],
     queryFn: () => mcsr.getUser(runnerName),
-    enabled: runnerName.trim().length > 1
+    enabled: runnerName.trim().length > 1,
+    retry: false
   })
-  const runnerUuid = runnerName.trim() ? (runner?.uuid ?? null) : null
+  const typingRunner = runnerName.trim().length > 1
+  const runnerUuid = typingRunner ? (runner?.uuid ?? null) : null
   const effective = useMemo<PracticeFilters>(() => ({ ...filters, runnerUuid }), [filters, runnerUuid])
 
   const { counts, seeds, draw, drawing, error, clear } = usePractice(effective)
@@ -117,12 +123,14 @@ export function Practice() {
           <Num label="Over (min)" value={filters.minMinutes} onChange={(v) => set('minMinutes', v)} />
           <Num label="Top rank #" value={filters.minRank} onChange={(v) => set('minRank', v)} step={50} />
           <label className="min-w-[180px] flex-1">
-            <span className="mb-1 block text-[11px] uppercase tracking-[0.16em] text-muted">Runner</span>
+            <span className="mb-1 block text-[11px] uppercase tracking-[0.16em] text-muted">
+              Top runner
+            </span>
             <PlayerAutocomplete
               value={runnerName}
               onChange={setRunnerName}
               onSubmit={(name) => setRunnerName(name.trim())}
-              placeholder="Anyone"
+              placeholder="Anyone in their collection"
               className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg-2)] px-3 py-1.5 text-xs text-text outline-none transition-colors placeholder:text-faint focus:border-[var(--gold)]/40"
             />
           </label>
@@ -144,8 +152,25 @@ export function Practice() {
             </button>
           </div>
         </div>
-        {runnerName.trim().length > 1 && !runner && (
+        {typingRunner && runnerPending && (
           <div className="mt-2 text-xs text-faint">Looking up “{runnerName}”…</div>
+        )}
+        {typingRunner && runnerMissing && (
+          <div className="mt-2 text-xs text-[var(--loss)]">
+            No player called “{runnerName}” on MCSR Ranked — check the spelling.
+          </div>
+        )}
+        {/* GapCheck's collection is top-runner matches only, so most players have nothing in it. */}
+        {runnerUuid && counts?.total === 0 && (
+          <div className="mt-2 text-xs text-[var(--loss)]">
+            GapCheck has no seeds for {runner?.nickname ?? runnerName} — their collection only covers
+            matches from top-ranked players. Clear the name to draw from the whole collection.
+          </div>
+        )}
+        {!runnerUuid && counts?.total === 0 && (
+          <div className="mt-2 text-xs text-[var(--loss)]">
+            No seeds match these filters — try a longer time limit or a higher rank number.
+          </div>
         )}
         {error && <div className="mt-2 text-xs text-[var(--loss)]">{error}</div>}
       </section>

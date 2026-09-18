@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { buildQuery, matchUrl, normalizeMatch, vodSeconds } from './gapcheck'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { buildQuery, matchUrl, normalizeMatch, randomSeed, vodSeconds } from './gapcheck'
 
 describe('buildQuery', () => {
   it('passes through known filters', () => {
@@ -174,5 +174,23 @@ describe('normalizeMatch', () => {
     expect(bare.players).toEqual([])
     expect(bare.endTowers).toEqual([])
     expect(bare.rngConfidence).toBeNull()
+  })
+})
+
+describe('randomSeed when nothing matches', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('returns null on their 404 instead of throwing', async () => {
+    // GapCheck answers 404 for a filter combination it has no match for — e.g. a player who
+    // isn't in its top-runner collection. That's an answer, not a failure.
+    vi.stubGlobal('fetch', async () =>
+      new Response(JSON.stringify({ error: 'No matches found for this seed type' }), { status: 404 })
+    )
+    await expect(randomSeed({ players: ['441989ec815a479fb381dffa1bf5bd1f'] })).resolves.toBeNull()
+  })
+
+  it('still reports a real outage', async () => {
+    vi.stubGlobal('fetch', async () => new Response('nope', { status: 503 }))
+    await expect(randomSeed({})).rejects.toThrow(/503/)
   })
 })

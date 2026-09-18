@@ -193,13 +193,19 @@ function queued<T>(fn: () => Promise<T>): Promise<T> {
   return run
 }
 
+class GapCheckHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`GapCheck returned ${status}`)
+  }
+}
+
 async function getJson(path: string): Promise<unknown> {
   return queued(async () => {
     const res = await fetch(`${BASE}${path}`, {
       headers: { accept: 'application/json', 'user-agent': userAgent() },
       signal: AbortSignal.timeout(15_000)
     })
-    if (!res.ok) throw new Error(`GapCheck returned ${res.status}`)
+    if (!res.ok) throw new GapCheckHttpError(res.status)
     return res.json()
   })
 }
@@ -233,11 +239,18 @@ export async function match(matchId: number): Promise<GapCheckSeed | null> {
   return seed
 }
 
-/** Draw one seed matching the filters: their random pick, then that match's detail. */
+/**
+ * Draw one seed matching the filters: their random pick, then that match's detail. Nothing matching
+ * is a 404 upstream, which is an ordinary answer here (null), not a failure to report.
+ */
 export async function randomSeed(filters: GapCheckFilters = {}): Promise<GapCheckSeed | null> {
   const query = buildQuery(filters)
-  const picked = (await getJson(`/matches/random${query ? `?${query}` : ''}`)) as {
-    matchId?: number
+  let picked: { matchId?: number }
+  try {
+    picked = (await getJson(`/matches/random${query ? `?${query}` : ''}`)) as { matchId?: number }
+  } catch (e) {
+    if (e instanceof GapCheckHttpError && e.status === 404) return null
+    throw e
   }
   if (typeof picked?.matchId !== 'number') return null
   return match(picked.matchId)
