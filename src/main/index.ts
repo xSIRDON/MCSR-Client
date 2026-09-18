@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc, isGameRunning } from './ipc-handlers'
+import * as gmll from './launcher/gmll-adapter'
 import { setupUpdater } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
 import { removeDesktopShortcut } from './tools/ninjabrain'
@@ -30,6 +31,16 @@ function enablePacemanCors(): void {
       })
     }
   )
+}
+
+/** Best-effort startup warm-up so the first launch doesn't wait on GMLL's one-time init. */
+async function warmLauncher(): Promise<void> {
+  try {
+    await gmll.ensureCore()
+    await gmll.ensureManagedJava()
+  } catch {
+    // Offline or first run — launching does this properly, with progress.
+  }
 }
 
 function createWindow(): void {
@@ -129,6 +140,9 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc()
     createWindow()
     setupUpdater()
+    // Warm GMLL (and the game's Java) in the background: its manifest refresh takes ~2s, and
+    // paying that on the first Play click is the difference between "launching" and "frozen".
+    void warmLauncher()
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()

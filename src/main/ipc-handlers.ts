@@ -500,9 +500,14 @@ async function launchInstance(
   }
 
   pushLog('system', `Launching ${id}…`)
+  // Files are verified on install/update/verify, so a normal launch doesn't re-hash 300+ MB of
+  // assets first — that check is synchronous inside GMLL and froze the window for seconds.
+  const skipVerify = states[id].state === 'launching' && !!installedVersion(id)
   let child: Awaited<ReturnType<typeof gmll.launch>>
   try {
-    child = await gmll.launch(id, token, fabric, sendProgress, (line) => pushLog('system', line))
+    child = await gmll.launch(id, token, fabric, sendProgress, (line) => pushLog('system', line), {
+      skipVerify
+    })
   } catch (e) {
     // Don't strand the instance in "launching" — the player can fix the cause and try again.
     setState(id, { state: 'ready' })
@@ -542,7 +547,16 @@ async function launchInstance(
     )
   }
 
-  child.on('close', () => {
+  const startedAt = Date.now()
+  child.on('close', (code) => {
+    // A launch that dies at once usually means missing/corrupt game files — the one thing the
+    // fast launch path no longer re-checks every time.
+    if (code !== 0 && Date.now() - startedAt < 20_000) {
+      pushLog(
+        'system',
+        `${id} exited immediately (code ${code}). If this repeats, use Edit instance → Verify files.`
+      )
+    }
     if (id === 'rsg') tracker.stop()
     // Close the Ninjabrain Bot we run alongside the game.
     if (store.getConfig().ninjabrain) killNinjabrain()

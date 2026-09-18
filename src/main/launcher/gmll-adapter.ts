@@ -79,6 +79,15 @@ function clearSharedLinks(id: InstanceId): void {
   removeLinkIfPresent(join(paths.instanceDir(id), 'assets'))
 }
 
+/**
+ * Re-create the shared libraries/assets junctions in the instance. GMLL's install() does this as its
+ * first step; the fast launch path skips install() and so must do it itself.
+ */
+function linkShared(inst: Instance): void {
+  config.getlibraries().linkFrom(inst.getDir().getDir('libraries'))
+  config.getAssets().linkFrom(inst.getDir().getDir('assets'))
+}
+
 const FABRIC_VERSION_FALLBACK = 'fabric-loader-0.19.2-1.16.1'
 
 export function makeInstance(
@@ -254,6 +263,29 @@ export function gameDir(id: InstanceId): string {
   return makeInstance(id).getDir().path?.join?.('/') ?? paths.instanceDir(id)
 }
 
+/**
+ * Launch without re-verifying files GMLL already verified at install time.
+ *
+ * GMLL's launch() always calls install(), which re-hashes every asset and library and re-installs
+ * the Java 8 runtime the 1.16.1 manifest asks for — measured on a normal install: 4.3s to sha1 2615
+ * asset files (319 MB), 2.8s for the unused Java 8 runtime, 0.7s for libraries, all of it
+ * synchronous. In Electron that runs on the main thread, so clicking Play froze the whole window for
+ * seconds before the game even started. Files are verified when an instance is installed, updated,
+ * or verified from Edit instance, so a launch only has to re-create the shared links install()
+ * would have made and hand back the version it would have returned.
+ */
+async function useVerifiedFiles(inst: Instance): Promise<void> {
+  const version = await inst.getVersion()
+  const json = await version.getJSON()
+  // The one thing in install() that isn't just verification: it extracts the game's native
+  // libraries into a temp folder. Windows clears temp, so re-extract when they've gone missing
+  // rather than launching a game that can't find them.
+  const natives = config.getNatives()
+  if (!natives.exists() || natives.ls().length === 0) await downloader.libraries(json)
+  linkShared(inst)
+  inst.install = (async () => version) as typeof inst.install
+}
+
 /** Install the base game + Fabric for an instance (no mods yet). */
 export async function installBase(
   id: InstanceId,
@@ -281,7 +313,8 @@ export async function launch(
   token: unknown,
   fabricVersion: string,
   onProgress?: (e: ProgressEvent) => void,
-  log?: (line: string) => void
+  log?: (line: string) => void,
+  opts: { skipVerify?: boolean } = {}
 ): Promise<ChildProcessWithoutNullStreams> {
   await ensureCore(onProgress)
   activePhaseInstance = id
@@ -292,6 +325,7 @@ export async function launch(
   log?.(`Starting on ${jvm.label} with ${ramMb} MB.`)
   emit({ instance: id, phase: 'launch', fraction: null, message: 'Launching…' })
   const inst = makeInstance(id, fabricVersion, jvm.javaPath)
+  if (opts.skipVerify) await useVerifiedFiles(inst)
   return withLaunchLock(async () => {
     Instance.defaultGameArguments = jvmArgsFor(jvm.gc, jvm.major, GMLL_JVM_ARGS)
     try {
