@@ -64,6 +64,11 @@ function clearSharedLinks(id: InstanceId): void {
   removeLinkIfPresent(join(paths.instanceDir(id), 'assets'))
 }
 
+function linkShared(inst: Instance): void {
+  config.getlibraries().linkFrom(inst.getDir().getDir('libraries'))
+  config.getAssets().linkFrom(inst.getDir().getDir('assets'))
+}
+
 const FABRIC_VERSION_FALLBACK = 'fabric-loader-0.19.2-1.16.1'
 
 export function makeInstance(
@@ -211,6 +216,15 @@ export function gameDir(id: InstanceId): string {
   return makeInstance(id).getDir().path?.join?.('/') ?? paths.instanceDir(id)
 }
 
+async function useVerifiedFiles(inst: Instance): Promise<void> {
+  const version = await inst.getVersion()
+  const json = await version.getJSON()
+  const natives = config.getNatives()
+  if (!natives.exists() || natives.ls().length === 0) await downloader.libraries(json)
+  linkShared(inst)
+  inst.install = (async () => version) as typeof inst.install
+}
+
 export async function installBase(
   id: InstanceId,
   fabricVersion: string,
@@ -232,7 +246,8 @@ export async function launch(
   token: unknown,
   fabricVersion: string,
   onProgress?: (e: ProgressEvent) => void,
-  log?: (line: string) => void
+  log?: (line: string) => void,
+  opts: { skipVerify?: boolean } = {}
 ): Promise<ChildProcessWithoutNullStreams> {
   await ensureCore(onProgress)
   activePhaseInstance = id
@@ -243,6 +258,7 @@ export async function launch(
   log?.(`Starting on ${jvm.label} with ${ramMb} MB.`)
   emit({ instance: id, phase: 'launch', fraction: null, message: 'Launching…' })
   const inst = makeInstance(id, fabricVersion, jvm.javaPath)
+  if (opts.skipVerify) await useVerifiedFiles(inst)
   return withLaunchLock(async () => {
     Instance.defaultGameArguments = jvmArgsFor(jvm.gc, jvm.major, GMLL_JVM_ARGS)
     try {

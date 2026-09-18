@@ -449,9 +449,12 @@ async function launchInstance(
   }
 
   pushLog('system', `Launching ${id}…`)
+  const skipVerify = states[id].state === 'launching' && !!installedVersion(id)
   let child: Awaited<ReturnType<typeof gmll.launch>>
   try {
-    child = await gmll.launch(id, token, fabric, sendProgress, (line) => pushLog('system', line))
+    child = await gmll.launch(id, token, fabric, sendProgress, (line) => pushLog('system', line), {
+      skipVerify
+    })
   } catch (e) {
     setState(id, { state: 'ready' })
     throw e
@@ -483,7 +486,14 @@ async function launchInstance(
     )
   }
 
-  child.on('close', () => {
+  const startedAt = Date.now()
+  child.on('close', (code) => {
+    if (code !== 0 && Date.now() - startedAt < 20_000) {
+      pushLog(
+        'system',
+        `${id} exited immediately (code ${code}). If this repeats, use Edit instance → Verify files.`
+      )
+    }
     if (id === 'rsg') tracker.stop()
     if (store.getConfig().ninjabrain) killNinjabrain()
     pushLog('system', `${id} closed.`)

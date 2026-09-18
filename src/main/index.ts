@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc, isGameRunning } from './ipc-handlers'
+import * as gmll from './launcher/gmll-adapter'
 import { setupUpdater } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
 import { removeDesktopShortcut } from './tools/ninjabrain'
@@ -20,6 +21,14 @@ function enablePacemanCors(): void {
       })
     }
   )
+}
+
+async function warmLauncher(): Promise<void> {
+  try {
+    await gmll.ensureCore()
+    await gmll.ensureManagedJava()
+  } catch {
+  }
 }
 
 function createWindow(): void {
@@ -103,6 +112,7 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc()
     createWindow()
     setupUpdater()
+    void warmLauncher()
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
