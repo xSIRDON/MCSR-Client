@@ -285,6 +285,32 @@ async function companionJavaw(id: InstanceId): Promise<string | null> {
   return (await detectJava()).ok ? 'javaw' : null
 }
 
+/** Start Toolscreen's watcher and Ninjabrain Bot for a launch. Best-effort; never throws. */
+async function startCompanions(id: InstanceId, javaw: string | null): Promise<void> {
+  const cfg = store.getConfig()
+  if (!cfg.toolscreen && !cfg.ninjabrain) return
+  if (!javaw) {
+    pushLog('system', 'Companion tools (Toolscreen / Ninjabrain) need Java 17+; skipped this launch.')
+    return
+  }
+  if (cfg.toolscreen) {
+    try {
+      await spawnToolscreenWatcher(gmll.gameDir(id), javaw)
+      pushLog('system', 'Toolscreen watcher started — it will inject once the game window opens.')
+    } catch (e) {
+      pushLog('system', `Toolscreen skipped: ${e instanceof Error ? e.message : e}`)
+    }
+  }
+  if (cfg.ninjabrain) {
+    try {
+      const opened = await launchNinjabrain(javaw)
+      if (opened) pushLog('system', 'Ninjabrain Bot opened.')
+    } catch (e) {
+      pushLog('system', `Ninjabrain Bot skipped: ${e instanceof Error ? e.message : e}`)
+    }
+  }
+}
+
 /** All installs of one instance run strictly one at a time (see installQueue above). */
 function installInstance(
   id: InstanceId,
@@ -471,33 +497,11 @@ async function launchInstance(
     }
   }
 
-  // Companion tools that run alongside the game (all need Java 17+). Spawn them now, before the
-  // game, so Toolscreen's watcher catches the window and Ninjabrain is ready. All best-effort —
-  // never block the launch.
-  const cfg = store.getConfig()
+  // Companion tools (all need Java 17+) start alongside the game rather than ahead of it:
+  // Toolscreen's watcher only has to be up before the game window appears, which is seconds after
+  // spawn, and Ninjabrain's "already open?" check alone used to hold every launch for ~0.5s.
   const javaw = await companionJavaw(id)
-  if (cfg.toolscreen || cfg.ninjabrain) {
-    if (javaw) {
-      if (cfg.toolscreen) {
-        try {
-          await spawnToolscreenWatcher(gmll.gameDir(id), javaw)
-          pushLog('system', 'Toolscreen watcher started — it will inject once the game window opens.')
-        } catch (e) {
-          pushLog('system', `Toolscreen skipped: ${e instanceof Error ? e.message : e}`)
-        }
-      }
-      if (cfg.ninjabrain) {
-        try {
-          const opened = await launchNinjabrain(javaw)
-          if (opened) pushLog('system', 'Ninjabrain Bot opened.')
-        } catch (e) {
-          pushLog('system', `Ninjabrain Bot skipped: ${e instanceof Error ? e.message : e}`)
-        }
-      }
-    } else {
-      pushLog('system', 'Companion tools (Toolscreen / Ninjabrain) need Java 17+; skipped this launch.')
-    }
-  }
+  void startCompanions(id, javaw)
 
   pushLog('system', `Launching ${id}…`)
   // Files are verified on install/update/verify, so a normal launch doesn't re-hash 300+ MB of
