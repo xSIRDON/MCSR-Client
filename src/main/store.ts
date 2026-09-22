@@ -19,6 +19,7 @@ type RawConfig = {
   friendsServerUrl?: string | null
   extraOptionsPromptSeen?: boolean
   seedQueueAutoTune?: boolean
+  pacemanShowWindow?: boolean
 }
 
 /** Coerce a stored (possibly legacy) config into the current AppConfig shape. */
@@ -59,7 +60,9 @@ function normalizeConfig(raw: RawConfig): AppConfig {
         ? raw.extraOptionsPromptSeen
         : DEFAULT_CONFIG.extraOptionsPromptSeen,
     seedQueueAutoTune:
-      typeof raw.seedQueueAutoTune === 'boolean' ? raw.seedQueueAutoTune : DEFAULT_CONFIG.seedQueueAutoTune
+      typeof raw.seedQueueAutoTune === 'boolean' ? raw.seedQueueAutoTune : DEFAULT_CONFIG.seedQueueAutoTune,
+    pacemanShowWindow:
+      typeof raw.pacemanShowWindow === 'boolean' ? raw.pacemanShowWindow : DEFAULT_CONFIG.pacemanShowWindow
   }
 }
 

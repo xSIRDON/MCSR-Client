@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc, isGameRunning } from './ipc-handlers'
 import * as gmll from './launcher/gmll-adapter'
+import * as tracker from './paceman/tracker'
 import { setupUpdater } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
 import { removeDesktopShortcut } from './tools/ninjabrain'
@@ -148,6 +149,10 @@ if (!app.requestSingleInstanceLock()) {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
   })
+
+  // A tracker left running after the client quits (e.g. restarting for an update mid-run) was
+  // orphaned: nothing ever stopped it, and it held the tracker's single-instance lock for good.
+  app.on('before-quit', () => tracker.stop())
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()

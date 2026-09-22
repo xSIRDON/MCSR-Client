@@ -86,6 +86,8 @@ export interface AppConfig {
   extraOptionsPromptSeen: boolean
   /** Keep RSG/ZSG SeedQueue sizing (and RAM) within what this PC can run, before each launch. */
   seedQueueAutoTune: boolean
+  /** Open the PaceMan Tracker's own window while it runs (off = it tracks invisibly). */
+  pacemanShowWindow: boolean
 }
 
 /** The SeedQueue settings that decide how hard the wall works the CPU and heap. */
@@ -178,7 +180,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   favorites: [],
   friendsServerUrl: DEFAULT_FRIENDS_SERVER,
   extraOptionsPromptSeen: false,
-  seedQueueAutoTune: true
+  seedQueueAutoTune: true,
+  pacemanShowWindow: true
 }
 
 /** A single mod jar inside an instance's mods/ folder. */

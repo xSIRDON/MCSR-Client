@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { mcsr, paceman } from '../lib/clients'
 import { eloToRank } from '@core/rank'
@@ -72,6 +72,7 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
   const status = statuses.rsg
   const prog = progress.rsg
   const busy = isBusy(status.state)
+  const tracking = useTrackerRunning()
 
   const pb = pbData?.finish ?? null
 
@@ -101,7 +102,10 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
             <div className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-faint">Random Seed Glitchless</div>
           </div>
         </div>
-        <StatusPill live={isLive} />
+        <div className="flex shrink-0 items-center gap-1.5">
+          {tracking && <TrackerPill />}
+          <StatusPill live={isLive} />
+        </div>
       </header>
 
       <Hero label="Personal best" value={pbValue} color="var(--portal)" glow="rgba(159,107,255,.5)" />
@@ -187,6 +191,33 @@ function Hero({ label, value, color, glow }: { label: string; value: ReactNode; 
 }
 
 /** RSG live indicator — pulses green while a run is live, otherwise a quiet IDLE chip. */
+/** Whether the client's paceman tracker is running right now (it can run without a window). */
+function useTrackerRunning(): boolean {
+  const [running, setRunning] = useState(false)
+  useEffect(() => {
+    void window.mcsr.paceman.status().then((s) => setRunning(s.running))
+    return window.mcsr.paceman.onStatusChanged((s) => setRunning(s.running))
+  }, [])
+  return running
+}
+
+function TrackerPill() {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium"
+      style={{
+        color: 'var(--portal)',
+        background: 'rgba(159,107,255,.12)',
+        border: '1px solid rgba(159,107,255,.3)'
+      }}
+      title="The paceman tracker is running and uploading your splits to paceman.gg"
+    >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--portal)' }} />
+      TRACKING
+    </span>
+  )
+}
+
 function StatusPill({ live }: { live: boolean }) {
   return (
     <span

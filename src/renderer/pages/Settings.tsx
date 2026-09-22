@@ -223,6 +223,19 @@ export function Settings() {
           Get a key at paceman.gg → sign in with Discord → Generate Access Token. The tracker starts
           automatically when you launch RSG — no Julti or Jingle needed.
         </p>
+        <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={config?.pacemanShowWindow ?? true}
+            onChange={(e) => patch({ pacemanShowWindow: e.target.checked })}
+            className="accent-[var(--gold)]"
+          />
+          <span className="text-muted">Show the tracker window while it runs</span>
+        </label>
+        <p className="mt-1 pl-6 text-xs text-faint">
+          Off, it tracks in the background with no window — your runs still upload, and the RSG card
+          shows TRACKING while it's on.
+        </p>
 
         <div className="mt-4">
           <label className="mb-1 block text-xs text-muted">Paceman / Minecraft name for live pace</label>
