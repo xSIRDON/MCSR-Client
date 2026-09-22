@@ -140,7 +140,7 @@ if (!app.requestSingleInstanceLock()) {
     enablePacemanCors()
     registerIpc()
     createWindow()
-    setupUpdater()
+    setupUpdater(isGameRunning)
     // Warm GMLL (and the game's Java) in the background: its manifest refresh takes ~2s, and
     // paying that on the first Play click is the difference between "launching" and "frozen".
     void warmLauncher()

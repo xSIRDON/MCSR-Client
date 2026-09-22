@@ -28,7 +28,12 @@ export function currentUpdateStatus(): UpdateStatus {
   return status
 }
 
-export function setupUpdater(): void {
+// A client left open for days only ever checked once, at startup — so it sat on an old version
+// while fixes shipped. Re-check periodically too, but never mid-game (the download competes with
+// the run for bandwidth and disk).
+const RECHECK_MS = 30 * 60_000
+
+export function setupUpdater(isGameRunning: () => boolean = () => false): void {
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
 
@@ -47,7 +52,14 @@ export function setupUpdater(): void {
   )
 
   // Quietly check a few seconds after launch so we don't compete with first paint.
-  if (app.isPackaged) setTimeout(() => void checkForUpdates(), 4000)
+  if (app.isPackaged) {
+    setTimeout(() => void checkForUpdates(), 4000)
+    setInterval(() => {
+      // Nothing to do once an update is downloading or waiting to install.
+      if (isGameRunning() || status.state === 'downloading' || status.state === 'ready') return
+      void checkForUpdates()
+    }, RECHECK_MS)
+  }
 }
 
 export async function checkForUpdates(): Promise<UpdateStatus> {
