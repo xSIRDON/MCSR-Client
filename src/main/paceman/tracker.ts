@@ -14,8 +14,8 @@ const TRACKER_DOWNLOAD =
 const TRACKER_SHA512 =
   'fe756f6b1f97ae4f32952701f58e9150a579c7ef1278959f77eadd5707a64c6dbc9597a1039f65b60b530281a069fa59aba546e17a7a44082497f3b0741bcb07'
 
-export function trackerArgs(jar: string): string[] {
-  return ['-jar', jar, '--nogui']
+export function trackerArgs(jar: string, showWindow: boolean): string[] {
+  return ['-jar', jar, showWindow ? '--noreopen' : '--nogui']
 }
 
 let proc: ChildProcess | null = null
@@ -95,11 +95,12 @@ export async function start(javaw = 'javaw'): Promise<void> {
   if (!hasKey()) return
   await ensureJar()
   writeOptions()
-  const child = spawn(javaw, trackerArgs(jarPath()), {
+  const showWindow = store.getConfig().pacemanShowWindow
+  const child = spawn(javaw, trackerArgs(jarPath(), showWindow), {
     cwd: paths.tracker(),
     stdio: 'ignore',
     detached: false,
-    windowsHide: true
+    windowsHide: !showWindow
   })
   proc = child
   const gone = (): void => {

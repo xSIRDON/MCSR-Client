@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, session, shell } from 'electron'
 import { join } from 'node:path'
 import { registerIpc, isGameRunning } from './ipc-handlers'
 import * as gmll from './launcher/gmll-adapter'
+import * as tracker from './paceman/tracker'
 import { setupUpdater } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
 import { removeDesktopShortcut } from './tools/ninjabrain'
@@ -118,6 +119,8 @@ if (!app.requestSingleInstanceLock()) {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
   })
+
+  app.on('before-quit', () => tracker.stop())
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()

@@ -59,6 +59,7 @@ export interface AppConfig {
   friendsServerUrl: string | null
   extraOptionsPromptSeen: boolean
   seedQueueAutoTune: boolean
+  pacemanShowWindow: boolean
 }
 
 export interface SeedQueueSizing {
@@ -126,7 +127,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   favorites: [],
   friendsServerUrl: DEFAULT_FRIENDS_SERVER,
   extraOptionsPromptSeen: false,
-  seedQueueAutoTune: true
+  seedQueueAutoTune: true,
+  pacemanShowWindow: true
 }
 
 export interface ModInfo {
