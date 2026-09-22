@@ -255,6 +255,31 @@ async function companionJavaw(id: InstanceId): Promise<string | null> {
   return (await detectJava()).ok ? 'javaw' : null
 }
 
+async function startCompanions(id: InstanceId, javaw: string | null): Promise<void> {
+  const cfg = store.getConfig()
+  if (!cfg.toolscreen && !cfg.ninjabrain) return
+  if (!javaw) {
+    pushLog('system', 'Companion tools (Toolscreen / Ninjabrain) need Java 17+; skipped this launch.')
+    return
+  }
+  if (cfg.toolscreen) {
+    try {
+      await spawnToolscreenWatcher(gmll.gameDir(id), javaw)
+      pushLog('system', 'Toolscreen watcher started — it will inject once the game window opens.')
+    } catch (e) {
+      pushLog('system', `Toolscreen skipped: ${e instanceof Error ? e.message : e}`)
+    }
+  }
+  if (cfg.ninjabrain) {
+    try {
+      const opened = await launchNinjabrain(javaw)
+      if (opened) pushLog('system', 'Ninjabrain Bot opened.')
+    } catch (e) {
+      pushLog('system', `Ninjabrain Bot skipped: ${e instanceof Error ? e.message : e}`)
+    }
+  }
+}
+
 function installInstance(
   id: InstanceId,
   importFrom: InstanceId | null = null,
@@ -423,30 +448,8 @@ async function launchInstance(
     }
   }
 
-  const cfg = store.getConfig()
   const javaw = await companionJavaw(id)
-  if (cfg.toolscreen || cfg.ninjabrain) {
-    if (javaw) {
-      if (cfg.toolscreen) {
-        try {
-          await spawnToolscreenWatcher(gmll.gameDir(id), javaw)
-          pushLog('system', 'Toolscreen watcher started — it will inject once the game window opens.')
-        } catch (e) {
-          pushLog('system', `Toolscreen skipped: ${e instanceof Error ? e.message : e}`)
-        }
-      }
-      if (cfg.ninjabrain) {
-        try {
-          const opened = await launchNinjabrain(javaw)
-          if (opened) pushLog('system', 'Ninjabrain Bot opened.')
-        } catch (e) {
-          pushLog('system', `Ninjabrain Bot skipped: ${e instanceof Error ? e.message : e}`)
-        }
-      }
-    } else {
-      pushLog('system', 'Companion tools (Toolscreen / Ninjabrain) need Java 17+; skipped this launch.')
-    }
-  }
+  void startCompanions(id, javaw)
 
   pushLog('system', `Launching ${id}…`)
   const skipVerify = states[id].state === 'launching' && !!installedVersion(id)

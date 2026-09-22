@@ -112,7 +112,7 @@ if (!app.requestSingleInstanceLock()) {
     enablePacemanCors()
     registerIpc()
     createWindow()
-    setupUpdater()
+    setupUpdater(isGameRunning)
     void warmLauncher()
 
     app.on('activate', () => {

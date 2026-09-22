@@ -20,7 +20,9 @@ export function currentUpdateStatus(): UpdateStatus {
   return status
 }
 
-export function setupUpdater(): void {
+const RECHECK_MS = 30 * 60_000
+
+export function setupUpdater(isGameRunning: () => boolean = () => false): void {
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
 
@@ -38,7 +40,13 @@ export function setupUpdater(): void {
     emit({ state: 'error', error: String(e instanceof Error ? e.message : e) })
   )
 
-  if (app.isPackaged) setTimeout(() => void checkForUpdates(), 4000)
+  if (app.isPackaged) {
+    setTimeout(() => void checkForUpdates(), 4000)
+    setInterval(() => {
+      if (isGameRunning() || status.state === 'downloading' || status.state === 'ready') return
+      void checkForUpdates()
+    }, RECHECK_MS)
+  }
 }
 
 export async function checkForUpdates(): Promise<UpdateStatus> {
