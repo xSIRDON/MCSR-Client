@@ -44,20 +44,40 @@ export function pickGc(
 /**
  * JVM flags for the chosen collector. `g1Defaults` is GMLL's stock list (`-Xmx${ram}M`, G1 tuning,
  * the log4j lookup guard) and is used as-is for G1 — the two collectors can't be combined, so ZGC
- * gets its own list rather than an append. The ZGC set is the tech-support bot's; the Graal
- * inliner hint is an ordinary system property on other JVMs.
+ * gets its own list rather than an append. The ZGC set follows the tech-support bot's, except that
+ * it sizes the heap up front instead of pre-touching it (see below); the Graal inliner hint is an
+ * ordinary system property on other JVMs.
  */
 export function jvmArgsFor(gc: GcKind, javaMajor: number | null, g1Defaults: readonly string[]): string[] {
   if (gc === 'g1') return [...g1Defaults]
-  const args = ['-Xmx${ram}M', '-XX:+UseZGC']
+  // The whole heap from the start (-Xms = -Xmx). Left to itself ZGC starts at 1/64 of RAM and grows
+  // the heap *during* SeedQueue's allocation bursts (up to ~2 GB/s on the wall), then hands memory
+  // back after 5 idle minutes only to re-commit it on the next burst. Game threads stall on both:
+  // a 4-day 10 GB session measured stalls of up to 1.46s, with up to 716 page-cache misses/s while
+  // the heap was growing. It never uncommits below -Xms. The heap is committed but not pre-touched:
+  // pre-touching costs ~0.45s per GB at boot, while committing alone boots faster than the old
+  // grow-as-needed setup did (4 GB: 0.36s against 0.44s).
+  const args = ['-Xms${ram}M', '-Xmx${ram}M', '-XX:+UseZGC']
   if (javaMajor === 23) args.push('-XX:-ZGenerational')
   args.push(
-    '-XX:+AlwaysPreTouch',
     '-XX:NmethodSweepActivity=1',
     '-Djdk.graal.TuneInlinerExploration=1',
     '-Dlog4j2.formatMsgNoLookups=true'
   )
   return args
+}
+
+/** Where a launch's GC log goes, relative to the game directory (the JVM's working directory). */
+export const GC_LOG_FILE = 'logs/gc.log'
+
+/**
+ * GC logging for a real launch — never for the -version probe, which would write the file into
+ * whatever directory the client runs from. The log rotates at every start, so gc.log is always
+ * the current session. The JVM refuses to start when it can't open the file, so the caller must
+ * make sure logs/ exists.
+ */
+export function gcLogArg(): string {
+  return `-Xlog:gc:file=${GC_LOG_FILE}:uptime:filecount=2,filesize=10M`
 }
 
 /** Fill GMLL's `${ram}` placeholder, for running a flag set outside GMLL (the startup probe). */

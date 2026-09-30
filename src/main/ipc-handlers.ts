@@ -56,6 +56,7 @@ import { ensureToolscreenJar, spawnToolscreenWatcher } from './tools/toolscreen'
 import { detectJava } from './system/java'
 import { removeLinkIfPresent } from './launcher/links'
 import { gameWindowReady } from './launcher/game-ready'
+import { describeGcReport, readGcReport, readLastSession, saveLastSession } from './launcher/gc-report'
 import { pushLog, onLog, logHistory, clearLog } from './log'
 import { paths } from './paths'
 import { createKeyedQueue } from './keyed-queue'
@@ -247,7 +248,8 @@ function seedQueueInfo(id: InstanceId): SeedQueueInfo | null {
     recommended: recommendedSeedQueue(threads, memMb),
     ramMb: store.getConfig().ram[id],
     neededRamMb: recommendedRamMb(current.maxCapacity),
-    cpuThreads: threads
+    cpuThreads: threads,
+    lastSession: readLastSession(paths.instanceDir(id))
   }
 }
 
@@ -562,6 +564,13 @@ async function launchInstance(
       )
     }
     if (id === 'rsg') tracker.stop()
+    // Did the game freeze waiting for memory? Its GC log says, so the next lag report comes with
+    // evidence instead of guesswork. (Absent when it ran on G1/Java 8.)
+    const report = readGcReport(gmll.gameDir(id))
+    if (report) {
+      saveLastSession(paths.instanceDir(id), report)
+      pushLog('system', `${id} session: ${describeGcReport(report)}.`)
+    }
     // Close the Ninjabrain Bot we run alongside the game.
     if (store.getConfig().ninjabrain) killNinjabrain()
     pushLog('system', `${id} closed.`)

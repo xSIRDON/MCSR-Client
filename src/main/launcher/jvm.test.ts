@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   describeJvm,
+  gcLogArg,
   jvmArgsFor,
   missingRuntimeFiles,
   pickGc,
@@ -60,11 +61,11 @@ describe('jvmArgsFor', () => {
     expect(jvmArgsFor('g1', 21, GMLL_G1)).toEqual(GMLL_G1)
   })
 
-  it('uses the tech-support flag set for ZGC, never mixing collectors', () => {
+  it('uses the tech-support flag set for ZGC with a full-size heap, never mixing collectors', () => {
     expect(jvmArgsFor('zgc', 21, GMLL_G1)).toEqual([
+      '-Xms${ram}M',
       '-Xmx${ram}M',
       '-XX:+UseZGC',
-      '-XX:+AlwaysPreTouch',
       '-XX:NmethodSweepActivity=1',
       '-Djdk.graal.TuneInlinerExploration=1',
       '-Dlog4j2.formatMsgNoLookups=true'
@@ -72,10 +73,20 @@ describe('jvmArgsFor', () => {
     expect(jvmArgsFor('zgc', 21, GMLL_G1).some((a) => a.includes('G1'))).toBe(false)
   })
 
+  it('does not pre-touch the heap (it would cost ~0.45s per GB at boot)', () => {
+    expect(jvmArgsFor('zgc', 21, GMLL_G1)).not.toContain('-XX:+AlwaysPreTouch')
+  })
+
   it('turns generational ZGC back off only on Java 23', () => {
     expect(jvmArgsFor('zgc', 23, GMLL_G1)).toContain('-XX:-ZGenerational')
     expect(jvmArgsFor('zgc', 21, GMLL_G1)).not.toContain('-XX:-ZGenerational')
     expect(jvmArgsFor('zgc', 24, GMLL_G1)).not.toContain('-XX:-ZGenerational')
+  })
+})
+
+describe('gcLogArg', () => {
+  it('logs gc events to logs/gc.log, rotating at each start and bounded in size', () => {
+    expect(gcLogArg()).toBe('-Xlog:gc:file=logs/gc.log:uptime:filecount=2,filesize=10M')
   })
 })
 

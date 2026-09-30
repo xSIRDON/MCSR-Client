@@ -109,6 +109,20 @@ export interface SeedQueueInfo {
   /** Heap the current queue needs (2000 MB + 250 MB per queued seed). */
   neededRamMb: number
   cpuThreads: number
+  /** How the last session went memory-wise, from its GC log; null before one has been recorded. */
+  lastSession: GcSessionReport | null
+}
+
+/** What a session's GC log says about freezes (ZGC allocation stalls). */
+export interface GcSessionReport {
+  /** Stalls on the render thread — the game visibly freezing. */
+  freezes: number
+  worstFreezeMs: number | null
+  totalFreezeMs: number
+  /** Stalls on world-generation and other threads — slower resets, not a frozen screen. */
+  otherStalls: number
+  /** When the session ended (unix seconds). */
+  at: number
 }
 
 /** The official friends network, baked in so every client is on the same network by default.

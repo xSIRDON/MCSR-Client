@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import type { AppConfig, InstanceId, ModInfo, SeedQueueInfo } from '@shared/types'
+import type { AppConfig, GcSessionReport, InstanceId, ModInfo, SeedQueueInfo } from '@shared/types'
 import { MAP_CATALOG, ALL_MAP_IDS } from '@shared/maps'
 
 const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
@@ -228,6 +228,8 @@ function WallCard({ id, onTuned }: { id: InstanceId; onTuned: () => void }) {
             </div>
           </div>
 
+          {info.lastSession && <LastSession report={info.lastSession} />}
+
           <div className="mt-3 flex items-center justify-between gap-3">
             <p className="min-w-0 text-xs text-faint">
               Limits for your {info.cpuThreads}-thread CPU, from SeedQueue’s docs and the MCSR
@@ -247,6 +249,33 @@ function WallCard({ id, onTuned }: { id: InstanceId; onTuned: () => void }) {
         </>
       )}
     </Card>
+  )
+}
+
+/** How the last session went, from its GC log: did the game freeze waiting for memory? */
+function LastSession({ report }: { report: GcSessionReport }) {
+  const froze = report.freezes > 0
+  const worst = report.worstFreezeMs != null ? `${(report.worstFreezeMs / 1000).toFixed(2)}s` : null
+  return (
+    <div
+      className="mt-3 rounded-md border px-3 py-2 text-xs"
+      style={{
+        borderColor: froze ? 'rgba(255,90,90,0.35)' : 'var(--line)',
+        background: froze ? 'rgba(255,90,90,0.06)' : 'transparent'
+      }}
+    >
+      <div className={froze ? 'text-[var(--loss)]' : 'text-muted'}>
+        Last session:{' '}
+        {froze
+          ? `froze ${report.freezes} time${report.freezes === 1 ? '' : 's'} waiting for memory${worst ? ` (worst ${worst})` : ''}.`
+          : 'no freezes waiting for memory.'}
+      </div>
+      {froze && (
+        <div className="mt-0.5 text-faint">
+          The game ran out of free memory mid-burst. Raise RAM above, or queue fewer seeds.
+        </div>
+      )}
+    </div>
   )
 }
 
