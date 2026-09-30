@@ -82,6 +82,15 @@ export function planTune(
   return { settings, ramMb: ram, changes }
 }
 
+export const PC_HEADROOM_MB = 8192
+
+export function suggestLowerRam(ramMb: number, neededMb: number, totalMemMb: number): number | null {
+  const excess = ramMb - neededMb
+  if (excess < 1024) return null
+  if (totalMemMb - ramMb >= PC_HEADROOM_MB) return null
+  return neededMb
+}
+
 function num(v: unknown): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? v : null
 }

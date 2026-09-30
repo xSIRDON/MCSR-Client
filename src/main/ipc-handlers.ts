@@ -1,7 +1,7 @@
 import { ipcMain, BrowserWindow, dialog, shell } from 'electron'
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, rmSync } from 'node:fs'
 import { spawn } from 'node:child_process'
-import { availableParallelism, totalmem } from 'node:os'
+import { availableParallelism, freemem, totalmem } from 'node:os'
 import { join } from 'node:path'
 import { IPC } from '../shared/ipc'
 import type {
@@ -35,6 +35,7 @@ import {
   readSeedQueue,
   recommendedRamMb,
   recommendedSeedQueue,
+  suggestLowerRam,
   writeSeedQueue
 } from './instances/seedqueue'
 import { syncMaps } from './instances/maps'
@@ -227,6 +228,8 @@ function seedQueueInfo(id: InstanceId): SeedQueueInfo | null {
     ramMb: store.getConfig().ram[id],
     neededRamMb: recommendedRamMb(current.maxCapacity),
     cpuThreads: threads,
+    totalMemMb: memMb,
+    lowerRamTo: suggestLowerRam(store.getConfig().ram[id], recommendedRamMb(current.maxCapacity), memMb),
     lastSession: readLastSession(paths.instanceDir(id))
   }
 }
@@ -492,7 +495,13 @@ async function launchInstance(
   }
 
   const startedAt = Date.now()
+  let lowestFreeMemMb = Math.round(freemem() / 1048576)
+  const memWatch = setInterval(() => {
+    lowestFreeMemMb = Math.min(lowestFreeMemMb, Math.round(freemem() / 1048576))
+  }, 5000)
+  memWatch.unref()
   child.on('close', (code) => {
+    clearInterval(memWatch)
     if (code !== 0 && Date.now() - startedAt < 20_000) {
       pushLog(
         'system',
@@ -500,8 +509,9 @@ async function launchInstance(
       )
     }
     if (id === 'rsg') tracker.stop()
-    const report = readGcReport(gmll.gameDir(id))
-    if (report) {
+    const gc = readGcReport(gmll.gameDir(id))
+    if (gc) {
+      const report = { ...gc, lowestFreeMemMb }
       saveLastSession(paths.instanceDir(id), report)
       pushLog('system', `${id} session: ${describeGcReport(report)}.`)
     }

@@ -74,8 +74,12 @@ export interface SeedQueueInfo {
   ramMb: number
   neededRamMb: number
   cpuThreads: number
+  totalMemMb: number
+  lowerRamTo: number | null
   lastSession: GcSessionReport | null
 }
+
+export const LOW_FREE_MEM_MB = 1024
 
 export interface GcSessionReport {
   freezes: number
@@ -83,6 +87,7 @@ export interface GcSessionReport {
   totalFreezeMs: number
   otherStalls: number
   at: number
+  lowestFreeMemMb?: number | null
 }
 
 export const DEFAULT_FRIENDS_SERVER = 'https://mcsrfriends.duckdns.org:8787'
