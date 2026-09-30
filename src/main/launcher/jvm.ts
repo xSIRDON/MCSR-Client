@@ -24,15 +24,20 @@ export function pickGc(
 
 export function jvmArgsFor(gc: GcKind, javaMajor: number | null, g1Defaults: readonly string[]): string[] {
   if (gc === 'g1') return [...g1Defaults]
-  const args = ['-Xmx${ram}M', '-XX:+UseZGC']
+  const args = ['-Xms${ram}M', '-Xmx${ram}M', '-XX:+UseZGC']
   if (javaMajor === 23) args.push('-XX:-ZGenerational')
   args.push(
-    '-XX:+AlwaysPreTouch',
     '-XX:NmethodSweepActivity=1',
     '-Djdk.graal.TuneInlinerExploration=1',
     '-Dlog4j2.formatMsgNoLookups=true'
   )
   return args
+}
+
+export const GC_LOG_FILE = 'logs/gc.log'
+
+export function gcLogArg(): string {
+  return `-Xlog:gc:file=${GC_LOG_FILE}:uptime:filecount=2,filesize=10M`
 }
 
 export function withRam(args: readonly string[], ramMb: number): string[] {

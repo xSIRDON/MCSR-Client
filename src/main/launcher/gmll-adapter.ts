@@ -10,6 +10,7 @@ import { removeLinkIfPresent } from './links'
 import {
   MANAGED_RUNTIME,
   describeJvm,
+  gcLogArg,
   jvmArgsFor,
   missingRuntimeFiles,
   pickGc,
@@ -260,7 +261,12 @@ export async function launch(
   const inst = makeInstance(id, fabricVersion, jvm.javaPath)
   if (opts.skipVerify) await useVerifiedFiles(inst)
   return withLaunchLock(async () => {
-    Instance.defaultGameArguments = jvmArgsFor(jvm.gc, jvm.major, GMLL_JVM_ARGS)
+    const args = jvmArgsFor(jvm.gc, jvm.major, GMLL_JVM_ARGS)
+    if (jvm.gc === 'zgc') {
+      mkdirSync(join(paths.instanceDir(id), 'logs'), { recursive: true })
+      args.push(gcLogArg())
+    }
+    Instance.defaultGameArguments = args
     try {
       return await inst.launch(token as never)
     } finally {

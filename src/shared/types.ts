@@ -74,6 +74,15 @@ export interface SeedQueueInfo {
   ramMb: number
   neededRamMb: number
   cpuThreads: number
+  lastSession: GcSessionReport | null
+}
+
+export interface GcSessionReport {
+  freezes: number
+  worstFreezeMs: number | null
+  totalFreezeMs: number
+  otherStalls: number
+  at: number
 }
 
 export const DEFAULT_FRIENDS_SERVER = 'https://mcsrfriends.duckdns.org:8787'
