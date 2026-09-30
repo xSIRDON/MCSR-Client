@@ -13,7 +13,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { GcSessionReport } from '../../shared/types'
+import { LOW_FREE_MEM_MB, type GcSessionReport } from '../../shared/types'
 import { GC_LOG_FILE } from './jvm'
 
 const STALL = /\b(?:Allocation|Relocation) Stall \((.+?)\) ([\d.]+)ms/
@@ -69,6 +69,9 @@ export function describeGcReport(r: GcSessionReport): string {
   if (r.otherStalls > 0) {
     parts.push(`${r.otherStalls} slowdown${r.otherStalls === 1 ? '' : 's'} in world generation`)
   }
+  if (typeof r.lowestFreeMemMb === 'number' && r.lowestFreeMemMb < LOW_FREE_MEM_MB) {
+    parts.push(`the PC ran low on memory (${r.lowestFreeMemMb} MB free at worst)`)
+  }
   return parts.join('; ')
 }
 
@@ -95,7 +98,8 @@ export function readLastSession(instanceDir: string): GcSessionReport | null {
       worstFreezeMs: typeof r.worstFreezeMs === 'number' ? r.worstFreezeMs : null,
       totalFreezeMs: typeof r.totalFreezeMs === 'number' ? r.totalFreezeMs : 0,
       otherStalls: r.otherStalls,
-      at: r.at
+      at: r.at,
+      lowestFreeMemMb: typeof r.lowestFreeMemMb === 'number' ? r.lowestFreeMemMb : null
     }
   } catch {
     return null

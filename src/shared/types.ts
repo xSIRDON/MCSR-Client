@@ -109,9 +109,17 @@ export interface SeedQueueInfo {
   /** Heap the current queue needs (2000 MB + 250 MB per queued seed). */
   neededRamMb: number
   cpuThreads: number
+  /** This PC's physical memory (MB). */
+  totalMemMb: number
+  /** Suggested lower RAM when the game holds far more than its queue needs and that leaves the
+   *  rest of the PC short; null when the allocation is fine. */
+  lowerRamTo: number | null
   /** How the last session went memory-wise, from its GC log; null before one has been recorded. */
   lastSession: GcSessionReport | null
 }
+
+/** Under this much available memory (MB) Windows is paging to disk, which freezes everything. */
+export const LOW_FREE_MEM_MB = 1024
 
 /** What a session's GC log says about freezes (ZGC allocation stalls). */
 export interface GcSessionReport {
@@ -123,6 +131,8 @@ export interface GcSessionReport {
   otherStalls: number
   /** When the session ended (unix seconds). */
   at: number
+  /** The least memory Windows had available during the session (MB); low means it was paging. */
+  lowestFreeMemMb?: number | null
 }
 
 /** The official friends network, baked in so every client is on the same network by default.

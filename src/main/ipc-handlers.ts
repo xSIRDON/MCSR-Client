@@ -1,7 +1,7 @@
 import { ipcMain, BrowserWindow, dialog, shell } from 'electron'
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, rmSync } from 'node:fs'
 import { spawn } from 'node:child_process'
-import { availableParallelism, totalmem } from 'node:os'
+import { availableParallelism, freemem, totalmem } from 'node:os'
 import { join } from 'node:path'
 import { IPC } from '../shared/ipc'
 import type {
@@ -35,6 +35,7 @@ import {
   readSeedQueue,
   recommendedRamMb,
   recommendedSeedQueue,
+  suggestLowerRam,
   writeSeedQueue
 } from './instances/seedqueue'
 import { syncMaps } from './instances/maps'
@@ -249,6 +250,8 @@ function seedQueueInfo(id: InstanceId): SeedQueueInfo | null {
     ramMb: store.getConfig().ram[id],
     neededRamMb: recommendedRamMb(current.maxCapacity),
     cpuThreads: threads,
+    totalMemMb: memMb,
+    lowerRamTo: suggestLowerRam(store.getConfig().ram[id], recommendedRamMb(current.maxCapacity), memMb),
     lastSession: readLastSession(paths.instanceDir(id))
   }
 }
@@ -554,7 +557,15 @@ async function launchInstance(
   }
 
   const startedAt = Date.now()
+  // Watch how much memory the rest of the PC has while the game runs: when Windows runs short it
+  // pages to disk and the whole game freezes — which the GC log can't see.
+  let lowestFreeMemMb = Math.round(freemem() / 1048576)
+  const memWatch = setInterval(() => {
+    lowestFreeMemMb = Math.min(lowestFreeMemMb, Math.round(freemem() / 1048576))
+  }, 5000)
+  memWatch.unref()
   child.on('close', (code) => {
+    clearInterval(memWatch)
     // A launch that dies at once usually means missing/corrupt game files — the one thing the
     // fast launch path no longer re-checks every time.
     if (code !== 0 && Date.now() - startedAt < 20_000) {
@@ -566,8 +577,9 @@ async function launchInstance(
     if (id === 'rsg') tracker.stop()
     // Did the game freeze waiting for memory? Its GC log says, so the next lag report comes with
     // evidence instead of guesswork. (Absent when it ran on G1/Java 8.)
-    const report = readGcReport(gmll.gameDir(id))
-    if (report) {
+    const gc = readGcReport(gmll.gameDir(id))
+    if (gc) {
+      const report = { ...gc, lowestFreeMemMb }
       saveLastSession(paths.instanceDir(id), report)
       pushLog('system', `${id} session: ${describeGcReport(report)}.`)
     }

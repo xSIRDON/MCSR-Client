@@ -44,6 +44,15 @@ describe('describeGcReport', () => {
     )
     expect(describeGcReport(parseGcLog(''))).toBe('no freezes waiting for memory')
   })
+
+  it('says when the PC itself ran short, and not when it had room', () => {
+    expect(describeGcReport({ ...parseGcLog(''), lowestFreeMemMb: 612 })).toBe(
+      'no freezes waiting for memory; the PC ran low on memory (612 MB free at worst)'
+    )
+    expect(describeGcReport({ ...parseGcLog(''), lowestFreeMemMb: 9000 })).toBe(
+      'no freezes waiting for memory'
+    )
+  })
 })
 
 describe('session report files', () => {
@@ -64,7 +73,7 @@ describe('session report files', () => {
 
   it('round-trips the last session and rejects junk', () => {
     expect(readLastSession(dir)).toBeNull()
-    const r = parseGcLog(LOG, 42)
+    const r = { ...parseGcLog(LOG, 42), lowestFreeMemMb: 612 }
     saveLastSession(dir, r)
     expect(readLastSession(dir)).toEqual(r)
     writeFileSync(join(dir, '.mcsr-last-session.json'), '{"freezes":"lots"}')

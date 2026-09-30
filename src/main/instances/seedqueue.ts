@@ -101,6 +101,22 @@ export function planTune(
   return { settings, ramMb: ram, changes }
 }
 
+/** What the rest of the PC should keep: Windows alone takes 3-4 GB, plus a browser, Discord, OBS. */
+export const PC_HEADROOM_MB = 8192
+
+/**
+ * The RAM to suggest when the game holds far more than its queue needs *and* that squeezes the rest
+ * of the PC — the extra heap does nothing for SeedQueue, and once Windows runs short it pages to
+ * disk, which freezes the whole game. Null when the allocation is fine. (A 32 GB PC with 10 GB for
+ * the game is fine; a 16 GB PC giving 9 GB to a 12-seed queue is not.)
+ */
+export function suggestLowerRam(ramMb: number, neededMb: number, totalMemMb: number): number | null {
+  const excess = ramMb - neededMb
+  if (excess < 1024) return null
+  if (totalMemMb - ramMb >= PC_HEADROOM_MB) return null
+  return neededMb
+}
+
 function num(v: unknown): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? v : null
 }

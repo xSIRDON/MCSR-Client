@@ -9,6 +9,7 @@ import {
   recommendedRamMb,
   recommendedSeedQueue,
   seedQueueConfigPath,
+  suggestLowerRam,
   writeSeedQueue
 } from './seedqueue'
 
@@ -135,5 +136,24 @@ describe('readSeedQueue / writeSeedQueue', () => {
     mkdirSync(join(dir, 'config', 'mcsr'), { recursive: true })
     writeFileSync(seedQueueConfigPath(dir), JSON.stringify({ maxCapacity: '30' }))
     expect(readSeedQueue(dir)).toBeNull()
+  })
+})
+
+describe('suggestLowerRam', () => {
+  it('flags a 16 GB PC giving 9 GB to a 12-seed queue', () => {
+    expect(suggestLowerRam(9216, recommendedRamMb(12), 16384)).toBe(5120)
+  })
+
+  it('leaves a well-sized allocation alone', () => {
+    expect(suggestLowerRam(9216, recommendedRamMb(28), 16384)).toBeNull()
+  })
+
+  it('leaves extra RAM alone when the PC has plenty to spare', () => {
+    expect(suggestLowerRam(10240, recommendedRamMb(26), 32644)).toBeNull()
+    expect(suggestLowerRam(12288, recommendedRamMb(12), 32644)).toBeNull()
+  })
+
+  it('ignores small overshoots', () => {
+    expect(suggestLowerRam(5632, recommendedRamMb(12), 16384)).toBeNull()
   })
 })
