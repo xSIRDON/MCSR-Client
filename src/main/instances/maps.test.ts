@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { sanitize, placeWorlds } from './maps'
 
 describe('sanitize', () => {
-  it('strips illegal filename characters', () => {
+  it('strips illegal filename characters', async () => {
     expect(sanitize('Portal: Practice/v2')).toBe('Portal_ Practice_v2')
     expect(sanitize('   ')).toBe('world')
   })
@@ -27,7 +27,7 @@ describe('placeWorlds', () => {
     }
   })
 
-  it('treats a zip whose root is the world (level.dat present) as one world', () => {
+  it('treats a zip whose root is the world (level.dat present) as one world', async () => {
     const root = tmp()
     const extract = join(root, 'x')
     const saves = join(root, 'saves')
@@ -35,12 +35,12 @@ describe('placeWorlds', () => {
     mkdirSync(saves, { recursive: true })
     writeFileSync(join(extract, 'level.dat'), 'x')
 
-    placeWorlds(extract, saves, 'My Map')
+    await placeWorlds(extract, saves, 'My Map')
 
     expect(existsSync(join(saves, 'My Map', 'level.dat'))).toBe(true)
   })
 
-  it('places each top-level folder as its own world', () => {
+  it('places each top-level folder as its own world', async () => {
     const root = tmp()
     const extract = join(root, 'x')
     const saves = join(root, 'saves')
@@ -50,12 +50,12 @@ describe('placeWorlds', () => {
     writeFileSync(join(extract, 'World A', 'level.dat'), 'a')
     writeFileSync(join(extract, 'World B', 'level.dat'), 'b')
 
-    placeWorlds(extract, saves, 'fallback')
+    await placeWorlds(extract, saves, 'fallback')
 
     expect(readdirSync(saves).sort()).toEqual(['World A', 'World B'])
   })
 
-  it('does not overwrite an existing world of the same name', () => {
+  it('does not overwrite an existing world of the same name', async () => {
     const root = tmp()
     const extract = join(root, 'x')
     const saves = join(root, 'saves')
@@ -64,7 +64,7 @@ describe('placeWorlds', () => {
     writeFileSync(join(saves, 'My Map', 'keep.txt'), 'original')
     writeFileSync(join(extract, 'level.dat'), 'new')
 
-    placeWorlds(extract, saves, 'My Map')
+    await placeWorlds(extract, saves, 'My Map')
 
     expect(existsSync(join(saves, 'My Map', 'keep.txt'))).toBe(true)
     expect(existsSync(join(saves, 'My Map (2)', 'level.dat'))).toBe(true)

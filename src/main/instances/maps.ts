@@ -4,10 +4,9 @@ import {
   writeFileSync,
   readFileSync,
   readdirSync,
-  statSync,
-  cpSync,
-  rmSync
+  statSync
 } from 'node:fs'
+import { cp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import extract from 'extract-zip'
@@ -20,7 +19,11 @@ export function sanitize(name: string): string {
   return name.replace(/[<>:"/\\|?*]/g, '_').trim() || 'world'
 }
 
-export function placeWorlds(extractDir: string, savesDir: string, fallbackName: string): string[] {
+export async function placeWorlds(
+  extractDir: string,
+  savesDir: string,
+  fallbackName: string
+): Promise<string[]> {
   const entries = readdirSync(extractDir)
   const roots = entries.includes('level.dat')
     ? [{ src: extractDir, name: fallbackName }]
@@ -39,7 +42,7 @@ export function placeWorlds(extractDir: string, savesDir: string, fallbackName: 
     let base = sanitize(name)
     let n = 2
     while (existsSync(join(savesDir, base))) base = `${sanitize(name)} (${n++})`
-    cpSync(src, join(savesDir, base), { recursive: true })
+    await cp(src, join(savesDir, base), { recursive: true })
     placed.push(base)
   }
   return placed
@@ -78,10 +81,10 @@ async function installMap(savesDir: string, map: MapDef): Promise<string[]> {
   writeFileSync(zip, buf)
   try {
     await extract(zip, { dir: out })
-    return placeWorlds(out, savesDir, map.name)
+    return await placeWorlds(out, savesDir, map.name)
   } finally {
-    rmSync(zip, { force: true })
-    rmSync(out, { recursive: true, force: true })
+    await rm(zip, { force: true })
+    await rm(out, { recursive: true, force: true })
   }
 }
 
@@ -98,7 +101,7 @@ export async function syncMaps(
     if (!selected.has(mapId)) {
       for (const folder of manifest[mapId]) {
         try {
-          rmSync(join(savesDir, folder), { recursive: true, force: true })
+          await rm(join(savesDir, folder), { recursive: true, force: true })
         } catch {
         }
       }

@@ -1,4 +1,7 @@
+import { utilityProcess } from 'electron'
 import { init, config, downloader, handler, Instance } from 'gmll'
+import installWorkerPath from './install-worker?modulePath'
+import type { WorkerMessage } from './install-worker'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { existsSync, mkdirSync } from 'node:fs'
 import { release } from 'node:os'
@@ -226,6 +229,48 @@ async function useVerifiedFiles(inst: Instance): Promise<void> {
   inst.install = (async () => version) as typeof inst.install
 }
 
+function installInWorker(id: InstanceId, fabricVersion: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = utilityProcess.fork(installWorkerPath, [], {
+      serviceName: 'MCSR Client install',
+      stdio: 'ignore'
+    })
+    let settled = false
+    const finish = (err?: Error): void => {
+      if (settled) return
+      settled = true
+      child.kill()
+      if (err) reject(err)
+      else resolve()
+    }
+    child.on('message', (m: WorkerMessage) => {
+      if (m.type === 'progress') {
+        emit({
+          instance: id,
+          phase: 'assets',
+          fraction: m.total > 0 ? m.index / m.total : null,
+          message: `Downloading files (${m.index}/${m.total})`
+        })
+      } else if (m.type === 'setup') {
+        emit({ instance: id, phase: 'client', fraction: null, message: 'Preparing download…' })
+      } else if (m.type === 'done') {
+        finish()
+      } else if (m.type === 'error') {
+        finish(new Error(m.message))
+      }
+    })
+    child.on('exit', (code) => finish(new Error(`The installer stopped unexpectedly (code ${code}).`)))
+    child.postMessage({
+      root: paths.shared(),
+      instances: paths.instances(),
+      id,
+      version: fabricVersion,
+      path: paths.instanceDir(id),
+      ram: Math.max(1, store.getConfig().ram[id] / 1024)
+    })
+  })
+}
+
 export async function installBase(
   id: InstanceId,
   fabricVersion: string,
@@ -237,7 +282,7 @@ export async function installBase(
   clearSharedLinks(id)
   emit({ instance: id, phase: 'fabric', fraction: null, message: 'Installing Minecraft 1.16.1 + Fabric…' })
   const inst = makeInstance(id, fabricVersion)
-  await inst.install()
+  await installInWorker(id, fabricVersion)
   if (!store.getConfig().java[id]) await ensureManagedJava(id)
   return inst.getDir().path?.join?.('/') ?? paths.instanceDir(id)
 }

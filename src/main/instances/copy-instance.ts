@@ -1,4 +1,5 @@
-import { existsSync, copyFileSync, cpSync, mkdirSync, readdirSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync } from 'node:fs'
+import { copyFile, cp } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 
 export function listWorlds(gameDir: string): string[] {
@@ -14,18 +15,18 @@ export function listWorlds(gameDir: string): string[] {
   }
 }
 
-export function copyInstanceSettings(
+export async function copyInstanceSettings(
   srcGameDir: string,
   dstGameDir: string,
   opts: { worlds?: string[] } = {}
-): string[] {
+): Promise<string[]> {
   const copied: string[] = []
   mkdirSync(dstGameDir, { recursive: true })
 
   for (const file of ['options.txt', 'hotbar.nbt']) {
     const src = join(srcGameDir, file)
     if (existsSync(src)) {
-      copyFileSync(src, join(dstGameDir, file))
+      await copyFile(src, join(dstGameDir, file))
       copied.push(file)
     }
   }
@@ -36,7 +37,7 @@ export function copyInstanceSettings(
   ] as const) {
     const src = join(srcGameDir, folder)
     if (existsSync(src)) {
-      cpSync(src, join(dstGameDir, folder), { recursive: true })
+      await cp(src, join(dstGameDir, folder), { recursive: true })
       copied.push(label)
     }
   }
@@ -46,7 +47,7 @@ export function copyInstanceSettings(
     if (world !== basename(world) || world === '.' || world === '..') continue
     const src = join(srcGameDir, 'saves', world)
     if (existsSync(src)) {
-      cpSync(src, join(dstGameDir, 'saves', world), { recursive: true })
+      await cp(src, join(dstGameDir, 'saves', world), { recursive: true })
       worlds++
     }
   }
