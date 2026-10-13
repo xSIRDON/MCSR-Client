@@ -33,11 +33,11 @@ function seedSrc(dir: string): void {
 }
 
 describe('copyInstanceSettings', () => {
-  it('copies resource packs (the seedwall) alongside options/config/worlds', () => {
+  it('copies resource packs (the seedwall) alongside options/config/worlds', async () => {
     const src = tmp()
     const dst = tmp()
     seedSrc(src)
-    const copied = copyInstanceSettings(src, dst, { worlds: ['World1'] })
+    const copied = await copyInstanceSettings(src, dst, { worlds: ['World1'] })
     expect(existsSync(join(dst, 'options.txt'))).toBe(true)
     expect(existsSync(join(dst, 'config', 'standardoptions.txt'))).toBe(true)
     expect(existsSync(join(dst, 'resourcepacks', 'my-seedwall.zip'))).toBe(true)
@@ -46,23 +46,23 @@ describe('copyInstanceSettings', () => {
     expect(copied).toContain('resource packs')
   })
 
-  it('merges into a target that already ships wall packs (keeps both)', () => {
+  it('merges into a target that already ships wall packs (keeps both)', async () => {
     const src = tmp()
     const dst = tmp()
     seedSrc(src)
     mkdirSync(join(dst, 'resourcepacks'), { recursive: true })
     writeFileSync(join(dst, 'resourcepacks', 'bundled-wall.zip'), 'bundled')
-    copyInstanceSettings(src, dst)
+    await copyInstanceSettings(src, dst)
     expect(existsSync(join(dst, 'resourcepacks', 'bundled-wall.zip'))).toBe(true) // pre-installed kept
     expect(existsSync(join(dst, 'resourcepacks', 'my-seedwall.zip'))).toBe(true) // imported added
   })
 
-  it('skips resource packs when the source has none', () => {
+  it('skips resource packs when the source has none', async () => {
     const src = tmp()
     const dst = tmp()
     mkdirSync(src, { recursive: true })
     writeFileSync(join(src, 'options.txt'), 'x')
-    const copied = copyInstanceSettings(src, dst)
+    const copied = await copyInstanceSettings(src, dst)
     expect(copied).toContain('options.txt')
     expect(copied).not.toContain('resource packs')
     expect(existsSync(join(dst, 'resourcepacks'))).toBe(false)

@@ -1,5 +1,6 @@
 import { ipcMain, BrowserWindow, dialog, shell } from 'electron'
-import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { availableParallelism, freemem, totalmem } from 'node:os'
 import { join } from 'node:path'
@@ -405,14 +406,14 @@ async function doInstallInstance(
     // or from any folder the player pointed at (we resolve its game dir).
     if (importFrom && importFrom !== id) {
       try {
-        const copied = copyInstanceSettings(gmll.gameDir(importFrom), gameDir, { worlds: importWorlds })
+        const copied = await copyInstanceSettings(gmll.gameDir(importFrom), gameDir, { worlds: importWorlds })
         pushLog('system', `Imported from ${importFrom}: ${copied.join(', ') || 'nothing found'}.`)
       } catch (e) {
         pushLog('system', `Import skipped: ${e instanceof Error ? e.message : e}`)
       }
     } else if (importFolder) {
       try {
-        const copied = copyInstanceSettings(resolveGameDir(importFolder), gameDir, { worlds: importWorlds })
+        const copied = await copyInstanceSettings(resolveGameDir(importFolder), gameDir, { worlds: importWorlds })
         pushLog('system', `Imported from ${importFolder}: ${copied.join(', ') || 'nothing found'}.`)
       } catch (e) {
         pushLog('system', `Import skipped: ${e instanceof Error ? e.message : e}`)
@@ -610,13 +611,15 @@ const BUSY_STATES = ['installing', 'launching', 'running']
 
 /** Delete an instance's files. Clears shared-link junctions first so the recursive
  *  remove can never follow them into the shared assets/libraries. */
-function deleteInstance(id: InstanceId): void {
+async function deleteInstance(id: InstanceId): Promise<void> {
   if (BUSY_STATES.includes(states[id].state)) {
     throw new Error('Close the game before deleting this instance.')
   }
   removeLinkIfPresent(join(paths.instanceDir(id), 'libraries'))
   removeLinkIfPresent(join(paths.instanceDir(id), 'assets'))
-  rmSync(paths.instanceDir(id), { recursive: true, force: true })
+  // Async: an RSG instance can hold tens of thousands of worlds, and a synchronous delete froze the
+  // window until it finished.
+  await rm(paths.instanceDir(id), { recursive: true, force: true })
   setState(id, { state: 'not-installed', versionId: undefined, error: undefined })
 }
 
@@ -730,10 +733,10 @@ export function registerIpc(): void {
   )
   ipcMain.handle(
     IPC.instImportFromInstance,
-    (_e, rawTarget: unknown, rawSource: unknown, opts?: { worlds?: string[] }) => {
+    async (_e, rawTarget: unknown, rawSource: unknown, opts?: { worlds?: string[] }) => {
       const target = assertInstanceId(rawTarget)
       const source = assertInstanceId(rawSource)
-      const copied = copyInstanceSettings(gmll.gameDir(source), gmll.gameDir(target), {
+      const copied = await copyInstanceSettings(gmll.gameDir(source), gmll.gameDir(target), {
         worlds: opts?.worlds ?? []
       })
       pushLog('system', `Imported from ${source} into ${target}: ${copied.join(', ') || 'nothing found'}.`)
@@ -742,9 +745,9 @@ export function registerIpc(): void {
   )
   ipcMain.handle(
     IPC.instImportFromFolderPath,
-    (_e, rawTarget: unknown, folder: string, opts?: { worlds?: string[] }) => {
+    async (_e, rawTarget: unknown, folder: string, opts?: { worlds?: string[] }) => {
       const target = assertInstanceId(rawTarget)
-      const copied = copyInstanceSettings(resolveGameDir(folder), gmll.gameDir(target), {
+      const copied = await copyInstanceSettings(resolveGameDir(folder), gmll.gameDir(target), {
         worlds: opts?.worlds ?? []
       })
       pushLog('system', `Imported from ${folder} into ${target}: ${copied.join(', ') || 'nothing found'}.`)

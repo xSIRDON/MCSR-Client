@@ -2,7 +2,10 @@
 // Each MCSR instance gets its own directory (isolated mods/saves) while sharing
 // the downloaded JRE, assets, and libraries under the MCSR Client root.
 
+import { utilityProcess } from 'electron'
 import { init, config, downloader, handler, Instance } from 'gmll'
+import installWorkerPath from './install-worker?modulePath'
+import type { WorkerMessage } from './install-worker'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { existsSync, mkdirSync } from 'node:fs'
 import { release } from 'node:os'
@@ -287,6 +290,52 @@ async function useVerifiedFiles(inst: Instance): Promise<void> {
   inst.install = (async () => version) as typeof inst.install
 }
 
+/**
+ * Run GMLL's install in a utility process (see install-worker.ts): its synchronous file hashing
+ * would otherwise freeze the client window for the whole install. Progress is relayed as usual.
+ */
+function installInWorker(id: InstanceId, fabricVersion: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = utilityProcess.fork(installWorkerPath, [], {
+      serviceName: 'MCSR Client install',
+      stdio: 'ignore'
+    })
+    let settled = false
+    const finish = (err?: Error): void => {
+      if (settled) return
+      settled = true
+      child.kill()
+      if (err) reject(err)
+      else resolve()
+    }
+    child.on('message', (m: WorkerMessage) => {
+      if (m.type === 'progress') {
+        emit({
+          instance: id,
+          phase: 'assets',
+          fraction: m.total > 0 ? m.index / m.total : null,
+          message: `Downloading files (${m.index}/${m.total})`
+        })
+      } else if (m.type === 'setup') {
+        emit({ instance: id, phase: 'client', fraction: null, message: 'Preparing download…' })
+      } else if (m.type === 'done') {
+        finish()
+      } else if (m.type === 'error') {
+        finish(new Error(m.message))
+      }
+    })
+    child.on('exit', (code) => finish(new Error(`The installer stopped unexpectedly (code ${code}).`)))
+    child.postMessage({
+      root: paths.shared(),
+      instances: paths.instances(),
+      id,
+      version: fabricVersion,
+      path: paths.instanceDir(id),
+      ram: Math.max(1, store.getConfig().ram[id] / 1024)
+    })
+  })
+}
+
 /** Install the base game + Fabric for an instance (no mods yet). */
 export async function installBase(
   id: InstanceId,
@@ -299,7 +348,7 @@ export async function installBase(
   clearSharedLinks(id)
   emit({ instance: id, phase: 'fabric', fraction: null, message: 'Installing Minecraft 1.16.1 + Fabric…' })
   const inst = makeInstance(id, fabricVersion)
-  await inst.install()
+  await installInWorker(id, fabricVersion)
   // Fetch the game's Java now so the first launch doesn't stall on it. Best-effort: launch retries.
   if (!store.getConfig().java[id]) await ensureManagedJava(id)
   return inst.getDir().path?.join?.('/') ?? paths.instanceDir(id)
