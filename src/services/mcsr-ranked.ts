@@ -29,6 +29,9 @@ export interface Statistics {
   playtime?: StatBreakdown
   wins?: StatBreakdown
   loses?: StatBreakdown
+  completionTime?: StatBreakdown
+  completions?: StatBreakdown
+  forfeits?: StatBreakdown
 }
 
 export interface McsrUser {
@@ -63,6 +66,10 @@ export interface FlatRankedStats {
   currentStreak: number
   bestStreak: number
   bestTime: number | null
+  averageTime: number | null
+  completions: number
+  forfeits: number
+  forfeitRate: number | null
 }
 
 export function rankedStats(
@@ -70,13 +77,21 @@ export function rankedStats(
   scope: 'season' | 'total' = 'season'
 ): FlatRankedStats {
   const s = scope === 'total' ? user?.statistics?.total : user?.statistics?.season
+  const played = s?.playedMatches?.ranked ?? 0
+  const completions = s?.completions?.ranked ?? 0
+  const totalTime = s?.completionTime?.ranked ?? 0
+  const forfeits = s?.forfeits?.ranked ?? 0
   return {
     wins: s?.wins?.ranked ?? 0,
     loses: s?.loses?.ranked ?? 0,
-    played: s?.playedMatches?.ranked ?? 0,
+    played,
     currentStreak: s?.currentWinStreak?.ranked ?? 0,
     bestStreak: s?.highestWinStreak?.ranked ?? 0,
-    bestTime: s?.bestTime?.ranked ?? null
+    bestTime: s?.bestTime?.ranked ?? null,
+    averageTime: completions > 0 && totalTime > 0 ? Math.round(totalTime / completions) : null,
+    completions,
+    forfeits,
+    forfeitRate: played > 0 ? Math.round((forfeits / played) * 1000) / 10 : null
   }
 }
 
