@@ -186,7 +186,19 @@ export function ProfileHero({
         <StatTile label="Win Rate" value={`${wr}%`} accent={wr >= 50 ? 'var(--win)' : undefined} hint={`${stats.wins}W · ${stats.loses}L`} delay={40} />
         <StatTile label="Win Streak" value={stats.currentStreak} hint={`best ${stats.bestStreak}`} delay={90} />
         <StatTile label="Best Time" value={msToTime(stats.bestTime)} accent="var(--gold)" delay={140} />
-        <StatTile label="Matches" value={stats.played} hint={matchesHint} delay={190} />
+        <StatTile
+          label="Average"
+          value={stats.averageTime != null ? msToTime(stats.averageTime) : '—'}
+          hint={`${stats.completions} completions`}
+          delay={165}
+        />
+        <StatTile
+          label="Forfeit Rate"
+          value={stats.forfeitRate != null ? `${stats.forfeitRate}%` : '—'}
+          hint={`${stats.forfeits} forfeits`}
+          delay={190}
+        />
+        <StatTile label="Matches" value={stats.played} hint={matchesHint} delay={215} />
       </div>
     </section>
   )
@@ -199,8 +211,8 @@ function HeroSkeleton() {
       <div className="flex-1 space-y-3">
         <div className="skeleton h-7 w-48" />
         <div className="skeleton h-14 w-40" />
-        <div className="grid grid-cols-4 gap-3">
-          {[0, 1, 2, 3].map((i) => (
+        <div className="grid grid-cols-6 gap-3">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="skeleton h-16" />
           ))}
         </div>
