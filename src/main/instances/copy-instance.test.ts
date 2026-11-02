@@ -67,3 +67,25 @@ describe('copyInstanceSettings', () => {
     expect(existsSync(join(dst, 'resourcepacks'))).toBe(false)
   })
 })
+
+describe('copyInstanceSettings progress', () => {
+  it('reports the whole copy and skips a world held open by the game', async () => {
+    const src = tmp()
+    const dst = tmp()
+    seedSrc(src)
+    writeFileSync(join(src, 'saves', 'World1', 'session.lock'), 'locked')
+    const scans: number[] = []
+    const seen: { doneFiles: number; totalFiles: number; doneBytes: number; totalBytes: number }[] = []
+    await copyInstanceSettings(src, dst, {
+      worlds: ['World1'],
+      onScan: (n) => scans.push(n),
+      onProgress: (p) => seen.push(p)
+    })
+    const last = seen[seen.length - 1]
+    expect(last.doneFiles).toBe(last.totalFiles)
+    expect(last.doneBytes).toBe(last.totalBytes)
+    expect(scans[scans.length - 1]).toBe(last.totalFiles)
+    expect(existsSync(join(dst, 'saves', 'World1', 'level.dat'))).toBe(true)
+    expect(existsSync(join(dst, 'saves', 'World1', 'session.lock'))).toBe(false)
+  })
+})

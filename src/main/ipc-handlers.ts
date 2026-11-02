@@ -51,6 +51,7 @@ import {
 } from './instances/mods'
 import { readStandardSettings, writeStandardSettings, importOptionsFile } from './instances/standard-settings'
 import { copyInstanceSettings, resolveGameDir, listWorlds } from './instances/copy-instance'
+import { formatBytes, type CopyProgress } from './instances/copy-tree'
 import { getSkin } from './skins'
 import { checkForUpdates, currentUpdateStatus, quitAndInstall } from './updater'
 import { setupNinjabrain, launchNinjabrain, killNinjabrain } from './tools/ninjabrain'
@@ -119,10 +120,42 @@ function runSyncMaps(id: InstanceId, label: string): Promise<void> {
         instance: id,
         phase: 'configs',
         fraction: total > 0 ? done / total : null,
-        message: `${label}: ${lbl} (${done}/${total})`
+        message:
+          total === 0
+            ? `${label}: nothing to download`
+            : done >= total
+              ? `${label}: ${total} installed`
+              : `${label}: ${lbl} (${done + 1}/${total})`
       })
     )
   )
+}
+
+function copyProgress(id: InstanceId): {
+  onScan: (files: number) => void
+  onProgress: (p: CopyProgress) => void
+} {
+  let last = 0
+  const due = (): boolean => {
+    const now = Date.now()
+    if (now - last < 150) return false
+    last = now
+    return true
+  }
+  return {
+    onScan: (files) => {
+      if (due()) sendProgress({ instance: id, phase: 'configs', fraction: null, message: `Finding files to copy… ${files}` })
+    },
+    onProgress: (p) => {
+      if (!due() && p.doneFiles < p.totalFiles) return
+      sendProgress({
+        instance: id,
+        phase: 'configs',
+        fraction: p.totalBytes > 0 ? p.doneBytes / p.totalBytes : null,
+        message: `Copying worlds & settings: ${formatBytes(p.doneBytes)} of ${formatBytes(p.totalBytes)} (${p.doneFiles}/${p.totalFiles} files)`
+      })
+    }
+  }
 }
 
 function versionFile(id: InstanceId): string {
@@ -366,14 +399,20 @@ async function doInstallInstance(
 
     if (importFrom && importFrom !== id) {
       try {
-        const copied = await copyInstanceSettings(gmll.gameDir(importFrom), gameDir, { worlds: importWorlds })
+        const copied = await copyInstanceSettings(gmll.gameDir(importFrom), gameDir, {
+          worlds: importWorlds,
+          ...copyProgress(id)
+        })
         pushLog('system', `Imported from ${importFrom}: ${copied.join(', ') || 'nothing found'}.`)
       } catch (e) {
         pushLog('system', `Import skipped: ${e instanceof Error ? e.message : e}`)
       }
     } else if (importFolder) {
       try {
-        const copied = await copyInstanceSettings(resolveGameDir(importFolder), gameDir, { worlds: importWorlds })
+        const copied = await copyInstanceSettings(resolveGameDir(importFolder), gameDir, {
+          worlds: importWorlds,
+          ...copyProgress(id)
+        })
         pushLog('system', `Imported from ${importFolder}: ${copied.join(', ') || 'nothing found'}.`)
       } catch (e) {
         pushLog('system', `Import skipped: ${e instanceof Error ? e.message : e}`)
@@ -381,6 +420,7 @@ async function doInstallInstance(
     }
 
     try {
+      sendProgress({ instance: id, phase: 'configs', fraction: null, message: 'Finishing up…' })
       if (store.getConfig().ninjabrain) await setupNinjabrain()
     } catch (e) {
       pushLog('system', `Ninjabrain Bot setup skipped: ${e instanceof Error ? e.message : e}`)
@@ -426,6 +466,7 @@ async function launchInstance(
   const fabric = fabricVersionString(index)
   await ensureInstanceExtras(id, gmll.gameDir(id))
   setState(id, { state: 'launching' })
+  sendProgress({ instance: id, phase: 'launch', fraction: null, message: 'Getting ready to launch…' })
 
   if (id !== 'ranked') {
     try {

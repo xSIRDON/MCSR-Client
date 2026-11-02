@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync } from 'node:fs'
-import { copyFile, cp } from 'node:fs/promises'
+import { copyFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
+import { emptyPlan, planCopy, runCopy, type CopyProgress } from './copy-tree'
 
 export function listWorlds(gameDir: string): string[] {
   const saves = join(gameDir, 'saves')
@@ -18,7 +19,11 @@ export function listWorlds(gameDir: string): string[] {
 export async function copyInstanceSettings(
   srcGameDir: string,
   dstGameDir: string,
-  opts: { worlds?: string[] } = {}
+  opts: {
+    worlds?: string[]
+    onScan?: (files: number) => void
+    onProgress?: (p: CopyProgress) => void
+  } = {}
 ): Promise<string[]> {
   const copied: string[] = []
   mkdirSync(dstGameDir, { recursive: true })
@@ -31,13 +36,14 @@ export async function copyInstanceSettings(
     }
   }
 
+  const plan = emptyPlan()
   for (const [folder, label] of [
     ['config', 'config/'],
     ['resourcepacks', 'resource packs']
   ] as const) {
     const src = join(srcGameDir, folder)
     if (existsSync(src)) {
-      await cp(src, join(dstGameDir, folder), { recursive: true })
+      await planCopy(src, join(dstGameDir, folder), plan, opts.onScan)
       copied.push(label)
     }
   }
@@ -47,12 +53,13 @@ export async function copyInstanceSettings(
     if (world !== basename(world) || world === '.' || world === '..') continue
     const src = join(srcGameDir, 'saves', world)
     if (existsSync(src)) {
-      await cp(src, join(dstGameDir, 'saves', world), { recursive: true })
+      await planCopy(src, join(dstGameDir, 'saves', world), plan, opts.onScan)
       worlds++
     }
   }
   if (worlds > 0) copied.push(`${worlds} world${worlds === 1 ? '' : 's'}`)
 
+  await runCopy(plan, opts.onProgress)
   return copied
 }
 
