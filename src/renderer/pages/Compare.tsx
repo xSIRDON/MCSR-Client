@@ -16,6 +16,7 @@ import { msToTime } from '@core/format'
 import { usePlayerAnalytics } from '../hooks/usePlayerAnalytics'
 import type { SeasonSel } from '../hooks/usePlayerAnalytics'
 import { matchupWinChance, speedFromPerf } from '@core/ranked-analytics'
+import type { SplitPerf } from '@core/ranked-analytics'
 import type { MatchupInput } from '@core/ranked-analytics'
 import { PlayerHead } from '../components/PlayerHead'
 import { RankBadge } from '../components/RankBadge'
@@ -357,6 +358,10 @@ function CompareRadar({ a, b }: { a: Side; b: Side }) {
         b: bByLabel.get(p.label)!.score as number
       }))
   }, [a.perfWorld, b.perfWorld])
+  const labels = useMemo(() => {
+    const bByLabel = new Map(b.perfWorld.map((p) => [p.label, p]))
+    return new Map(a.perfWorld.map((p) => [p.label, { a: p, b: bByLabel.get(p.label) }]))
+  }, [a.perfWorld, b.perfWorld])
   const loading = a.settling || b.settling
 
   return (
@@ -372,15 +377,15 @@ function CompareRadar({ a, b }: { a: Side; b: Side }) {
         </span>
       </header>
       {data.length < 3 ? (
-        <div className="grid h-[300px] place-items-center text-center text-sm text-muted">
+        <div className="grid h-[340px] place-items-center text-center text-sm text-muted">
           {loading ? 'Crunching both players' + '…' : 'Not enough shared split data to overlay yet.'}
         </div>
       ) : (
-        <div className="h-[300px]">
+        <div className="h-[340px]">
           <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={data} outerRadius="66%">
+            <RadarChart data={data} outerRadius="58%" margin={{ top: 24, right: 70, bottom: 24, left: 70 }}>
               <PolarGrid stroke="rgba(255,255,255,0.08)" />
-              <PolarAngleAxis dataKey="axis" tick={{ fill: '#8b8b9e', fontSize: 11 }} />
+              <PolarAngleAxis dataKey="axis" tick={<CompareTick labels={labels} />} />
               <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
               <Radar name={a.user?.nickname ?? 'A'} dataKey="a" stroke={A_COLOR} fill={A_COLOR} fillOpacity={0.22} isAnimationActive animationDuration={600} />
               <Radar name={b.user?.nickname ?? 'B'} dataKey="b" stroke={B_COLOR} fill={B_COLOR} fillOpacity={0.22} isAnimationActive animationDuration={600} />
@@ -390,6 +395,34 @@ function CompareRadar({ a, b }: { a: Side; b: Side }) {
         </div>
       )}
     </section>
+  )
+}
+
+function CompareTick(props: {
+  x?: number
+  y?: number
+  cx?: number
+  payload?: { value: string }
+  labels?: Map<string, { a: SplitPerf; b?: SplitPerf }>
+}) {
+  const { x = 0, y = 0, cx = 0, payload, labels } = props
+  const l = payload && labels ? labels.get(payload.value) : undefined
+  const anchor = x > cx + 8 ? 'start' : x < cx - 8 ? 'end' : 'middle'
+  const dx = anchor === 'start' ? 6 : anchor === 'end' ? -6 : 0
+  const line = (p: SplitPerf | undefined) =>
+    p?.ms != null ? `${msToTime(p.ms)}${p.pctLabel !== '—' ? ` · ${p.pctLabel}` : ''}` : '—'
+  return (
+    <g>
+      <text x={x + dx} y={y - 12} textAnchor={anchor} fill="#cdcdd8" fontSize={12} className="font-display">
+        {payload?.value}
+      </text>
+      <text x={x + dx} y={y + 2} textAnchor={anchor} fontSize={10.5} fill={A_COLOR}>
+        {line(l?.a)}
+      </text>
+      <text x={x + dx} y={y + 15} textAnchor={anchor} fontSize={10.5} fill={B_COLOR}>
+        {line(l?.b)}
+      </text>
+    </g>
   )
 }
 

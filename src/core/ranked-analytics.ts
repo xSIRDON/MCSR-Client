@@ -857,12 +857,95 @@ export function splitPerformance(
     }
     const f = fasterFraction(p.avg, arr)
     const score = clamp100((1 - f) * 100)
-    const pctLabel =
-      f <= 0.5
-        ? `Top ${Math.max(1, Math.round(f * 100))}%`
-        : `Bottom ${Math.max(1, Math.round((1 - f) * 100))}%`
+    const pctLabel = f <= 0.5 ? `Top ${pctText(f * 100)}` : `Bottom ${pctText((1 - f) * 100)}`
     return { key, label, ms: p.avg, score, pctLabel, sample: p.count }
   })
+}
+
+export function pctText(share: number): string {
+  return share < 10.05 ? `${Math.max(0.1, Math.round(share * 10) / 10).toFixed(1)}%` : `${Math.round(share)}%`
+}
+
+export function strongestWeakest(
+  perf: SplitPerf[],
+  minSample = 3
+): { strongest: SplitPerf; weakest: SplitPerf } | null {
+  const rated = perf.filter((p) => p.score != null && p.sample >= minSample)
+  if (rated.length < 2) return null
+  const by = [...rated].sort((a, b) => (b.score as number) - (a.score as number))
+  return { strongest: by[0], weakest: by[by.length - 1] }
+}
+
+export interface SplitBreakdownRow {
+  key: string
+  label: string
+  reached: number
+  started: number
+  deaths: number
+  deathRate: number | null
+  oppDeaths: number
+  oppDeathRate: number | null
+}
+
+export interface SplitBreakdown {
+  games: number
+  completions: number
+  rows: SplitBreakdownRow[]
+}
+
+function routeMarks(uuid: string, m: MatchInfo): (number | null)[] {
+  const won = m.result?.uuid === uuid && !m.forfeited
+  const finish = won && typeof m.result?.time === 'number' ? m.result.time : null
+  const marks = [M_NETHER, M_BASTION, M_FORTRESS, M_BLIND, M_STRONGHOLD, M_END].map((ev) =>
+    earliestEvent(uuid, m, ev)
+  )
+  return [0, ...marks, finish]
+}
+
+export function splitBreakdown(uuid: string, details: MatchInfo[]): SplitBreakdown {
+  const me = uuid.toLowerCase()
+  const list = Array.isArray(details)
+    ? details.filter((m) => m && m.type === 2 && Array.isArray(m.timelines))
+    : []
+  const n = SPLIT_SEGMENTS.length
+  const tally = () => ({ started: new Array(n).fill(0), reached: new Array(n).fill(0), deaths: new Array(n).fill(0) })
+  const mine = tally()
+  const opp = tally()
+  let completions = 0
+  const add = (who: string, m: MatchInfo, into: ReturnType<typeof tally>): boolean => {
+    const marks = routeMarks(who, m)
+    for (let k = 0; k < n; k++) {
+      if (marks[k] != null) into.started[k]++
+      if (marks[k + 1] != null) into.reached[k]++
+    }
+    for (const e of m.timelines!) {
+      if (!e || typeof e.uuid !== 'string' || e.uuid.toLowerCase() !== who || e.type !== REAL_DEATH_EVENT) continue
+      let k = 0
+      for (let i = 1; i < n; i++) if (marks[i] != null && (marks[i] as number) <= e.time) k = i
+      into.deaths[k]++
+    }
+    return marks[n] != null
+  }
+  for (const m of list) {
+    if (add(me, m, mine)) completions++
+    const other = m.players?.find((p) => p.uuid.toLowerCase() !== me)
+    if (other) add(other.uuid.toLowerCase(), m, opp)
+  }
+  const rate = (d: number, s: number): number | null => (s > 0 ? d / s : null)
+  return {
+    games: list.length,
+    completions,
+    rows: SPLIT_SEGMENTS.map(({ key, label }, k) => ({
+      key,
+      label,
+      reached: mine.reached[k],
+      started: mine.started[k],
+      deaths: mine.deaths[k],
+      deathRate: rate(mine.deaths[k], mine.started[k]),
+      oppDeaths: opp.deaths[k],
+      oppDeathRate: rate(opp.deaths[k], opp.started[k])
+    }))
+  }
 }
 
 export function speedFromPerf(perf: SplitPerf[]): { score: number; sample: number } | null {

@@ -57,7 +57,7 @@ export function usePlayerAnalytics(uuid: string | null | undefined, season?: Sea
     () =>
       (matches ?? [])
         .filter((m) => m.type === 2)
-        .slice(0, 30)
+        .slice(0, 50)
         .map((m) => m.id),
     [matches]
   )

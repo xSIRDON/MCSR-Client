@@ -7,8 +7,8 @@ import {
   RadarChart,
   ResponsiveContainer
 } from 'recharts'
-import { splitPerformance } from '@core/ranked-analytics'
-import type { SplitPerf } from '@core/ranked-analytics'
+import { splitBreakdown, splitPerformance, strongestWeakest } from '@core/ranked-analytics'
+import type { SplitBreakdown, SplitPerf } from '@core/ranked-analytics'
 import type { MatchInfo } from '@services/mcsr-ranked'
 import { msToTime } from '@core/format'
 import { BUCKETS } from '../lib/baseline'
@@ -68,6 +68,8 @@ export function SplitPerformanceRadar({
     .filter((p) => p.score != null)
     .map((p) => ({ axis: p.label, score: p.score as number }))
   const rated = data.length
+  const breakdown = useMemo(() => splitBreakdown(uuid, details), [uuid, details])
+  const sw = strongestWeakest(perf)
 
   return (
     <section className="surface p-5 animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
@@ -120,6 +122,87 @@ export function SplitPerformanceRadar({
           </ResponsiveContainer>
         </div>
       )}
+      {rated >= 3 && (
+        <>
+          <p className="text-center text-xs text-faint">
+            {breakdown.games} games ({breakdown.completions} completions) analyzed · times are averages,
+            ranked against other players' averages
+          </p>
+          {sw && (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <ExtremeSplit title="Strongest split" p={sw.strongest} color="#5fd38d" />
+              <ExtremeSplit title="Weakest split" p={sw.weakest} color="#e2706e" />
+            </div>
+          )}
+          <BreakdownTable b={breakdown} />
+        </>
+      )}
     </section>
+  )
+}
+
+function ExtremeSplit({ title, p, color }: { title: string; p: SplitPerf; color: string }) {
+  return (
+    <div className="surface-2 px-3 py-2">
+      <div className="text-[10px] uppercase tracking-[0.16em] text-muted">{title}</div>
+      <div className="mt-0.5 text-sm text-text">
+        {p.label} <span className="tnum text-muted">{p.ms != null ? msToTime(p.ms) : '—'}</span>
+      </div>
+      <div className="text-xs" style={{ color }}>
+        {p.pctLabel}
+      </div>
+    </div>
+  )
+}
+
+const SHORT: Record<string, string> = {
+  overworld: 'OW',
+  nether: 'Neth',
+  bastion: 'Bast',
+  fortress: 'Fort',
+  blind: 'Blind',
+  stronghold: 'SH',
+  end: 'End'
+}
+
+function rateText(rate: number | null): string {
+  if (rate == null) return '—'
+  const share = rate * 100
+  return share < 10 ? `${share.toFixed(1)}%` : `${Math.round(share)}%`
+}
+
+function BreakdownTable({ b }: { b: SplitBreakdown }) {
+  const rows: { label: string; hint: string; cell: (r: SplitBreakdown['rows'][number]) => string }[] = [
+    { label: 'Runs', hint: 'games that finished the split', cell: (r) => String(r.reached) },
+    { label: 'Deaths', hint: 'per game that got to the split', cell: (r) => rateText(r.deathRate) },
+    { label: 'Opp. deaths', hint: 'opponents, same games', cell: (r) => rateText(r.oppDeathRate) }
+  ]
+  return (
+    <table className="mt-3 w-full table-fixed text-center text-xs">
+      <thead>
+        <tr className="text-[10px] uppercase tracking-[0.12em] text-faint">
+          <th className="w-[76px]" />
+          {b.rows.map((r) => (
+            <th key={r.key} className="pb-1 font-medium">
+              {SHORT[r.key] ?? r.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.label} className="odd:bg-white/[0.02]">
+            <td className="py-1 pl-1 text-left text-muted" title={row.hint}>
+              {row.label}
+            </td>
+            {b.rows.map((r) => (
+              <td key={r.key} className="tnum py-1 text-text">
+                {row.cell(r)}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }

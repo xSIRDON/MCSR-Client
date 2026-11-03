@@ -13,7 +13,10 @@ import {
   seedStructureLabel,
   speedFromPerf,
   splitCallouts,
-  splitPerformance
+  splitPerformance,
+  splitBreakdown,
+  strongestWeakest,
+  pctText
 } from './ranked-analytics'
 import type { MatchupInput, SplitStat } from './ranked-analytics'
 import { eloWinChance } from './rank'
@@ -597,6 +600,94 @@ describe('playerSegments / splitPerformance', () => {
     expect(ow.pctLabel).toMatch(/^Top /)
     expect(ow.score).toBeGreaterThan(80)
     expect(perf.find((p) => p.key === 'bastion')?.pctLabel).toBe('—')
+  })
+})
+
+describe('splitBreakdown', () => {
+  const tl = (events: Array<[string, string, number]>): MatchInfo['timelines'] =>
+    events.map(([uuid, type, time]) => ({ uuid, time, type }))
+  const d = (timelines: MatchInfo['timelines'], winner: string | null = null, time: number | null = null): MatchInfo => ({
+    id: nextId++,
+    type: 2,
+    players: [
+      { uuid: ME, nickname: 'Me' },
+      { uuid: OPP, nickname: 'Opp' }
+    ],
+    result: { uuid: winner, time },
+    timelines
+  })
+  const full: Array<[string, string, number]> = [
+    [ME, 'story.enter_the_nether', 100_000],
+    [ME, 'nether.find_bastion', 150_000],
+    [ME, 'nether.find_fortress', 300_000],
+    [ME, 'projectelo.timeline.blind_travel', 400_000],
+    [ME, 'story.follow_ender_eye', 500_000],
+    [ME, 'story.enter_the_end', 600_000]
+  ]
+
+  it('counts splits reached and puts each death in the split it happened in', () => {
+    const b = splitBreakdown(ME, [
+      d(tl([...full, [ME, 'projectelo.timeline.death', 650_000]]), ME, 700_000),
+      d(
+        tl([
+          [ME, 'story.enter_the_nether', 120_000],
+          [ME, 'projectelo.timeline.death', 130_000],
+          [ME, 'projectelo.timeline.death_spawnpoint', 125_000],
+          [OPP, 'story.enter_the_nether', 90_000],
+          [OPP, 'projectelo.timeline.death', 95_000]
+        ])
+      )
+    ])
+    expect(b.games).toBe(2)
+    expect(b.completions).toBe(1)
+    const row = (k: string) => b.rows.find((r) => r.key === k)!
+    expect(row('overworld').reached).toBe(2)
+    expect(row('nether')).toMatchObject({ started: 2, reached: 1, deaths: 1, deathRate: 0.5 })
+    expect(row('end')).toMatchObject({ started: 1, reached: 1, deaths: 1, deathRate: 1 })
+    expect(row('nether').oppDeaths).toBe(1)
+    expect(row('nether').oppDeathRate).toBe(1)
+  })
+
+  it('still counts a fortress-first route', () => {
+    const b = splitBreakdown(ME, [
+      d(
+        tl([
+          [ME, 'story.enter_the_nether', 100_000],
+          [ME, 'nether.find_fortress', 140_000],
+          [ME, 'nether.find_bastion', 200_000],
+          [ME, 'projectelo.timeline.blind_travel', 300_000],
+          [ME, 'projectelo.timeline.death', 310_000]
+        ])
+      )
+    ])
+    const row = (k: string) => b.rows.find((r) => r.key === k)!
+    expect(row('bastion').reached).toBe(1)
+    expect(row('fortress').reached).toBe(1)
+    expect(row('blind').deaths).toBe(1)
+  })
+})
+
+describe('pctText / strongestWeakest', () => {
+  it('shows a tenth of a percent under ten and whole percents above', () => {
+    expect(pctText(2.24)).toBe('2.2%')
+    expect(pctText(10)).toBe('10.0%')
+    expect(pctText(18.4)).toBe('18%')
+    expect(pctText(0)).toBe('0.1%')
+  })
+
+  it('picks the best- and worst-ranked splits with enough runs', () => {
+    const p = (key: string, score: number | null, sample: number) => ({
+      key,
+      label: key,
+      ms: 1,
+      score,
+      pctLabel: '',
+      sample
+    })
+    const r = strongestWeakest([p('a', 90, 5), p('b', 40, 5), p('c', 99, 1), p('d', null, 9)])
+    expect(r?.strongest.key).toBe('a')
+    expect(r?.weakest.key).toBe('b')
+    expect(strongestWeakest([p('a', 90, 5)])).toBeNull()
   })
 })
 
