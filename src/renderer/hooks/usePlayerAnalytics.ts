@@ -51,7 +51,21 @@ export function usePlayerAnalytics(uuid: string | null | undefined, season?: Sea
     enabled
   })
 
-  const analytics = useMemo(() => analyzeRanked(uuid ?? '', matches ?? []), [uuid, matches])
+  const scope: 'season' | 'total' = season === 'all' ? 'total' : 'season'
+  const seasonStats = useMemo(() => rankedStats(user, scope), [user, scope])
+  const seasonDecided = seasonStats.wins + seasonStats.loses
+  const seasonWinRate =
+    seasonDecided > 0 ? Math.round((seasonStats.wins / seasonDecided) * 1000) / 10 : null
+
+  const analytics = useMemo(
+    () =>
+      analyzeRanked(uuid ?? '', matches ?? [], {
+        winRate: seasonWinRate,
+        forfeitRate: seasonStats.forfeitRate,
+        played: seasonStats.played
+      }),
+    [uuid, matches, seasonWinRate, seasonStats.forfeitRate, seasonStats.played]
+  )
 
   const detailIds = useMemo(
     () =>
@@ -83,8 +97,6 @@ export function usePlayerAnalytics(uuid: string | null | undefined, season?: Sea
     seasonNum != null ? (user?.seasonResult?.last?.eloRate ?? null) : (user?.eloRate ?? null)
   const rank = eloToRank(elo)
 
-  const scope: 'season' | 'total' = season === 'all' ? 'total' : 'season'
-  const seasonStats = rankedStats(user, scope)
   const useSeason = seasonStats.played > 0
   const head: HeadStats = {
     wins: useSeason ? seasonStats.wins : analytics.wins,
@@ -97,10 +109,6 @@ export function usePlayerAnalytics(uuid: string | null | undefined, season?: Sea
     netElo: analytics.netElo,
     averageWin: (useSeason && seasonStats.averageTime) || analytics.averageWin
   }
-
-  const seasonDecided = seasonStats.wins + seasonStats.loses
-  const seasonWinRate =
-    seasonDecided > 0 ? Math.round((seasonStats.wins / seasonDecided) * 1000) / 10 : null
 
   const deaths = useMemo(() => countDeaths(uuid ?? '', details ?? []), [uuid, details])
   const perfWorld = useMemo(

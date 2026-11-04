@@ -1039,3 +1039,15 @@ describe('buildSplitGap uses your median, not your mean', () => {
     expect(row.delta).toBe(132_610 - 117_277)
   })
 })
+
+describe('analyzeRanked headline stats', () => {
+  it('quotes the season forfeit and win rates the profile shows', () => {
+    const a = analyzeRanked(ME, [match({ winner: ME }), match({ winner: OPP })], {
+      winRate: 55,
+      forfeitRate: 25,
+      played: 40
+    })
+    const ff = a.insights.find((i) => i.label === 'Forfeits often')
+    expect(ff?.detail).toBe('You forfeited 25% of your games.')
+  })
+})

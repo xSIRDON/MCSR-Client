@@ -56,7 +56,17 @@ function outcomeFor(uuid: string, m: MatchInfo): Outcome {
   return 'loss'
 }
 
-export function analyzeRanked(uuid: string, matches: MatchInfo[]): RankedAnalytics {
+export interface HeadlineStats {
+  winRate: number | null
+  forfeitRate: number | null
+  played: number
+}
+
+export function analyzeRanked(
+  uuid: string,
+  matches: MatchInfo[],
+  headline?: HeadlineStats
+): RankedAnalytics {
   uuid = uuid.toLowerCase()
   const list = Array.isArray(matches) ? matches.filter((m) => m && m.type === 2) : []
 
@@ -166,11 +176,19 @@ export function analyzeRanked(uuid: string, matches: MatchInfo[]): RankedAnalyti
   const vsLower = { decided: lowerDecided, winRate: pct(lowerWins, lowerDecided) }
   const overallWinRate = pct(wins, decided)
 
+  const useHead = !!headline && headline.played > 0
   const insights = buildInsights({
     played,
     decided,
     wins,
-    overallWinRate,
+    overallWinRate: (useHead ? headline.winRate : null) ?? overallWinRate,
+    baselineGames: useHead ? headline.played : decided,
+    forfeitRate:
+      useHead && headline.forfeitRate != null
+        ? headline.forfeitRate
+        : decided > 0
+          ? round1((forfeitsYours / decided) * 100)
+          : null,
     currentStreak,
     bestWinStreak,
     recentWinRate,
@@ -213,6 +231,8 @@ interface InsightInput {
   decided: number
   wins: number
   overallWinRate: number
+  baselineGames: number
+  forfeitRate: number | null
   currentStreak: number
   bestWinStreak: number
   recentWinRate: number
@@ -288,13 +308,13 @@ function buildInsights(d: InsightInput): RankedInsight[] {
     })
   }
 
-  if (d.decided > 0) {
-    const ffRate = round1((d.forfeitsYours / d.decided) * 100)
+  if (d.forfeitRate != null) {
+    const ffRate = d.forfeitRate
     if (ffRate >= 20) {
       out.push({
         kind: 'weakness',
         label: 'Forfeits often',
-        detail: `You forfeited ${ffRate}% of decided games.`
+        detail: `You forfeited ${ffRate}% of your games.`
       })
     } else if (d.forfeitsTheirs > d.forfeitsYours && d.forfeitsTheirs >= 3) {
       out.push({
@@ -334,7 +354,7 @@ function buildInsights(d: InsightInput): RankedInsight[] {
     out.push({
       kind: 'note',
       label: 'Even keel',
-      detail: `${d.overallWinRate}% win rate over ${d.decided} decided games.`
+      detail: `${d.overallWinRate}% win rate over ${d.baselineGames} games.`
     })
   }
   return out.slice(0, 6)

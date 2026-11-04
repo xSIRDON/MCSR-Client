@@ -208,7 +208,12 @@ function toMatchupInput(s: Side): MatchupInput {
     winRate: s.seasonWinRate ?? (decided > 0 ? s.analytics.winRate : null),
     avgWin: s.head.averageWin,
     splitScore: speedFromPerf(s.perfWorld)?.score ?? null,
-    completion: decided > 0 ? 1 - s.analytics.forfeits.yours / decided : null,
+    completion:
+      s.season.forfeitRate != null
+        ? 1 - s.season.forfeitRate / 100
+        : decided > 0
+          ? 1 - s.analytics.forfeits.yours / decided
+          : null,
     streak: s.head.currentStreak,
     games: s.head.played
   }
