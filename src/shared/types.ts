@@ -92,6 +92,8 @@ export interface GcSessionReport {
 
 export const DEFAULT_FRIENDS_SERVER = 'https://mcsrfriends.duckdns.org:8787'
 
+export const SAVED_KEY_MASK = '••••••••••••••••'
+
 export type FriendNetPresence = 'idle' | 'ranked' | 'rsg' | 'zsg' | 'offline'
 
 export interface FriendEntry {

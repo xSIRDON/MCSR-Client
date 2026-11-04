@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { paths } from '../paths'
 import { fetchVerified } from '../security/verified-download'
 import { store } from '../store'
-import type { TrackerStatus } from '../../shared/types'
+import { SAVED_KEY_MASK, type TrackerStatus } from '../../shared/types'
 
 const KEY_SECRET = 'paceman-key'
 export const TRACKER_JAR = 'paceman-tracker-0.7.3.jar'
@@ -42,7 +42,7 @@ export function hasKey(): boolean {
 }
 
 export function getKey(): string | null {
-  return store.secret.get(KEY_SECRET) ?? null
+  return hasKey() ? SAVED_KEY_MASK : null
 }
 
 export function setKey(key: string): void {

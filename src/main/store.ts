@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { paths } from './paths'
 import { DEFAULT_CONFIG, type AppConfig, type InstanceId } from '../shared/types'
+import { ALL_MAP_IDS } from '../shared/maps'
 import { encodeSecret, decodeSecret } from './secret-codec'
 
 type RawConfig = {
@@ -21,23 +22,35 @@ type RawConfig = {
   pacemanShowWindow?: boolean
 }
 
+function ramValue(v: unknown, fallback: number): number {
+  return typeof v === 'number' && Number.isFinite(v) ? Math.min(32768, Math.max(1024, Math.round(v))) : fallback
+}
+
+function javaValue(v: unknown): string | null {
+  return typeof v === 'string' && v ? v : null
+}
+
+function mapsValue(v: unknown, fallback: string[]): string[] {
+  return Array.isArray(v) ? v.filter((m): m is string => ALL_MAP_IDS.includes(m)) : [...fallback]
+}
+
 function normalizeConfig(raw: RawConfig): AppConfig {
   const legacy = typeof raw.ramMb === 'number' ? raw.ramMb : undefined
   return {
     ram: {
-      ranked: raw.ram?.ranked ?? legacy ?? DEFAULT_CONFIG.ram.ranked,
-      rsg: raw.ram?.rsg ?? legacy ?? DEFAULT_CONFIG.ram.rsg,
-      zsg: raw.ram?.zsg ?? legacy ?? DEFAULT_CONFIG.ram.zsg
+      ranked: ramValue(raw.ram?.ranked ?? legacy, DEFAULT_CONFIG.ram.ranked),
+      rsg: ramValue(raw.ram?.rsg ?? legacy, DEFAULT_CONFIG.ram.rsg),
+      zsg: ramValue(raw.ram?.zsg ?? legacy, DEFAULT_CONFIG.ram.zsg)
     },
     java: {
-      ranked: raw.java?.ranked ?? null,
-      rsg: raw.java?.rsg ?? null,
-      zsg: raw.java?.zsg ?? null
+      ranked: javaValue(raw.java?.ranked),
+      rsg: javaValue(raw.java?.rsg),
+      zsg: javaValue(raw.java?.zsg)
     },
     maps: {
-      ranked: raw.maps?.ranked ?? [...DEFAULT_CONFIG.maps.ranked],
-      rsg: raw.maps?.rsg ?? [...DEFAULT_CONFIG.maps.rsg],
-      zsg: raw.maps?.zsg ?? [...DEFAULT_CONFIG.maps.zsg]
+      ranked: mapsValue(raw.maps?.ranked, DEFAULT_CONFIG.maps.ranked),
+      rsg: mapsValue(raw.maps?.rsg, DEFAULT_CONFIG.maps.rsg),
+      zsg: mapsValue(raw.maps?.zsg, DEFAULT_CONFIG.maps.zsg)
     },
     seedQueueOverride:
       typeof raw.seedQueueOverride === 'string'
@@ -50,7 +63,8 @@ function normalizeConfig(raw: RawConfig): AppConfig {
       ? raw.favorites.filter((f): f is string => typeof f === 'string')
       : [...DEFAULT_CONFIG.favorites],
     friendsServerUrl:
-      typeof raw.friendsServerUrl === 'string' && raw.friendsServerUrl
+      typeof raw.friendsServerUrl === 'string' &&
+      /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$))/i.test(raw.friendsServerUrl)
         ? raw.friendsServerUrl
         : DEFAULT_CONFIG.friendsServerUrl,
     extraOptionsPromptSeen:

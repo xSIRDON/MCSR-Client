@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Account, AppConfig, JavaInfo, TrackerStatus, UpdateStatus } from '@shared/types'
+import { SAVED_KEY_MASK, type Account, type AppConfig, type JavaInfo, type TrackerStatus, type UpdateStatus } from '@shared/types'
 import { useUi } from '../store/uiStore'
 import { PlayerHead } from '../components/PlayerHead'
 
@@ -41,7 +41,7 @@ export function Settings() {
 
   async function saveKey() {
     const key = keyInput.trim()
-    if (!key) return
+    if (!key || key === SAVED_KEY_MASK) return
     await window.mcsr.paceman.setKey(key)
     setKeyInput(key)
     if (!pacemanName && profile?.name) setPacemanName(profile.name)

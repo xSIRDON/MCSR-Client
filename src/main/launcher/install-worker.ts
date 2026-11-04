@@ -1,5 +1,6 @@
 import { init, config, Instance } from 'gmll'
 import { cleanError } from './install-errors'
+import { verifySevenZip } from './seven-zip-pin'
 
 interface Job {
   root: string
@@ -31,6 +32,7 @@ port.once('message', async (e) => {
     )
     ev.on('download.setup', () => send({ type: 'setup' }))
     await init()
+    verifySevenZip(config.getMeta().bin.sysPath())
     const inst = new Instance({ name: job.id, version: job.version, path: job.path, ram: job.ram })
     await inst.install()
     send({ type: 'done' })

@@ -10,6 +10,7 @@ import { paths } from '../paths'
 import { store } from '../store'
 import { parseJavaVersion } from '../system/java'
 import { removeLinkIfPresent } from './links'
+import { verifySevenZip } from './seven-zip-pin'
 import {
   MANAGED_RUNTIME,
   describeJvm,
@@ -60,6 +61,7 @@ export async function ensureCore(onProgress?: (e: ProgressEvent) => void): Promi
   }
 
   await init()
+  verifySevenZip(config.getMeta().bin.sysPath())
   initialised = true
 }
 

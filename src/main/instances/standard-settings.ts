@@ -14,7 +14,11 @@ export function parseStandardSettings(text: string): StandardSettings {
   return out
 }
 
-export function mergeStandardSettings(text: string, patch: StandardSettings): string {
+export function mergeStandardSettings(text: string, rawPatch: StandardSettings): string {
+  const patch: StandardSettings = {}
+  for (const [k, v] of Object.entries(rawPatch)) {
+    if (k && !/[:\r\n]/.test(k)) patch[k] = String(v).replace(/[\r\n]/g, '')
+  }
   const seen = new Set<string>()
   const result: string[] = []
   for (const raw of text.split(/\r?\n/)) {

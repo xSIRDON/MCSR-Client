@@ -52,6 +52,7 @@ import {
 import { readStandardSettings, writeStandardSettings, importOptionsFile } from './instances/standard-settings'
 import { copyInstanceSettings, resolveGameDir, listWorlds } from './instances/copy-instance'
 import { formatBytes, type CopyProgress } from './instances/copy-tree'
+import { makeLineScrubber } from './line-scrub'
 import { getSkin } from './skins'
 import { checkForUpdates, currentUpdateStatus, quitAndInstall } from './updater'
 import { setupNinjabrain, launchNinjabrain, killNinjabrain } from './tools/ninjabrain'
@@ -92,12 +93,9 @@ function win(): BrowserWindow | null {
   return BrowserWindow.getAllWindows()[0] ?? null
 }
 
-function redactToken(text: string): string {
+function launchSecrets(): string[] {
   const t = auth.getLaunchToken() as { access_token?: string; profile?: { id?: string } } | null
-  let out = text
-  if (t?.access_token) out = out.split(t.access_token).join('«redacted»')
-  if (t?.profile?.id) out = out.split(t.profile.id).join('«redacted»')
-  return out
+  return [t?.access_token ?? '', t?.profile?.id ?? '']
 }
 
 function setState(id: InstanceId, patch: Partial<InstanceStatus>): void {
@@ -188,6 +186,34 @@ function hydrateStates(): void {
 }
 
 let cachedIndex: ModrinthIndex | null = null
+
+const pickedPaths = new Set<string>()
+function picked(path: string): string {
+  pickedPaths.add(path)
+  return path
+}
+function assertPicked(path: unknown): string {
+  if (typeof path !== 'string' || !pickedPaths.has(path)) {
+    throw new Error('Choose that folder again with Browse.')
+  }
+  return path
+}
+
+function guardConfigPatch(patch: Partial<AppConfig>): Partial<AppConfig> {
+  const cur = store.getConfig()
+  const out: Partial<AppConfig> = { ...patch }
+  if (patch.java) {
+    const java = { ...cur.java }
+    for (const id of Object.keys(java) as InstanceId[]) {
+      const v = patch.java[id]
+      if (v === null || (typeof v === 'string' && (v === cur.java[id] || pickedPaths.has(v)))) java[id] = v
+    }
+    out.java = java
+  }
+  if ('seedQueueOverride' in patch && patch.seedQueueOverride !== null) delete out.seedQueueOverride
+  delete out.friendsServerUrl
+  return out
+}
 async function getIndex(): Promise<ModrinthIndex> {
   if (!cachedIndex) cachedIndex = await fetchPack()
   return cachedIndex
@@ -522,13 +548,16 @@ async function launchInstance(
   }
   fallbackTimer = setTimeout(stepAside, 45_000)
 
-  const onGameOutput = (d: Buffer): void => {
-    const text = redactToken(d.toString())
+  const secrets = launchSecrets()
+  const onGameText = (text: string): void => {
     pushLog('game', text)
     if (!steppedAside && gameWindowReady(text)) stepAside()
   }
-  child.stdout.on('data', onGameOutput)
-  child.stderr.on('data', onGameOutput)
+  for (const stream of [child.stdout, child.stderr]) {
+    const scrub = makeLineScrubber(secrets, onGameText)
+    stream.on('data', (d: Buffer) => scrub.push(d.toString()))
+    stream.on('end', () => scrub.flush())
+  }
 
   if (id === 'rsg') {
     tracker.start(javaw ?? undefined).catch((e) =>
@@ -621,7 +650,10 @@ export function registerIpc(): void {
       _e,
       id: unknown,
       opts?: { importFrom?: InstanceId | null; importFolder?: string | null; importWorlds?: string[] }
-    ) => launchInstance(assertInstanceId(id), opts)
+    ) => {
+      if (opts?.importFolder != null) assertPicked(opts.importFolder)
+      return launchInstance(assertInstanceId(id), opts)
+    }
   )
   ipcMain.handle(IPC.instVerify, (_e, id: unknown) => installInstance(assertInstanceId(id)))
   ipcMain.handle(IPC.instDelete, (_e, id: unknown) => deleteInstance(assertInstanceId(id)))
@@ -708,7 +740,7 @@ export function registerIpc(): void {
     IPC.instImportFromFolderPath,
     async (_e, rawTarget: unknown, folder: string, opts?: { worlds?: string[] }) => {
       const target = assertInstanceId(rawTarget)
-      const copied = await copyInstanceSettings(resolveGameDir(folder), gmll.gameDir(target), {
+      const copied = await copyInstanceSettings(resolveGameDir(assertPicked(folder)), gmll.gameDir(target), {
         worlds: opts?.worlds ?? []
       })
       pushLog('system', `Imported from ${folder} into ${target}: ${copied.join(', ') || 'nothing found'}.`)
@@ -718,7 +750,9 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.instListWorlds, (_e, id: unknown) =>
     listWorlds(gmll.gameDir(assertInstanceId(id)))
   )
-  ipcMain.handle(IPC.instListWorldsInFolder, (_e, folder: string) => listWorlds(resolveGameDir(folder)))
+  ipcMain.handle(IPC.instListWorldsInFolder, (_e, folder: string) =>
+    listWorlds(resolveGameDir(assertPicked(folder)))
+  )
   ipcMain.handle(IPC.instSeedQueue, (_e, id: InstanceId) => seedQueueInfo(assertInstanceId(id)))
   ipcMain.handle(IPC.instTuneSeedQueue, (_e, id: InstanceId) => {
     const iid = assertInstanceId(id)
@@ -763,7 +797,7 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.friendsMarkRead, (_e, uuid: string) => friends.markRead(uuid))
 
   ipcMain.handle(IPC.cfgGet, () => store.getConfig())
-  ipcMain.handle(IPC.cfgSet, (_e, patch: Partial<AppConfig>) => store.setConfig(patch))
+  ipcMain.handle(IPC.cfgSet, (_e, patch: Partial<AppConfig>) => store.setConfig(guardConfigPatch(patch ?? {})))
   ipcMain.handle(IPC.cfgPickJar, async () => {
     const res = await dialog.showOpenDialog({
       title: 'Choose a SeedQueue jar',
@@ -782,7 +816,7 @@ export function registerIpc(): void {
       properties: ['openFile']
     })
     if (res.canceled || res.filePaths.length === 0) return null
-    return res.filePaths[0]
+    return picked(res.filePaths[0])
   })
   ipcMain.handle(IPC.cfgPickFolder, async () => {
     const res = await dialog.showOpenDialog({
@@ -790,6 +824,6 @@ export function registerIpc(): void {
       properties: ['openDirectory']
     })
     if (res.canceled || res.filePaths.length === 0) return null
-    return res.filePaths[0]
+    return picked(res.filePaths[0])
   })
 }

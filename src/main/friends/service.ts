@@ -267,26 +267,35 @@ function stop(): void {
   msgTimer = null
 }
 
+function friendId(uuid: unknown): string {
+  const id = String(uuid ?? '').replace(/-/g, '').toLowerCase()
+  if (!/^[0-9a-f]{32}$/.test(id)) throw new Error('Not a valid player id.')
+  return id
+}
+
 export async function request(uuid: string, nickname?: string): Promise<FriendsNetState> {
   await api('/v1/friends/requests', {
     method: 'POST',
-    body: JSON.stringify({ to: uuid, nickname })
+    body: JSON.stringify({
+      to: friendId(uuid),
+      nickname: typeof nickname === 'string' ? nickname.slice(0, 16) : undefined
+    })
   })
   await refresh()
   return getState()
 }
 export async function accept(uuid: string): Promise<FriendsNetState> {
-  await api(`/v1/friends/requests/${uuid}/accept`, { method: 'POST' })
+  await api(`/v1/friends/requests/${friendId(uuid)}/accept`, { method: 'POST' })
   await refresh()
   return getState()
 }
 export async function decline(uuid: string): Promise<FriendsNetState> {
-  await api(`/v1/friends/requests/${uuid}/decline`, { method: 'POST' })
+  await api(`/v1/friends/requests/${friendId(uuid)}/decline`, { method: 'POST' })
   await refresh()
   return getState()
 }
 export async function remove(uuid: string): Promise<FriendsNetState> {
-  await api(`/v1/friends/${uuid}`, { method: 'DELETE' })
+  await api(`/v1/friends/${friendId(uuid)}`, { method: 'DELETE' })
   await refresh()
   return getState()
 }

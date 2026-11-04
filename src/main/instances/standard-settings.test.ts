@@ -27,3 +27,10 @@ describe('mergeStandardSettings', () => {
     expect(parseStandardSettings(merged)).toEqual({ fov: '1.0', sensitivity: '0.5' })
   })
 })
+
+describe('mergeStandardSettings line safety', () => {
+  it('drops keys that would split lines and strips line breaks from values', () => {
+    const out = mergeStandardSettings('fov:70', { 'a:b': '1', 'x\ny': '2', fov: '90\nfullscreen:true' })
+    expect(out).toBe('fov:90fullscreen:true')
+  })
+})
