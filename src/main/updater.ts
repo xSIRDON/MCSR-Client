@@ -62,6 +62,10 @@ export async function checkForUpdates(): Promise<UpdateStatus> {
   return status
 }
 
+export function skipInstallOnQuit(): void {
+  autoUpdater.autoInstallOnAppQuit = false
+}
+
 export function quitAndInstall(): void {
   if (status.state === 'ready') autoUpdater.quitAndInstall(true, true)
 }

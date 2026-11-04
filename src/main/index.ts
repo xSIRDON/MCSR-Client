@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { registerIpc, isGameRunning } from './ipc-handlers'
 import * as gmll from './launcher/gmll-adapter'
 import * as tracker from './paceman/tracker'
-import { setupUpdater } from './updater'
+import { setupUpdater, skipInstallOnQuit } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
 import { removeDesktopShortcut } from './tools/ninjabrain'
 import { isSafeExternalUrl, isSameOrigin } from './security/url-safety'
@@ -52,6 +52,8 @@ function createWindow(): void {
   })
 
   win.on('ready-to-show', () => win.show())
+
+  win.on('session-end', skipInstallOnQuit)
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (isSafeExternalUrl(url)) void shell.openExternal(url)
