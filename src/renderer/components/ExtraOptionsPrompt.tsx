@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { InstanceId } from '@shared/types'
+import { ipcMessage } from '../lib/ipc-error'
 
 const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
 
@@ -22,7 +23,7 @@ export function ExtraOptionsPrompt() {
       await window.mcsr.instances.dismissExtraOptionsPrompt()
       setPrompt({ show: false, instances: [] })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not add the mod. Try again from Edit instance.')
+      setError(ipcMessage(e, 'Could not add the mod. Try again from Edit instance.'))
       setBusy(false)
     }
   }

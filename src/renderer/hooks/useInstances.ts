@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { InstanceId, InstanceStatus, ProgressEvent } from '@shared/types'
+import { ipcMessage } from '../lib/ipc-error'
 
 const BUSY: InstanceStatus['state'][] = ['installing', 'launching', 'running']
 export const isBusy = (s: InstanceStatus['state']): boolean => BUSY.includes(s)
@@ -58,7 +59,8 @@ export const useInstances = create<InstancesState>((set, get) => ({
 
   launch: async (id) => {
     set({ selected: id })
-    if (get().statuses[id].state === 'not-installed') {
+    const s = get().statuses[id]
+    if (s.state === 'not-installed' || (s.state === 'error' && !s.versionId)) {
       set({ installPrompt: id })
       return
     }
@@ -73,7 +75,7 @@ export const useInstances = create<InstancesState>((set, get) => ({
       set((prev) => ({
         statuses: {
           ...prev.statuses,
-          [id]: { ...prev.statuses[id], state: 'error', error: String(e) }
+          [id]: { ...prev.statuses[id], state: 'error', error: ipcMessage(e, 'Could not launch.') }
         }
       }))
     }

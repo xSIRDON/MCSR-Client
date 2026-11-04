@@ -64,7 +64,7 @@ export function PlayBar() {
                 : status.state === 'running'
                   ? 'Game is running'
                   : status.state === 'error'
-                    ? 'Tap Verify on the Play page to repair'
+                    ? 'Press Play to try again, or Verify on the Play page to repair'
                     : 'Working…'}
           </div>
         </div>

@@ -132,7 +132,7 @@ type FetchBuffer = (url: string) => Promise<Buffer>
 
 const nodeFetchBuffer: FetchBuffer = async (url) => {
   assertTrustedDownloadUrl(url)
-  const res = await fetch(url, { redirect: 'follow' })
+  const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(120_000) })
   if (!res.ok) throw new Error(`download failed ${res.status} for ${url}`)
   if (res.url) assertTrustedDownloadUrl(res.url)
   return Buffer.from(await res.arrayBuffer())

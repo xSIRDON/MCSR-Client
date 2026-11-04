@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { LOW_FREE_MEM_MB, type AppConfig, type GcSessionReport, type InstanceId, type ModInfo, type SeedQueueInfo } from '@shared/types'
 import { MAP_CATALOG, ALL_MAP_IDS } from '@shared/maps'
+import { ipcMessage } from '../lib/ipc-error'
 
 const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
 
@@ -59,7 +60,7 @@ function DangerCard({ id, onDeleted }: { id: InstanceId; onDeleted: () => void }
     } catch (e) {
       setBusy(false)
       setConfirm(false)
-      setError(e instanceof Error ? e.message : 'Could not delete the instance.')
+      setError(ipcMessage(e, 'Could not delete the instance.'))
     }
   }
 
@@ -167,8 +168,7 @@ function WallCard({ id, onTuned }: { id: InstanceId; onTuned: () => void }) {
       setInfo(await window.mcsr.instances.tuneSeedQueue(id))
       onTuned()
     } catch (e) {
-      const msg = e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : ''
-      setError(msg || 'Could not tune SeedQueue.')
+      setError(ipcMessage(e, 'Could not tune SeedQueue.'))
     } finally {
       setBusy(false)
     }
@@ -409,7 +409,7 @@ function ModsCard({ id }: { id: InstanceId }) {
       await window.mcsr.instances.addExtraOptions([id])
       setMods(await window.mcsr.instances.mods(id))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not add extra-options.')
+      setError(ipcMessage(e, 'Could not add extra-options.'))
     } finally {
       setAdding(false)
     }
@@ -488,7 +488,7 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
           : { ok: false, msg: `Nothing to import from ${TITLES[source]} yet.` }
       )
     } catch (e) {
-      setResult({ ok: false, msg: e instanceof Error ? e.message : 'Could not import from that instance.' })
+      setResult({ ok: false, msg: ipcMessage(e, 'Could not import from that instance.') })
     } finally {
       setBusy(false)
     }
@@ -507,7 +507,7 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
           : { ok: false, msg: 'No options.txt / hotbar.nbt / config / resourcepacks found in that folder.' }
       )
     } catch (e) {
-      setResult({ ok: false, msg: e instanceof Error ? e.message : 'Could not import from that folder.' })
+      setResult({ ok: false, msg: ipcMessage(e, 'Could not import from that folder.') })
     } finally {
       setBusy(false)
     }
@@ -525,7 +525,7 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
             : { ok: false, msg: 'No settings found in that file.' }
         )
     } catch (e) {
-      setResult({ ok: false, msg: e instanceof Error ? e.message : 'Could not import that file.' })
+      setResult({ ok: false, msg: ipcMessage(e, 'Could not import that file.') })
     } finally {
       setBusy(false)
     }

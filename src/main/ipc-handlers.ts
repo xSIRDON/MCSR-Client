@@ -461,6 +461,8 @@ async function doInstallInstance(
   }
 }
 
+const launches = new Map<InstanceId, Promise<void>>()
+
 async function launchInstance(
   id: InstanceId,
   opts?: { importFrom?: InstanceId | null; importFolder?: string | null; importWorlds?: string[] }
@@ -474,7 +476,8 @@ async function launchInstance(
     latest = cachedIndex.versionId
   } catch {
   }
-  const wasFresh = states[id].state === 'not-installed'
+  const wasFresh =
+    states[id].state === 'not-installed' || (states[id].state === 'error' && !installedVersion(id))
   const stale = latest !== undefined && installedVersion(id) !== latest
   if (states[id].state !== 'ready' || stale) {
     if (stale) {
@@ -651,8 +654,14 @@ export function registerIpc(): void {
       id: unknown,
       opts?: { importFrom?: InstanceId | null; importFolder?: string | null; importWorlds?: string[] }
     ) => {
+      const iid = assertInstanceId(id)
       if (opts?.importFolder != null) assertPicked(opts.importFolder)
-      return launchInstance(assertInstanceId(id), opts)
+      const inFlight = launches.get(iid)
+      if (inFlight) return inFlight
+      if (states[iid].state === 'running') throw new Error('That instance is already running.')
+      const p = launchInstance(iid, opts).finally(() => launches.delete(iid))
+      launches.set(iid, p)
+      return p
     }
   )
   ipcMain.handle(IPC.instVerify, (_e, id: unknown) => installInstance(assertInstanceId(id)))

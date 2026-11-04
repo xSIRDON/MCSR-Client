@@ -70,7 +70,7 @@ function writeManifest(savesDir: string, m: Manifest): void {
 }
 
 async function installMap(savesDir: string, map: MapDef): Promise<string[]> {
-  const res = await fetch(map.url, { redirect: 'follow' })
+  const res = await fetch(map.url, { redirect: 'follow', signal: AbortSignal.timeout(120_000) })
   if (!res.ok) throw new Error(`map "${map.name}" download failed (${res.status})`)
   const buf = Buffer.from(await res.arrayBuffer())
 

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { GapCheckFilters, GapCheckSeed } from '@shared/types'
+import { ipcMessage } from '../lib/ipc-error'
 
 export interface PracticeFilters {
   seedType: string | null
@@ -56,8 +57,7 @@ export function usePractice(filters: PracticeFilters) {
       }
       setSeeds((prev) => [seed, ...prev.filter((s) => s.matchId !== seed.matchId)].slice(0, 12))
     } catch (e) {
-      const msg = e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : ''
-      setError(msg || 'Could not reach GapCheck.')
+      setError(ipcMessage(e, 'Could not reach GapCheck.'))
     } finally {
       setDrawing(false)
     }
