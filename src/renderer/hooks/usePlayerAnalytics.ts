@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { mcsr } from '../lib/clients'
 import {
   analyzeRanked,
@@ -36,6 +36,16 @@ export function useCurrentSeason(): number | undefined {
 }
 
 export type SeasonSel = number | 'all' | undefined
+
+function combineDetails(results: UseQueryResult<MatchInfo>[]): {
+  details: MatchInfo[]
+  detailsLoading: boolean
+} {
+  return {
+    details: results.flatMap((r) => (r.data ? [r.data] : [])),
+    detailsLoading: results.some((r) => r.isPending && r.fetchStatus !== 'idle')
+  }
+}
 
 export function usePlayerAnalytics(uuid: string | null | undefined, season?: SeasonSel) {
   const enabled = !!uuid
@@ -75,22 +85,16 @@ export function usePlayerAnalytics(uuid: string | null | undefined, season?: Sea
         .map((m) => m.id),
     [matches]
   )
-  const { data: details, isLoading: detailsLoading } = useQuery({
-    queryKey: ['review-splits', uuid, seasonNum ?? 'current', detailIds],
-    queryFn: async () => {
-      const out: MatchInfo[] = []
-      for (const id of detailIds) {
-        try {
-          out.push(await mcsr.getMatch(id))
-        } catch {
-        }
-      }
-      return out
-    },
-    enabled: enabled && detailIds.length > 0,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false
+  const { details, detailsLoading } = useQueries({
+    queries: detailIds.map((id) => ({
+      queryKey: ['match-detail', id],
+      queryFn: () => mcsr.getMatch(id),
+      enabled,
+      staleTime: Infinity,
+      gcTime: Infinity,
+      refetchOnMount: false
+    })),
+    combine: combineDetails
   })
 
   const elo =
@@ -140,7 +144,7 @@ export function usePlayerAnalytics(uuid: string | null | undefined, season?: Sea
     recentN: (matches ?? []).filter((m) => m.type === 2).length,
     analyzedN: detailIds.length,
     loading: enabled && matchesLoading && !matches,
-    detailsLoading: enabled && detailsLoading && !details
+    detailsLoading: enabled && detailsLoading && details.length === 0
   }
 }
 
