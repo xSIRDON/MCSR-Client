@@ -395,8 +395,13 @@ function ModsCard({ id }: { id: InstanceId }) {
     void window.mcsr.instances.mods(id).then(setMods)
   }, [id])
 
-  const toggle = (file: string, enabled: boolean) =>
-    void window.mcsr.instances.toggleMod(id, file, enabled).then(setMods)
+  const toggle = (file: string, enabled: boolean) => {
+    setError(null)
+    window.mcsr.instances
+      .toggleMod(id, file, enabled)
+      .then(setMods)
+      .catch((e) => setError(ipcMessage(e, 'Could not change that mod. Close the game first if it’s running.')))
+  }
 
   const extraOptionsInstalled = !!mods?.some((m) => m.name.toLowerCase() === 'extra-options')
   const canAddExtraOptions =
@@ -609,6 +614,7 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
 function MapsCard({ id }: { id: InstanceId }) {
   const [config, setConfig] = useState<AppConfig | null>(null)
   const [syncing, setSyncing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   useEffect(() => {
     void window.mcsr.config.get().then(setConfig)
   }, [])
@@ -618,10 +624,13 @@ function MapsCard({ id }: { id: InstanceId }) {
 
   async function setSelection(next: string[]) {
     setSyncing(true)
+    setError(null)
     try {
       const updated = await window.mcsr.config.set({ maps: { ...config!.maps, [id]: next } })
       setConfig(updated)
       await window.mcsr.instances.syncMaps(id)
+    } catch (e) {
+      setError(ipcMessage(e, 'Could not update the practice maps.'))
     } finally {
       setSyncing(false)
     }
@@ -669,6 +678,7 @@ function MapsCard({ id }: { id: InstanceId }) {
           </div>
         ))}
       </div>
+      {error && <div className="mt-2 text-xs text-[var(--loss)]">{error}</div>}
       <p className="mt-2 text-xs text-faint">
         Selected maps install into this instance’s <code>saves/</code> (now, and on next launch).
         Turning one off removes that world.

@@ -19,6 +19,7 @@ export function trackerArgs(jar: string, showWindow: boolean): string[] {
 }
 
 let proc: ChildProcess | null = null
+let startGen = 0
 let statusSink: ((s: TrackerStatus) => void) | null = null
 
 function jarPath(): string {
@@ -93,7 +94,9 @@ export async function ensureJar(): Promise<void> {
 export async function start(javaw = 'javaw'): Promise<void> {
   if (proc) return
   if (!hasKey()) return
+  const gen = ++startGen
   await ensureJar()
+  if (gen !== startGen) return
   writeOptions()
   const showWindow = store.getConfig().pacemanShowWindow
   const child = spawn(javaw, trackerArgs(jarPath(), showWindow), {
@@ -114,6 +117,7 @@ export async function start(javaw = 'javaw'): Promise<void> {
 }
 
 export function stop(): void {
+  startGen++
   if (proc) {
     try {
       proc.kill()
