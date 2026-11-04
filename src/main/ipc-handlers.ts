@@ -637,13 +637,18 @@ export function registerIpc(): void {
   ipcMain.on(IPC.winMinimize, () => win()?.minimize())
   ipcMain.on(IPC.winClose, () => win()?.close())
 
-  ipcMain.handle(IPC.authLogin, () => auth.login())
+  const thenSyncFriends = <T>(p: T | Promise<T>): Promise<T> =>
+    Promise.resolve(p).then((r) => {
+      void friends.syncAccount().catch(() => {})
+      return r
+    })
+  ipcMain.handle(IPC.authLogin, () => thenSyncFriends(auth.login()))
   ipcMain.handle(IPC.authRestore, () => auth.restore())
-  ipcMain.handle(IPC.authLogout, () => auth.logout())
+  ipcMain.handle(IPC.authLogout, () => thenSyncFriends(auth.logout()))
   ipcMain.handle(IPC.authAccounts, () => auth.listAccounts())
-  ipcMain.handle(IPC.authAdd, () => auth.addAccount())
-  ipcMain.handle(IPC.authSwitch, (_e, uuid: string) => auth.switchAccount(uuid))
-  ipcMain.handle(IPC.authRemove, (_e, uuid: string) => auth.removeAccount(uuid))
+  ipcMain.handle(IPC.authAdd, () => thenSyncFriends(auth.addAccount()))
+  ipcMain.handle(IPC.authSwitch, (_e, uuid: string) => thenSyncFriends(auth.switchAccount(uuid)))
+  ipcMain.handle(IPC.authRemove, (_e, uuid: string) => thenSyncFriends(auth.removeAccount(uuid)))
 
   ipcMain.handle(IPC.instStatus, (_e, id: unknown) => states[assertInstanceId(id)])
   ipcMain.handle(IPC.instInstall, (_e, id: unknown) => installInstance(assertInstanceId(id)))

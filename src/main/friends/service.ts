@@ -183,6 +183,10 @@ export async function resume(): Promise<void> {
   const stored = readSession()
   const url = serverUrl()?.replace(/\/+$/, '')
   if (!stored || !url || stored.url !== url) return
+  if (stored.uuid !== currentUuid()) {
+    disconnect()
+    return
+  }
   session = stored
   connected = true
   start()
@@ -191,6 +195,16 @@ export async function resume(): Promise<void> {
   } catch {
   }
   emit()
+}
+
+function currentUuid(): string | null {
+  return getLaunchToken()?.profile?.id?.replace(/-/g, '').toLowerCase() ?? null
+}
+
+export async function syncAccount(): Promise<FriendsNetState> {
+  if (!currentUuid()) return disconnect()
+  if (session && session.uuid !== currentUuid()) disconnect()
+  return autoConnect()
 }
 
 let autoInflight: Promise<FriendsNetState> | null = null
