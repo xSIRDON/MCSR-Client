@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { AppConfig, InstanceId } from '@shared/types'
 import { MAP_CATALOG, ALL_MAP_IDS } from '@shared/maps'
 import { useInstances } from '../hooks/useInstances'
 
 const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
+
+const GENERATED_WORLD = /^(Random|Set) Speedrun #\d+/i
+const MAX_LISTED_WORLDS = 200
 
 export function InstallMapPicker() {
   const id = useInstances((s) => s.installPrompt)
@@ -40,6 +43,17 @@ export function InstallMapPicker() {
       active = false
     }
   }, [importFrom, importFolder])
+
+  const [showGenerated, setShowGenerated] = useState(false)
+  const [filter, setFilter] = useState('')
+  const generatedCount = useMemo(() => worlds.filter((w) => GENERATED_WORLD.test(w)).length, [worlds])
+  const visibleWorlds = useMemo(() => {
+    const f = filter.trim().toLowerCase()
+    return worlds.filter(
+      (w) => (showGenerated || !GENERATED_WORLD.test(w)) && (!f || w.toLowerCase().includes(f))
+    )
+  }, [worlds, showGenerated, filter])
+  const shownWorlds = visibleWorlds.slice(0, MAX_LISTED_WORLDS)
 
   if (!id) return null
 
@@ -147,7 +161,7 @@ export function InstallMapPicker() {
                 </span>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setPickedWorlds(new Set(worlds))}
+                    onClick={() => setPickedWorlds(new Set(visibleWorlds))}
                     className="text-[11px] text-faint transition-colors hover:text-text"
                   >
                     All
@@ -160,8 +174,37 @@ export function InstallMapPicker() {
                   </button>
                 </div>
               </div>
-              <div className="space-y-0.5 rounded-md border border-[var(--line)] bg-[var(--bg-2)] p-1.5">
-                {worlds.map((w) => (
+              {(worlds.length > 12 || generatedCount > 0) && (
+                <div className="mb-1.5 flex items-center gap-3">
+                  <input
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    placeholder="Filter worlds"
+                    className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--bg-2)] px-2 py-1 text-xs text-text outline-none placeholder:text-faint focus:border-[var(--gold)]/40"
+                  />
+                  {generatedCount > 0 && (
+                    <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] text-faint">
+                      <input
+                        type="checkbox"
+                        checked={showGenerated}
+                        onChange={(e) => setShowGenerated(e.target.checked)}
+                        className="h-3 w-3 accent-[var(--gold)]"
+                      />
+                      Show {generatedCount} generated
+                    </label>
+                  )}
+                </div>
+              )}
+              <div className="max-h-56 space-y-0.5 overflow-y-auto rounded-md border border-[var(--line)] bg-[var(--bg-2)] p-1.5">
+                {shownWorlds.length === 0 && (
+                  <div className="px-2 py-1 text-xs text-faint">No worlds match.</div>
+                )}
+                {visibleWorlds.length > shownWorlds.length && (
+                  <div className="px-2 py-1 text-[11px] text-faint">
+                    Showing {shownWorlds.length} of {visibleWorlds.length} — filter to find others.
+                  </div>
+                )}
+                {shownWorlds.map((w) => (
                   <label
                     key={w}
                     className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs text-text transition-colors hover:bg-white/[0.04]"
