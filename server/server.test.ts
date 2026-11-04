@@ -249,6 +249,21 @@ describe('declined requests', () => {
     expect(bobList.json.incoming).toHaveLength(0)
     const aliceList = await api(s.base, alice, 'GET', '/v1/friends')
     expect(aliceList.json.outgoing).toHaveLength(0)
+
+    const del = await api(s.base, alice, 'DELETE', `/v1/friends/${U.bob}`)
+    expect(del.status).toBe(204)
+    await api(s.base, alice, 'POST', '/v1/friends/requests', { to: U.bob, nickname: '' })
+    bobList = await api(s.base, bob, 'GET', '/v1/friends')
+    expect(bobList.json.incoming).toHaveLength(0)
+  })
+
+  it('a non-object JSON body is a clean 400, not a crash', async () => {
+    const res = await fetch(`${s.base}/v1/auth/handshake`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: 'null'
+    })
+    expect(res.status).toBe(400)
   })
 
   it('the decliner can reopen the pair, and it can then be accepted', async () => {

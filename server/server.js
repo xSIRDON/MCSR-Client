@@ -1,5 +1,5 @@
 import { createServer } from 'node:http'
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { DatabaseSync } from 'node:sqlite'
 
 const SECRET = process.env.SERVER_SECRET
@@ -145,6 +145,7 @@ function limited(key, max, windowS = 60) {
   const t = nowS()
   const cur = buckets.get(key)
   if (!cur || t - cur[0] >= windowS) {
+    if (!cur && buckets.size >= 200_000) return true
     buckets.set(key, [t, 1])
     return false
   }
@@ -170,7 +171,8 @@ async function readJson(req) {
     chunks.push(chunk)
   }
   if (size === 0) return {}
-  return JSON.parse(Buffer.concat(chunks).toString('utf8'))
+  const body = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+  return body && typeof body === 'object' && !Array.isArray(body) ? body : {}
 }
 
 function send(res, status, body) {
@@ -188,10 +190,18 @@ async function hasJoined(username, serverId) {
   const url = `https://sessionserver.mojang.com/session/minecraft/hasJoined?username=${encodeURIComponent(
     username
   )}&serverId=${encodeURIComponent(serverId)}`
-  const res = await fetch(url)
-  if (res.status !== 200) return null
-  const body = await res.json()
-  return body && typeof body.id === 'string' ? { uuid: normUuid(body.id), name: body.name } : null
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    if (res.status !== 200) return null
+    const body = await res.json()
+    return body && typeof body.id === 'string' ? { uuid: normUuid(body.id), name: body.name } : null
+  } catch {
+    return null
+  }
+}
+
+function joinIdFor(serverId) {
+  return createHash('sha1').update(`mcsr-friends-v1:${serverId}`).digest('hex')
 }
 
 async function route(req, res) {
@@ -210,6 +220,7 @@ async function route(req, res) {
     const { uuid } = await readJson(req)
     const id = normUuid(uuid)
     if (!isUuid(id)) return send(res, 400, { error: 'bad uuid' })
+    if (nonces.size >= 50_000) return send(res, 429, { error: 'slow down' })
     const serverId = randomBytes(20).toString('hex')
     nonces.set(serverId, { uuid: id, exp: nowS() + 120 })
     return send(res, 200, { serverId })
@@ -225,7 +236,9 @@ async function route(req, res) {
 
     let proven = { uuid: id, name: String(username ?? '') }
     if (!DEV_UNVERIFIED) {
-      const joined = await hasJoined(String(username ?? ''), String(serverId))
+      const name = String(username ?? '')
+      const joined =
+        (await hasJoined(name, joinIdFor(String(serverId)))) ?? (await hasJoined(name, String(serverId)))
       if (!joined || joined.uuid !== id) return send(res, 401, { error: 'mojang verification failed' })
       proven = joined
     }
@@ -300,6 +313,8 @@ async function route(req, res) {
   const delMatch = path.match(/^\/v1\/friends\/([0-9a-f]{32})$/)
   if (delMatch && req.method === 'DELETE') {
     const [a, b] = pairKey(me, delMatch[1])
+    const existing = q.pair.get(a, b)
+    if (existing?.status === 'declined' && existing.requested_by === me) return send(res, 204)
     q.deletePair.run(a, b)
     return send(res, 204)
   }

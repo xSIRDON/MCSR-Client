@@ -3,6 +3,7 @@ import { store } from '../store'
 import { paths } from '../paths'
 import { getLaunchToken } from '../auth/msmc-auth'
 import { nextReceiptBatch } from './receipt-batch'
+import { friendsJoinId } from './join-id'
 import { DEFAULT_FRIENDS_SERVER } from '../../shared/types'
 import type {
   FriendsNetState,
@@ -127,12 +128,15 @@ export async function connect(): Promise<FriendsNetState> {
       body: JSON.stringify({ uuid: profileId })
     })
     if (!hs.ok) throw new Error(`Handshake failed (${hs.status}).`)
-    const { serverId } = (await hs.json()) as { serverId: string }
+    const { serverId } = (await hs.json()) as { serverId: unknown }
+    if (typeof serverId !== 'string' || !/^[0-9a-f]{40}$/.test(serverId)) {
+      throw new Error('Handshake failed (bad response).')
+    }
 
     const join = await fetchT('https://sessionserver.mojang.com/session/minecraft/join', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ accessToken, selectedProfile: profileId, serverId })
+      body: JSON.stringify({ accessToken, selectedProfile: profileId, serverId: friendsJoinId(serverId) })
     })
     if (join.status !== 204 && !join.ok) throw new Error(`Mojang join failed (${join.status}).`)
 
