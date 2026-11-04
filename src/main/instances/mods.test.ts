@@ -331,7 +331,7 @@ describe('upgradeInstalledMods', () => {
   const upgrade = {
     replaces: 'mods/hermes-0.12.5+MC1.16.1.jar',
     path: 'mods/hermes-0.15.1+MC1.16.1.jar',
-    urls: ['https://github.com/x/hermes-0.15.1+MC1.16.1.jar'],
+    urls: ['https://github.com/Minecraft-Java-Edition-Speedrunning/legal-mods/raw/x/hermes-0.15.1+MC1.16.1.jar'],
     sha512: createHash('sha512').update(body).digest('hex')
   }
 

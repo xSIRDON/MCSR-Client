@@ -123,7 +123,9 @@ describe('assertTrustedDownloadUrl', () => {
       )
     ).not.toThrow()
     expect(() =>
-      assertTrustedDownloadUrl('https://raw.githubusercontent.com/x/legal-mods/abc/mod.jar')
+      assertTrustedDownloadUrl(
+        'https://raw.githubusercontent.com/Minecraft-Java-Edition-Speedrunning/legal-mods/abc/mod.jar'
+      )
     ).not.toThrow()
     expect(() =>
       assertTrustedDownloadUrl('https://objects.githubusercontent.com/github-production-release/x')
@@ -131,6 +133,13 @@ describe('assertTrustedDownloadUrl', () => {
     expect(() =>
       assertTrustedDownloadUrl('https://release-assets.githubusercontent.com/x')
     ).not.toThrow()
+  })
+
+  it('refuses GitHub files outside the speedrunning org', () => {
+    expect(() => assertTrustedDownloadUrl('https://github.com/attacker/mods/raw/main/x.jar')).toThrow(/untrusted/i)
+    expect(() =>
+      assertTrustedDownloadUrl('https://raw.githubusercontent.com/attacker/legal-mods/main/x.jar')
+    ).toThrow(/untrusted/i)
   })
 
   it('refuses plain http even on a trusted host', () => {
@@ -234,7 +243,7 @@ describe('installPackFiles URL containment', () => {
             {
               replaces: 'mods/hermes-0.12.5+MC1.16.1.jar',
               path: 'mods/hermes-0.15.1+MC1.16.1.jar',
-              urls: ['https://github.com/new'],
+              urls: ['https://github.com/Minecraft-Java-Edition-Speedrunning/legal-mods/raw/new'],
               sha512
             }
           ],
@@ -244,7 +253,7 @@ describe('installPackFiles URL containment', () => {
           }
         }
       )
-      expect(fetched).toEqual(['https://github.com/new'])
+      expect(fetched).toEqual(['https://github.com/Minecraft-Java-Edition-Speedrunning/legal-mods/raw/new'])
       expect(written).toEqual(['mods/hermes-0.15.1+MC1.16.1.jar'])
     } finally {
       rmSync(dir, { recursive: true, force: true })

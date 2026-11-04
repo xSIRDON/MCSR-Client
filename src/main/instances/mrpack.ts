@@ -29,8 +29,14 @@ export function assertTrustedDownloadUrl(url: string): string {
   if (u.protocol !== 'https:' || !TRUSTED_DOWNLOAD_HOSTS.has(u.hostname)) {
     throw new Error(`Refusing untrusted download URL: ${url}`)
   }
+  if (GITHUB_PATH_HOSTS.has(u.hostname) && !u.pathname.startsWith(`/${TRUSTED_GITHUB_OWNER}/`)) {
+    throw new Error(`Refusing untrusted download URL: ${url}`)
+  }
   return url
 }
+
+const TRUSTED_GITHUB_OWNER = 'Minecraft-Java-Edition-Speedrunning'
+const GITHUB_PATH_HOSTS: ReadonlySet<string> = new Set(['github.com', 'raw.githubusercontent.com'])
 
 export interface PackFile {
   path: string
