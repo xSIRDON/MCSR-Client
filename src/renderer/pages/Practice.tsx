@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useUi } from '../store/uiStore'
 import { mcsr } from '../lib/clients'
@@ -33,19 +33,24 @@ export function Practice() {
   const profile = useUi((s) => s.profile)
   const [filters, setFilters] = useState<PracticeFilters>(DEFAULT_PRACTICE_FILTERS)
   const [runnerName, setRunnerName] = useState('')
+  const [lookupName, setLookupName] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => setLookupName(runnerName.trim()), 400)
+    return () => clearTimeout(t)
+  }, [runnerName])
 
   const {
     data: runner,
     isPending: runnerPending,
     isError: runnerMissing
   } = useQuery({
-    queryKey: ['user', runnerName],
-    queryFn: () => mcsr.getUser(runnerName),
-    enabled: runnerName.trim().length > 1,
+    queryKey: ['user', lookupName],
+    queryFn: () => mcsr.getUser(lookupName),
+    enabled: lookupName.length > 1,
     retry: false
   })
   const typingRunner = runnerName.trim().length > 1
-  const runnerUuid = typingRunner ? (runner?.uuid ?? null) : null
+  const runnerUuid = typingRunner && lookupName === runnerName.trim() ? (runner?.uuid ?? null) : null
   const effective = useMemo<PracticeFilters>(() => ({ ...filters, runnerUuid }), [filters, runnerUuid])
 
   const { counts, seeds, draw, drawing, error, clear } = usePractice(effective)
@@ -122,7 +127,10 @@ export function Practice() {
             <PlayerAutocomplete
               value={runnerName}
               onChange={setRunnerName}
-              onSubmit={(name) => setRunnerName(name.trim())}
+              onSubmit={(name) => {
+                setRunnerName(name.trim())
+                setLookupName(name.trim())
+              }}
               placeholder="Anyone in their collection"
               className="w-full rounded-lg border border-[var(--line)] bg-[var(--bg-2)] px-3 py-1.5 text-xs text-text outline-none transition-colors placeholder:text-faint focus:border-[var(--gold)]/40"
             />
