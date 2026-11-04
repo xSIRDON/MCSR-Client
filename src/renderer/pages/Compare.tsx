@@ -306,7 +306,7 @@ function HeadToHead({ a, b }: { a: Side; b: Side }) {
       { label: 'Win rate', a: rate(a), b: rate(b), fmt: (v) => `${v}%`, better: 'high', requireSample: true },
       { label: 'Games played', a: a.user ? a.head.played : null, b: b.user ? b.head.played : null, fmt: String, better: 'high' },
       { label: 'Best time', a: a.head.bestTime, b: b.head.bestTime, fmt: msToTime, better: 'low' },
-      { label: 'Avg win', a: a.head.averageWin, b: b.head.averageWin, fmt: msToTime, better: 'low', requireSample: true },
+      { label: 'Average', a: a.head.averageWin, b: b.head.averageWin, fmt: msToTime, better: 'low', requireSample: true },
       { label: 'Best win streak', a: a.user ? a.head.bestStreak : null, b: b.user ? b.head.bestStreak : null, fmt: String, better: 'high' },
       { label: 'RSG PB · paceman', a: a.rsgPb?.finish ?? null, b: b.rsgPb?.finish ?? null, fmt: msToTime, better: 'low' }
     ]

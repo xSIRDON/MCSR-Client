@@ -95,7 +95,7 @@ export function usePlayerAnalytics(uuid: string | null | undefined, season?: Sea
     bestStreak: useSeason ? seasonStats.bestStreak : analytics.bestWinStreak,
     elo,
     netElo: analytics.netElo,
-    averageWin: analytics.averageWin
+    averageWin: (useSeason && seasonStats.averageTime) || analytics.averageWin
   }
 
   const seasonDecided = seasonStats.wins + seasonStats.loses

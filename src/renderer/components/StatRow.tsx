@@ -38,9 +38,9 @@ export function StatRow({ head, scope = 'season' }: { head: HeadStats; scope?: '
         delay={110}
       />
       <StatTile
-        label="Avg Win"
+        label="Average"
         value={head.averageWin != null ? msToTime(head.averageWin) : '—'}
-        hint="recent completions"
+        hint={scope === 'total' ? 'career average' : 'season average'}
         delay={140}
       />
       <StatTile
