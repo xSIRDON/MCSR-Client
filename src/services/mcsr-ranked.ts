@@ -204,6 +204,7 @@ export interface MatchesOpts {
   type?: number
   count?: number
   page?: number
+  before?: number
   season?: number
 }
 
@@ -228,6 +229,7 @@ export function createMcsrClient(fetchImpl: FetchLike, base = MCSR_BASE) {
           type: opts.type,
           count: opts.count,
           page: opts.page,
+          before: opts.before,
           season: opts.season
         })}`
       )

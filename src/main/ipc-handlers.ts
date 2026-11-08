@@ -54,6 +54,7 @@ import { copyInstanceSettings, resolveGameDir, listWorlds } from './instances/co
 import { formatBytes, type CopyProgress } from './instances/copy-tree'
 import { makeLineScrubber } from './line-scrub'
 import { getSkin } from './skins'
+import { getCachedMatch, putCachedMatch } from './match-cache'
 import { checkForUpdates, currentUpdateStatus, quitAndInstall } from './updater'
 import { setupNinjabrain, launchNinjabrain, killNinjabrain } from './tools/ninjabrain'
 import { ensureToolscreenJar, spawnToolscreenWatcher } from './tools/toolscreen'
@@ -780,6 +781,8 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.skinGet, (_e, idOrUuid: string, size: number, kind: 'avatar' | 'body') =>
     getSkin(idOrUuid, size, kind)
   )
+  ipcMain.handle(IPC.matchCacheGet, (_e, id: unknown) => getCachedMatch(id))
+  ipcMain.handle(IPC.matchCachePut, (_e, id: unknown, match: unknown) => putCachedMatch(id, match))
   ipcMain.handle(IPC.gapcheckCounts, (_e, filters: unknown) => gapcheck.counts(asGapCheckFilters(filters)))
   ipcMain.handle(IPC.gapcheckSeed, (_e, filters: unknown) => gapcheck.randomSeed(asGapCheckFilters(filters)))
   ipcMain.handle(IPC.sysJava, async () => ({ ...(await detectJava()), bundled: gmll.managedJavaOnDisk() }))

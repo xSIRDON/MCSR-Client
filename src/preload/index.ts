@@ -125,6 +125,10 @@ const api: McsrApi = {
   skins: {
     get: (idOrUuid: string, size: number, kind: 'avatar' | 'body') =>
       ipcRenderer.invoke(IPC.skinGet, idOrUuid, size, kind)
+  },
+  matchCache: {
+    get: (id: number) => ipcRenderer.invoke(IPC.matchCacheGet, id),
+    put: (id: number, match: unknown) => ipcRenderer.invoke(IPC.matchCachePut, id, match)
   }
 }
 

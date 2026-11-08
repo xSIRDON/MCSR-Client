@@ -87,7 +87,9 @@ export const IPC = {
   cfgPickJar: 'cfg:pickJar',
   cfgPickJava: 'cfg:pickJava',
   cfgPickFolder: 'cfg:pickFolder',
-  skinGet: 'skin:get'
+  skinGet: 'skin:get',
+  matchCacheGet: 'matchCache:get',
+  matchCachePut: 'matchCache:put'
 } as const
 
 export interface McsrApi {
@@ -193,6 +195,10 @@ export interface McsrApi {
   }
   skins: {
     get(idOrUuid: string, size: number, kind: 'avatar' | 'body'): Promise<string | null>
+  }
+  matchCache: {
+    get(id: number): Promise<unknown | null>
+    put(id: number, match: unknown): Promise<void>
   }
 }
 
