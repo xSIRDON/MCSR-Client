@@ -12,7 +12,7 @@ import {
   type SplitAnalysis
 } from '@core/run-analysis'
 import { msToTime } from '@core/format'
-import { POOL_PLAYERS, POOL_SEASON, shareBeaten, tierName, type CompareTo } from '../lib/baseline'
+import { eloEquivalent, POOL_PLAYERS, POOL_SEASON, shareBeaten, tierName, type CompareTo } from '../lib/baseline'
 import { RunPerformanceCard, type PerfItem } from './RunPerformanceCard'
 
 const SPLIT_SHORT: Record<string, string> = {
@@ -126,9 +126,11 @@ const pct1 = (x: number): string => `${(x * 100).toFixed(1)}%`
 export function SeasonStandingCard({ s, compareTo }: { s: StandingInput; compareTo: CompareTo }) {
   const ffl = s.losses > 0 ? s.forfeits / s.losses : 0
   const comp = s.played > 0 ? s.completions / s.played : 0
-  const tiles: { label: string; value: string; share: number | null; hint: string }[] = [
-    { label: 'Season Best', value: msToTime(s.bestTime), share: shareBeaten(s.bestTime, 'stats', 'sb', true, compareTo), hint: 'Your fastest completion this season.' },
-    { label: 'Avg Finish', value: msToTime(s.averageTime), share: shareBeaten(s.averageTime, 'stats', 'avg', true, compareTo), hint: 'Mean of every completion this season, no outliers removed.' },
+  const sbElo = eloEquivalent('sb', s.bestTime)
+  const avgElo = eloEquivalent('avg', s.averageTime)
+  const tiles: { label: string; value: string; share: number | null; hint: string; extra?: string }[] = [
+    { label: 'Season Best', value: msToTime(s.bestTime), share: shareBeaten(s.bestTime, 'stats', 'sb', true, compareTo), hint: 'Your fastest completion this season.', extra: sbElo != null ? `≈ ${sbElo} Elo` : undefined },
+    { label: 'Avg Finish', value: msToTime(s.averageTime), share: shareBeaten(s.averageTime, 'stats', 'avg', true, compareTo), hint: 'Mean of every completion this season, no outliers removed.', extra: avgElo != null ? `≈ ${avgElo} Elo` : undefined },
     { label: 'Elo', value: s.elo != null ? String(s.elo) : '—', share: shareBeaten(s.elo, 'stats', 'elo', false, compareTo), hint: 'Current season rating.' },
     { label: 'Forfeit / Loss', value: pct1(ffl), share: s.losses > 0 ? shareBeaten(ffl, 'stats', 'ffl', true, compareTo) : null, hint: 'Forfeits as a share of losses: how often you give up rather than play it out.' },
     { label: 'Completion Rate', value: pct1(comp), share: s.completions > 0 ? shareBeaten(comp, 'stats', 'comprate', false, compareTo) : null, hint: 'Games finished, out of games played.' },
@@ -152,6 +154,7 @@ export function SeasonStandingCard({ s, compareTo }: { s: StandingInput; compare
             <div className="tnum font-display text-base text-text">{t.value}</div>
             <div className="text-[11px]" style={{ color: t.share == null ? 'var(--faint)' : t.share >= 0.5 ? '#5fd38d' : '#e2706e' }}>
               {t.share == null ? '—' : topLabel(t.share)}
+              {t.extra && <span className="ml-1.5 text-faint">{t.extra}</span>}
             </div>
           </div>
         ))}

@@ -7,6 +7,7 @@ const PB = splitBaseline as unknown as {
   ow?: Tables
   bastion?: Tables
   stats?: Tables
+  eloFor?: Record<'avg' | 'sb', [number, number][]>
   players?: number
   season?: number
 }
@@ -56,6 +57,18 @@ export function shareBeaten(
   if (value == null || !t || t.length < 2) return null
   const below = fractionBelow(value, t)
   return Math.round((lowerIsBetter ? 1 - below : below) * 1000) / 1000
+}
+
+export function eloEquivalent(kind: 'avg' | 'sb', ms: number | null): number | null {
+  const curve = PB.eloFor?.[kind]
+  if (ms == null || !curve || curve.length < 2) return null
+  if (ms <= curve[0][0]) return curve[0][1]
+  const last = curve[curve.length - 1]
+  if (ms >= last[0]) return last[1]
+  const i = curve.findIndex(([v]) => v >= ms)
+  const [v0, e0] = curve[i - 1]
+  const [v1, e1] = curve[i]
+  return Math.round(e0 + ((ms - v0) / (v1 - v0 || 1)) * (e1 - e0))
 }
 
 export function nextTierAbove(
