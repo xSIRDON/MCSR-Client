@@ -617,6 +617,10 @@ export function scorecardInsights(
 
 export type SplitBaselineBucket = Record<string, number[]>
 
+export function tableMedian(table: number[]): number {
+  return table[Math.floor((table.length - 1) / 2)]
+}
+
 export interface SplitPerf {
   key: string
   label: string
@@ -959,8 +963,8 @@ export function splitCallouts(
     for (const p of perf) {
       const seg = segs[p.key]
       const arr = nextTier.bucket[p.key]
-      if (!seg || !arr || arr.length < 51) continue
-      const gap = seg.avg - arr[50]
+      if (!seg || !arr || arr.length < 3) continue
+      const gap = seg.avg - tableMedian(arr)
       if (gap > 0 && (!focus || gap > focus.gap)) focus = { label: p.label, gap }
     }
     if (focus) {

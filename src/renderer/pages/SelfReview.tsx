@@ -10,7 +10,7 @@ import {
   YAxis
 } from 'recharts'
 import { useUi } from '../store/uiStore'
-import { analyzeRanked, analyzeSplits, scorecardInsights, splitCallouts } from '@core/ranked-analytics'
+import { analyzeRanked, analyzeSplits, scorecardInsights, splitCallouts, tableMedian } from '@core/ranked-analytics'
 import type { RankedInsight, SplitPerf, SplitStat } from '@core/ranked-analytics'
 import { msToTime } from '@core/format'
 import { DEFAULT_SELECTION, usePlayerAnalytics } from '../hooks/usePlayerAnalytics'
@@ -193,9 +193,9 @@ function TargetSplitsGrid({
   const targets = useMemo(() => {
     if (!nextTier) return []
     return perf
-      .filter((p) => p.ms != null && (nextTier.bucket[p.key]?.length ?? 0) >= 51)
+      .filter((p) => p.ms != null && (nextTier.bucket[p.key]?.length ?? 0) >= 3)
       .map((p) => {
-        const target = nextTier.bucket[p.key][50]
+        const target = tableMedian(nextTier.bucket[p.key])
         return { key: p.key, label: p.label, yours: p.ms as number, target, delta: (p.ms as number) - target }
       })
   }, [perf, nextTier])
