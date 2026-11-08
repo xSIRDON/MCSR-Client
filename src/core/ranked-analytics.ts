@@ -1,5 +1,6 @@
 import type { MatchInfo, TimelineEvent } from '@services/mcsr-ranked'
 import { msToTime } from './format'
+import { analyzeSplitRuns, RUN_SPLITS, topLabel } from './run-analysis'
 
 export interface RankedInsight {
   kind: 'strength' | 'weakness' | 'note'
@@ -483,165 +484,6 @@ export function seedStructureLabel(code: string | null | undefined): string {
     .join(' ')
 }
 
-export interface TypeStat {
-  key: string
-  label: string
-  count: number
-  decided: number
-  wins: number
-  winRate: number | null
-  best: number | null
-  average: number | null
-  timeSample: number
-}
-
-export interface TypeBreakdown {
-  dimension: 'overworld' | 'bastion'
-  splitLabel: string
-  rows: TypeStat[]
-}
-
-const OVERWORLD_TYPES: { key: string; label: string }[] = [
-  { key: 'VILLAGE', label: 'Village' },
-  { key: 'SHIPWRECK', label: 'Shipwreck' },
-  { key: 'RUINED_PORTAL', label: 'Ruined Portal' },
-  { key: 'DESERT_TEMPLE', label: 'Desert Temple' },
-  { key: 'BURIED_TREASURE', label: 'Buried Treasure' }
-]
-
-const BASTION_TYPES: { key: string; label: string }[] = [
-  { key: 'HOUSING', label: 'Housing' },
-  { key: 'TREASURE', label: 'Treasure' },
-  { key: 'STABLES', label: 'Stables' },
-  { key: 'BRIDGE', label: 'Bridge' }
-]
-
-function normalizeType(v: string | null | undefined): string | null {
-  if (typeof v !== 'string') return null
-  const k = v.trim().toUpperCase()
-  return k && k !== 'NONE' ? k : null
-}
-
-function pickType(...candidates: (string | null | undefined)[]): string | null {
-  for (const c of candidates) {
-    const k = normalizeType(c)
-    if (k) return k
-  }
-  return null
-}
-
-function prettyType(key: string): string {
-  return key
-    .toLowerCase()
-    .split('_')
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ')
-}
-
-function earliestEvent(uuid: string, m: MatchInfo, type: string): number | null {
-  const tl = m.timelines
-  if (!Array.isArray(tl)) return null
-  let earliest: number | null = null
-  for (const e of tl) {
-    if (e && e.uuid === uuid && e.type === type && typeof e.time === 'number' && e.time > 0) {
-      if (earliest == null || e.time < earliest) earliest = e.time
-    }
-  }
-  return earliest
-}
-
-function buildBreakdown(
-  uuid: string,
-  matches: MatchInfo[],
-  details: MatchInfo[],
-  dimension: 'overworld' | 'bastion',
-  splitLabel: string,
-  eventType: string,
-  types: { key: string; label: string }[],
-  typeKey: (m: MatchInfo) => string | null
-): TypeBreakdown {
-  const labelByKey: Record<string, string> = {}
-  for (const t of types) labelByKey[t.key] = t.label
-
-  const agg: Record<string, { count: number; decided: number; wins: number }> = {}
-  const ensure = (k: string) => (agg[k] ??= { count: 0, decided: 0, wins: 0 })
-
-  const rankedMatches = Array.isArray(matches) ? matches.filter((m) => m && m.type === 2) : []
-  for (const m of rankedMatches) {
-    const key = typeKey(m)
-    if (!key) continue
-    const a = ensure(key)
-    a.count++
-    const outcome = outcomeFor(uuid, m)
-    if (outcome === 'win') {
-      a.decided++
-      a.wins++
-    } else if (outcome === 'loss') {
-      a.decided++
-    }
-  }
-
-  const times: Record<string, number[]> = {}
-  const rankedDetails = Array.isArray(details) ? details.filter((m) => m && m.type === 2) : []
-  for (const m of rankedDetails) {
-    const key = typeKey(m)
-    if (!key) continue
-    const t = earliestEvent(uuid, m, eventType)
-    if (t != null) (times[key] ??= []).push(t)
-  }
-
-  const keys = new Set<string>([...types.map((t) => t.key), ...Object.keys(agg), ...Object.keys(times)])
-  const rows: TypeStat[] = [...keys].map((key) => {
-    const a = agg[key] ?? { count: 0, decided: 0, wins: 0 }
-    const ts = times[key] ?? []
-    return {
-      key,
-      label: labelByKey[key] ?? prettyType(key),
-      count: a.count,
-      decided: a.decided,
-      wins: a.wins,
-      winRate: a.decided > 0 ? pct(a.wins, a.decided) : null,
-      best: ts.length ? Math.min(...ts) : null,
-      average: ts.length ? Math.round(ts.reduce((x, y) => x + y, 0) / ts.length) : null,
-      timeSample: ts.length
-    }
-  })
-  rows.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
-
-  return { dimension, splitLabel, rows }
-}
-
-export function analyzeTypeBreakdowns(
-  uuid: string,
-  matches: MatchInfo[],
-  details: MatchInfo[]
-): { overworld: TypeBreakdown; bastion: TypeBreakdown } {
-  uuid = uuid.toLowerCase()
-  return {
-    overworld: buildBreakdown(
-      uuid,
-      matches,
-      details,
-      'overworld',
-      'Overworld',
-      'story.enter_the_nether',
-      OVERWORLD_TYPES,
-      (m) => pickType(m.seedType, m.seed?.overworld)
-    ),
-    bastion: buildBreakdown(
-      uuid,
-      matches,
-      details,
-      'bastion',
-      'Bastion',
-      'nether.find_bastion',
-      BASTION_TYPES,
-      (m) => pickType(m.bastionType, m.seed?.nether)
-    )
-  }
-}
-
 const REAL_DEATH_EVENT = 'projectelo.timeline.death'
 
 export interface DeathStats {
@@ -794,55 +636,16 @@ const SPLIT_SEGMENTS: { key: string; label: string }[] = [
   { key: 'end', label: 'The End' }
 ]
 
-const M_NETHER = 'story.enter_the_nether'
-const M_BASTION = 'nether.find_bastion'
-const M_FORTRESS = 'nether.find_fortress'
-const M_BLIND = 'projectelo.timeline.blind_travel'
-const M_STRONGHOLD = 'story.follow_ender_eye'
-const M_END = 'story.enter_the_end'
-
-function matchSegments(uuid: string, m: MatchInfo): Record<string, number> {
-  const t = (ev: string): number | null => earliestEvent(uuid, m, ev)
-  const nether = t(M_NETHER)
-  const bastion = t(M_BASTION)
-  const fortress = t(M_FORTRESS)
-  const blind = t(M_BLIND)
-  const stronghold = t(M_STRONGHOLD)
-  const end = t(M_END)
-  const won = m.result?.uuid === uuid
-  const finish = won && !m.forfeited && typeof m.result?.time === 'number' ? m.result.time : null
-  const out: Record<string, number> = {}
-  const seg = (key: string, a: number | null, b: number | null): void => {
-    if (a != null && b != null && b > a) out[key] = b - a
-  }
-  if (nether != null && nether > 0) out.overworld = nether
-  seg('nether', nether, bastion)
-  seg('bastion', bastion, fortress)
-  seg('fortress', fortress, blind)
-  seg('blind', blind, stronghold)
-  seg('stronghold', stronghold, end)
-  seg('end', end, finish)
-  return out
-}
-
 export function playerSegments(
   uuid: string,
   details: MatchInfo[]
 ): Record<string, { avg: number; count: number }> {
-  const me = uuid.toLowerCase()
-  const list = Array.isArray(details)
-    ? details.filter((m) => m && m.type === 2 && Array.isArray(m.timelines))
-    : []
-  const acc: Record<string, number[]> = {}
-  for (const m of list) {
-    for (const [k, v] of Object.entries(matchSegments(me, m))) (acc[k] ??= []).push(v)
-  }
+  const list = Array.isArray(details) ? details.filter((m) => m && m.type === 2) : []
+  const a = analyzeSplitRuns(uuid, list)
   const out: Record<string, { avg: number; count: number }> = {}
-  for (const { key } of SPLIT_SEGMENTS) {
-    const arr = acc[key]
-    if (arr && arr.length) {
-      out[key] = { avg: Math.round(arr.reduce((a, b) => a + b, 0) / arr.length), count: arr.length }
-    }
+  for (const k of RUN_SPLITS) {
+    const avg = a.self.avg[k]
+    if (avg != null) out[k === 'ow' ? 'overworld' : k] = { avg, count: a.self.count[k] }
   }
   return out
 }
@@ -877,95 +680,8 @@ export function splitPerformance(
     }
     const f = fasterFraction(p.avg, arr)
     const score = clamp100((1 - f) * 100)
-    const pctLabel = f <= 0.5 ? `Top ${pctText(f * 100)}` : `Bottom ${pctText((1 - f) * 100)}`
-    return { key, label, ms: p.avg, score, pctLabel, sample: p.count }
+    return { key, label, ms: p.avg, score, pctLabel: topLabel(1 - f), sample: p.count }
   })
-}
-
-export function pctText(share: number): string {
-  return share < 10.05 ? `${Math.max(0.1, Math.round(share * 10) / 10).toFixed(1)}%` : `${Math.round(share)}%`
-}
-
-export function strongestWeakest(
-  perf: SplitPerf[],
-  minSample = 3
-): { strongest: SplitPerf; weakest: SplitPerf } | null {
-  const rated = perf.filter((p) => p.score != null && p.sample >= minSample)
-  if (rated.length < 2) return null
-  const by = [...rated].sort((a, b) => (b.score as number) - (a.score as number))
-  return { strongest: by[0], weakest: by[by.length - 1] }
-}
-
-export interface SplitBreakdownRow {
-  key: string
-  label: string
-  reached: number
-  started: number
-  deaths: number
-  deathRate: number | null
-  oppDeaths: number
-  oppDeathRate: number | null
-}
-
-export interface SplitBreakdown {
-  games: number
-  completions: number
-  rows: SplitBreakdownRow[]
-}
-
-function routeMarks(uuid: string, m: MatchInfo): (number | null)[] {
-  const won = m.result?.uuid === uuid && !m.forfeited
-  const finish = won && typeof m.result?.time === 'number' ? m.result.time : null
-  const marks = [M_NETHER, M_BASTION, M_FORTRESS, M_BLIND, M_STRONGHOLD, M_END].map((ev) =>
-    earliestEvent(uuid, m, ev)
-  )
-  return [0, ...marks, finish]
-}
-
-export function splitBreakdown(uuid: string, details: MatchInfo[]): SplitBreakdown {
-  const me = uuid.toLowerCase()
-  const list = Array.isArray(details)
-    ? details.filter((m) => m && m.type === 2 && Array.isArray(m.timelines))
-    : []
-  const n = SPLIT_SEGMENTS.length
-  const tally = () => ({ started: new Array(n).fill(0), reached: new Array(n).fill(0), deaths: new Array(n).fill(0) })
-  const mine = tally()
-  const opp = tally()
-  let completions = 0
-  const add = (who: string, m: MatchInfo, into: ReturnType<typeof tally>): boolean => {
-    const marks = routeMarks(who, m)
-    for (let k = 0; k < n; k++) {
-      if (marks[k] != null) into.started[k]++
-      if (marks[k + 1] != null) into.reached[k]++
-    }
-    for (const e of m.timelines!) {
-      if (!e || typeof e.uuid !== 'string' || e.uuid.toLowerCase() !== who || e.type !== REAL_DEATH_EVENT) continue
-      let k = 0
-      for (let i = 1; i < n; i++) if (marks[i] != null && (marks[i] as number) <= e.time) k = i
-      into.deaths[k]++
-    }
-    return marks[n] != null
-  }
-  for (const m of list) {
-    if (add(me, m, mine)) completions++
-    const other = m.players?.find((p) => p.uuid.toLowerCase() !== me)
-    if (other) add(other.uuid.toLowerCase(), m, opp)
-  }
-  const rate = (d: number, s: number): number | null => (s > 0 ? d / s : null)
-  return {
-    games: list.length,
-    completions,
-    rows: SPLIT_SEGMENTS.map(({ key, label }, k) => ({
-      key,
-      label,
-      reached: mine.reached[k],
-      started: mine.started[k],
-      deaths: mine.deaths[k],
-      deathRate: rate(mine.deaths[k], mine.started[k]),
-      oppDeaths: opp.deaths[k],
-      oppDeathRate: rate(opp.deaths[k], opp.started[k])
-    }))
-  }
 }
 
 export function speedFromPerf(perf: SplitPerf[]): { score: number; sample: number } | null {
