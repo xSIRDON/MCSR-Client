@@ -9,7 +9,7 @@ import { MatchFeed } from '../components/MatchFeed'
 import { RsgStats } from '../components/RsgStats'
 import { PlayerSearch } from '../components/PlayerSearch'
 import { PlayStyleRadar } from '../components/PlayStyleRadar'
-import { SplitPerformanceRadar } from '../components/SplitPerformanceRadar'
+import { SplitRunsCard } from '../components/RunAnalysis'
 import { SeasonPicker } from '../components/SeasonPicker'
 import { usePlayerAnalytics } from '../hooks/usePlayerAnalytics'
 import type { SeasonSel } from '../hooks/usePlayerAnalytics'
@@ -98,19 +98,12 @@ export function Profile() {
 }
 
 function ProfileAnalytics({ uuid, season }: { uuid: string; season?: SeasonSel }) {
-  const { scorecard, details, rank, detailsLoading, hasData } = usePlayerAnalytics(uuid, season)
+  const { scorecard, runs, detailsLoading, hasData } = usePlayerAnalytics(uuid, season)
   if (!hasData) return null
   return (
     <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(360px,1fr))]">
       <PlayStyleRadar dims={scorecard} delay={110} />
-      <SplitPerformanceRadar
-        uuid={uuid}
-        details={details}
-        tierKey={rank.tier.toLowerCase()}
-        tierLabel={rank.tier}
-        loading={detailsLoading}
-        delay={130}
-      />
+      <SplitRunsCard a={runs.splits} compareTo="world" loading={detailsLoading} />
     </div>
   )
 }

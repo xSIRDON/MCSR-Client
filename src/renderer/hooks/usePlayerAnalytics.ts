@@ -13,6 +13,8 @@ import { rankedStats } from '@services/mcsr-ranked'
 import type { MatchInfo } from '@services/mcsr-ranked'
 import { eloToRank } from '@core/rank'
 import { WORLD_BUCKET } from '../lib/baseline'
+import { matchDetail } from '../lib/match-detail'
+import { analyzeBastions, analyzeOverworlds, analyzeSplitRuns, clutchStats } from '@core/run-analysis'
 
 export interface HeadStats {
   wins: number
@@ -47,7 +49,27 @@ function combineDetails(results: UseQueryResult<MatchInfo>[]): {
   }
 }
 
-export function usePlayerAnalytics(uuid: string | null | undefined, season?: SeasonSel) {
+export const SELECTIONS = [50, 100, 300, 1000] as const
+export type Selection = (typeof SELECTIONS)[number]
+export const DEFAULT_SELECTION: Selection = 300
+
+async function seasonMatches(uuid: string, season: number | undefined, limit: number): Promise<MatchInfo[]> {
+  const out: MatchInfo[] = []
+  let before: number | undefined
+  while (out.length < limit) {
+    const page = await mcsr.getMatches(uuid, { type: 2, count: 100, season, before })
+    out.push(...page.filter((m) => !m.decayed))
+    if (page.length < 100) break
+    before = page[page.length - 1].id
+  }
+  return out.slice(0, limit)
+}
+
+export function usePlayerAnalytics(
+  uuid: string | null | undefined,
+  season?: SeasonSel,
+  selection: Selection = DEFAULT_SELECTION
+) {
   const enabled = !!uuid
   const seasonNum = typeof season === 'number' ? season : undefined
   const { data: user } = useQuery({
@@ -56,8 +78,8 @@ export function usePlayerAnalytics(uuid: string | null | undefined, season?: Sea
     enabled
   })
   const { data: matches, isLoading: matchesLoading } = useQuery({
-    queryKey: seasonNum != null ? ['review-matches', uuid, seasonNum] : ['review-matches', uuid],
-    queryFn: () => mcsr.getMatches(uuid!, { type: 2, count: 100, season: seasonNum }),
+    queryKey: ['review-matches', uuid, seasonNum ?? 'current', selection],
+    queryFn: () => seasonMatches(uuid!, seasonNum, selection),
     enabled
   })
 
@@ -77,18 +99,11 @@ export function usePlayerAnalytics(uuid: string | null | undefined, season?: Sea
     [uuid, matches, seasonWinRate, seasonStats.forfeitRate, seasonStats.played]
   )
 
-  const detailIds = useMemo(
-    () =>
-      (matches ?? [])
-        .filter((m) => m.type === 2)
-        .slice(0, 50)
-        .map((m) => m.id),
-    [matches]
-  )
+  const detailIds = useMemo(() => (matches ?? []).filter((m) => m.type === 2).map((m) => m.id), [matches])
   const { details, detailsLoading } = useQueries({
     queries: detailIds.map((id) => ({
       queryKey: ['match-detail', id],
-      queryFn: () => mcsr.getMatch(id),
+      queryFn: () => matchDetail(id),
       enabled,
       staleTime: Infinity,
       gcTime: Infinity,
@@ -125,6 +140,15 @@ export function usePlayerAnalytics(uuid: string | null | undefined, season?: Sea
     [analytics, seasonWinRate, seasonStats.played, deaths, speed]
   )
   const playerSegs = useMemo(() => playerSegments(uuid ?? '', details ?? []), [uuid, details])
+  const runs = useMemo(() => {
+    const id = uuid ?? ''
+    return {
+      splits: analyzeSplitRuns(id, details),
+      overworlds: analyzeOverworlds(id, details),
+      bastions: analyzeBastions(id, details),
+      clutch: clutchStats(id, details)
+    }
+  }, [uuid, details])
 
   return {
     user,
@@ -139,10 +163,13 @@ export function usePlayerAnalytics(uuid: string | null | undefined, season?: Sea
     scorecard,
     perfWorld,
     playerSegs,
+    runs,
     rank,
     hasData: head.played > 0 || analytics.played > 0,
     recentN: (matches ?? []).filter((m) => m.type === 2).length,
     analyzedN: detailIds.length,
+    detailsLoaded: details.length,
+    selection,
     loading: enabled && matchesLoading && !matches,
     detailsLoading: enabled && detailsLoading && details.length === 0
   }

@@ -10,18 +10,19 @@ import {
   YAxis
 } from 'recharts'
 import { useUi } from '../store/uiStore'
-import { analyzeRanked, analyzeSplits, analyzeTypeBreakdowns, scorecardInsights, splitCallouts } from '@core/ranked-analytics'
-import type { RankedInsight, SplitPerf, SplitStat, TypeBreakdown } from '@core/ranked-analytics'
+import { analyzeRanked, analyzeSplits, scorecardInsights, splitCallouts } from '@core/ranked-analytics'
+import type { RankedInsight, SplitPerf, SplitStat } from '@core/ranked-analytics'
 import { msToTime } from '@core/format'
-import { usePlayerAnalytics } from '../hooks/usePlayerAnalytics'
-import type { SeasonSel } from '../hooks/usePlayerAnalytics'
-import { nextTierAbove } from '../lib/baseline'
+import { DEFAULT_SELECTION, usePlayerAnalytics } from '../hooks/usePlayerAnalytics'
+import type { SeasonSel, Selection } from '../hooks/usePlayerAnalytics'
+import { nextTierAbove, type CompareTo } from '../lib/baseline'
 import { PlayerHead } from '../components/PlayerHead'
 import { RankBadge } from '../components/RankBadge'
 import { StatRow } from '../components/StatRow'
 import { PlayStyleRadar } from '../components/PlayStyleRadar'
-import { SplitPerformanceRadar } from '../components/SplitPerformanceRadar'
 import { SeasonPicker } from '../components/SeasonPicker'
+import { CompareToPicker, SelectionPicker } from '../components/AnalysisPickers'
+import { BastionRunsCard, OverworldRunsCard, SeasonStandingCard, SplitRunsCard } from '../components/RunAnalysis'
 
 const KIND_COLOR: Record<RankedInsight['kind'], string> = {
   strength: 'var(--win)',
@@ -54,10 +55,11 @@ export function SelfReview() {
 
 function Review({ uuid, name }: { uuid: string; name: string }) {
   const [seasonSel, setSeasonSel] = useState<SeasonSel>(undefined)
-  const pa = usePlayerAnalytics(uuid, seasonSel)
+  const [selection, setSelection] = useState<Selection>(DEFAULT_SELECTION)
+  const [compareTo, setCompareTo] = useState<CompareTo>('world')
+  const pa = usePlayerAnalytics(uuid, seasonSel, selection)
   const {
     user,
-    matches,
     details,
     analytics,
     season,
@@ -71,15 +73,13 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
     rank,
     hasData,
     analyzedN,
+    detailsLoaded,
+    runs,
     loading,
     detailsLoading
   } = pa
 
   const splits = useMemo(() => analyzeSplits(uuid, details), [uuid, details])
-  const breakdowns = useMemo(
-    () => analyzeTypeBreakdowns(uuid, matches ?? [], details),
-    [uuid, matches, details]
-  )
 
   const nextTier = useMemo(() => nextTierAbove(rank.tier.toLowerCase()), [rank.tier])
   const insights = useMemo(
@@ -115,8 +115,10 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
             {user?.nickname ?? name} · Ranked Review
           </h1>
         </div>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex flex-wrap items-center gap-3">
           <SeasonPicker value={seasonSel} onChange={setSeasonSel} />
+          <SelectionPicker value={selection} onChange={setSelection} />
+          <CompareToPicker value={compareTo} onChange={setCompareTo} />
           <div className="hidden sm:block">
             <RankBadge elo={head.elo} size="md" />
           </div>
@@ -132,15 +134,28 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
       ) : (
         <>
           <StatRow head={head} scope={scope} />
+          {analyzedN > 0 && detailsLoaded < analyzedN && (
+            <div className="px-1 text-[11px] uppercase tracking-[0.16em] text-faint">
+              Analysing your matches… {detailsLoaded} / {analyzedN} (each is downloaded once, then kept)
+            </div>
+          )}
+          <SeasonStandingCard
+            compareTo={compareTo}
+            s={{
+              bestTime: season.bestTime,
+              averageTime: season.averageTime,
+              elo: head.elo,
+              forfeits: season.forfeits,
+              losses: season.loses,
+              completions: season.completions,
+              played: season.played,
+              clutch: runs.clutch,
+              clutchReady: analyzedN > 0 && detailsLoaded >= analyzedN
+            }}
+          />
           <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(360px,1fr))]">
             <PlayStyleRadar dims={scorecard} />
-            <SplitPerformanceRadar
-              uuid={uuid}
-              details={details}
-              tierKey={rank.tier.toLowerCase()}
-              tierLabel={rank.tier}
-              loading={detailsLoading}
-            />
+            <SplitRunsCard a={runs.splits} compareTo={compareTo} loading={detailsLoading} />
           </div>
           <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(320px,1fr))]">
             <InsightsCard insights={insights} />
@@ -149,21 +164,13 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
           {analyzedN > 0 && (
             <div className="px-1 text-[11px] uppercase tracking-[0.16em] text-faint">
               Split detail below from your last {analyzedN} ranked{' '}
-              {analyzedN === 1 ? 'match' : 'matches'}
+              {analyzedN === 1 ? 'match' : 'matches'} this season
             </div>
           )}
           <TargetSplitsGrid splits={splits} perf={perfWorld} nextTier={nextTier} loading={detailsLoading} />
-          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(320px,1fr))]">
-            <TypeBars
-              title="Overworld by seed type"
-              breakdown={breakdowns.overworld}
-              loadingTimes={detailsLoading}
-            />
-            <TypeBars
-              title="Bastion by type"
-              breakdown={breakdowns.bastion}
-              loadingTimes={detailsLoading}
-            />
+          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(360px,1fr))]">
+            <OverworldRunsCard a={runs.overworlds} compareTo={compareTo} loading={detailsLoading} />
+            <BastionRunsCard a={runs.bastions} compareTo={compareTo} loading={detailsLoading} />
           </div>
           <CompletionHistogram times={analytics.completionTimes} />
         </>
@@ -297,63 +304,6 @@ function SplitsCard({ splits, loading }: { splits: SplitStat[]; loading: boolean
                 </span>
                 <span className="w-7 text-right text-[10px] text-faint">{s.count || ''}</span>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  )
-}
-
-function TypeBars({
-  title,
-  breakdown,
-  loadingTimes
-}: {
-  title: string
-  breakdown: TypeBreakdown
-  loadingTimes: boolean
-}) {
-  const rows = [...breakdown.rows].sort(
-    (a, b) => (a.average ?? Infinity) - (b.average ?? Infinity) || a.label.localeCompare(b.label)
-  )
-  const withData = rows.filter((r) => r.average != null)
-  const maxMs = withData.length ? Math.max(...withData.map((r) => r.average as number)) : 1
-  const split = breakdown.splitLabel.toLowerCase()
-  return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '140ms' }}>
-      <header className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">{title}</h2>
-        <span className="text-xs text-faint">avg {split} · fastest first</span>
-      </header>
-      {rows.length === 0 ? (
-        <div className="grid h-24 place-items-center text-sm text-muted">No matches yet.</div>
-      ) : (
-        <div className="space-y-2">
-          {rows.map((r) => (
-            <div
-              key={r.key}
-              className="flex items-center gap-3"
-              title={r.count ? `${r.count} run${r.count === 1 ? '' : 's'}` : 'no runs yet'}
-            >
-              <span className="w-[5.5rem] shrink-0 truncate text-sm text-text">{r.label}</span>
-              <div className="relative h-5 flex-1 overflow-hidden rounded bg-white/[0.03]">
-                {r.average != null && (
-                  <div
-                    className="absolute inset-y-0 left-0 rounded transition-[width] duration-500"
-                    style={{
-                      width: `${Math.max(6, Math.round((r.average / maxMs) * 100))}%`,
-                      background: 'linear-gradient(90deg, var(--gold), #d9a52c)'
-                    }}
-                  />
-                )}
-              </div>
-              <span
-                className="tnum w-[4.5rem] shrink-0 text-right text-sm"
-                style={{ color: r.average != null ? 'var(--gold)' : 'var(--faint)' }}
-              >
-                {r.average != null ? msToTime(r.average) : loadingTimes ? '···' : '—'}
-              </span>
             </div>
           ))}
         </div>
