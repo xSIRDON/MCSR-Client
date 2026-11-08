@@ -1,10 +1,62 @@
 import splitBaseline from '@core/split-baseline.json'
 import type { SplitBaselineBucket } from '@core/ranked-analytics'
 
-export const BUCKETS = splitBaseline.buckets as Record<string, SplitBaselineBucket>
+type Tables = Record<string, Record<string, number[]>>
+const PB = splitBaseline as unknown as {
+  buckets: Record<string, SplitBaselineBucket>
+  ow?: Tables
+  bastion?: Tables
+  stats?: Tables
+  players?: number
+  season?: number
+}
+
+export const BUCKETS = PB.buckets
 export const WORLD_BUCKET: SplitBaselineBucket = BUCKETS.world
 
 export const TIER_ORDER = ['coal', 'iron', 'gold', 'emerald', 'diamond', 'netherite']
+
+export const POOL_PLAYERS = PB.players ?? null
+export const POOL_SEASON = PB.season ?? null
+
+export type CompareTo = 'world' | (typeof TIER_ORDER)[number]
+
+export const tierName = (key: string): string => (key === 'world' ? 'All players' : key.charAt(0).toUpperCase() + key.slice(1))
+
+export type PoolSection = 'split' | 'ow' | 'bastion' | 'stats'
+
+export function pool(section: PoolSection, key: string, compareTo: CompareTo = 'world'): number[] | undefined {
+  const t = section === 'split' ? BUCKETS : PB[section]
+  return t?.[compareTo]?.[key]
+}
+
+function fractionBelow(value: number, table: number[]): number {
+  const n = table.length
+  if (value <= table[0]) return 0
+  if (value >= table[n - 1]) return 1
+  let lo = 0
+  let hi = n - 1
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1
+    if (table[mid] <= value) lo = mid
+    else hi = mid
+  }
+  const span = table[hi] - table[lo] || 1
+  return (lo + (value - table[lo]) / span) / (n - 1)
+}
+
+export function shareBeaten(
+  value: number | null,
+  section: PoolSection,
+  key: string,
+  lowerIsBetter: boolean,
+  compareTo: CompareTo = 'world'
+): number | null {
+  const t = pool(section, key, compareTo)
+  if (value == null || !t || t.length < 2) return null
+  const below = fractionBelow(value, t)
+  return Math.round((lowerIsBetter ? 1 - below : below) * 1000) / 1000
+}
 
 export function nextTierAbove(
   tierKey: string
