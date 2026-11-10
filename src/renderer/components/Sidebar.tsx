@@ -54,7 +54,6 @@ export function Sidebar() {
               >
                 {({ isActive }) => (
                   <>
-                    {isActive && <span className="absolute left-[-8px] top-2 bottom-2 w-[3px] bg-[var(--gold)]" />}
                     <Icon />
                     <span
                       className={`text-[9px] tracking-[0.06em] ${isActive ? 'font-semibold' : 'opacity-70'}`}
