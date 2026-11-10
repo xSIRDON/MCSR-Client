@@ -42,10 +42,12 @@ export type SeasonSel = number | 'all' | undefined
 function combineDetails(results: UseQueryResult<MatchInfo>[]): {
   details: MatchInfo[]
   detailsLoading: boolean
+  detailsSettled: number
 } {
   return {
     details: results.flatMap((r) => (r.data ? [r.data] : [])),
-    detailsLoading: results.some((r) => r.isPending && r.fetchStatus !== 'idle')
+    detailsLoading: results.some((r) => r.isPending && r.fetchStatus !== 'idle'),
+    detailsSettled: results.filter((r) => r.data || r.isError).length
   }
 }
 
@@ -100,7 +102,7 @@ export function usePlayerAnalytics(
   )
 
   const detailIds = useMemo(() => (matches ?? []).filter((m) => m.type === 2).map((m) => m.id), [matches])
-  const { details, detailsLoading } = useQueries({
+  const { details, detailsLoading, detailsSettled } = useQueries({
     queries: detailIds.map((id) => ({
       queryKey: ['match-detail', id],
       queryFn: () => matchDetail(id),
@@ -168,7 +170,7 @@ export function usePlayerAnalytics(
     hasData: head.played > 0 || analytics.played > 0,
     recentN: (matches ?? []).filter((m) => m.type === 2).length,
     analyzedN: detailIds.length,
-    detailsLoaded: details.length,
+    detailsLoaded: detailsSettled,
     selection,
     loading: enabled && matchesLoading && !matches,
     detailsLoading: enabled && detailsLoading && details.length === 0

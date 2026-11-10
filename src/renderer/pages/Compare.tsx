@@ -1,3 +1,4 @@
+import { LoadProgress } from '../components/LoadProgress'
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -105,6 +106,12 @@ export function Compare() {
         </div>
       ) : (
         <>
+          <LoadProgress
+            label={`Loading ${[a.user?.nickname ?? p1, b.user?.nickname ?? p2].filter(Boolean).join(' & ')}`}
+            parts={[a, b]
+              .filter((s) => s.name && !s.notFound)
+              .map((s) => ({ total: s.analyzedN, done: s.detailsLoaded, pending: !s.user || s.loading }))}
+          />
           <div className="grid grid-cols-2 gap-4">
             <SideHero side={a} color={A_COLOR} />
             <SideHero side={b} color={B_COLOR} />

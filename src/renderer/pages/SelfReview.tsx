@@ -23,6 +23,7 @@ import { PlayStyleRadar } from '../components/PlayStyleRadar'
 import { SeasonPicker } from '../components/SeasonPicker'
 import { CompareToPicker, SelectionPicker } from '../components/AnalysisPickers'
 import { BastionRunsCard, OverworldRunsCard, SeasonStandingCard, SplitRunsCard } from '../components/RunAnalysis'
+import { LoadProgress } from '../components/LoadProgress'
 
 const KIND_COLOR: Record<RankedInsight['kind'], string> = {
   strength: 'var(--win)',
@@ -125,6 +126,8 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
         </div>
       </header>
 
+      <LoadProgress label="Analysing your matches" parts={[{ total: analyzedN, done: detailsLoaded, pending: loading }]} />
+
       {loading ? (
         <ReviewSkeleton />
       ) : !hasData ? (
@@ -134,11 +137,6 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
       ) : (
         <>
           <StatRow head={head} scope={scope} />
-          {analyzedN > 0 && detailsLoaded < analyzedN && (
-            <div className="px-1 text-[11px] uppercase tracking-[0.16em] text-faint">
-              Analysing your matches… {detailsLoaded} / {analyzedN} (each is downloaded once, then kept)
-            </div>
-          )}
           <SeasonStandingCard
             compareTo={compareTo}
             s={{
