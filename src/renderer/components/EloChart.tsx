@@ -65,7 +65,7 @@ export function EloChart({ uuid, season }: { uuid: string; season?: number | 'al
       ) : (
         <div className="h-[200px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={points} margin={{ top: 6, right: 6, left: -18, bottom: 0 }}>
+            <AreaChart data={points} margin={{ top: 6, right: 6, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="eloFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#f5c842" stopOpacity={0.45} />
@@ -77,7 +77,9 @@ export function EloChart({ uuid, season }: { uuid: string; season?: number | 'al
               <YAxis
                 domain={[lo - pad, hi + pad]}
                 tick={{ fill: '#8b8b9e', fontSize: 11 }}
-                width={42}
+                width={40}
+                allowDecimals={false}
+                tickFormatter={(v: number) => String(Math.round(v))}
                 axisLine={false}
                 tickLine={false}
               />

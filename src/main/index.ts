@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, session, shell } from 'electron'
 import { join } from 'node:path'
+import { writeFileSync } from 'node:fs'
 import { registerIpc, isGameRunning } from './ipc-handlers'
 import * as gmll from './launcher/gmll-adapter'
 import * as tracker from './paceman/tracker'
@@ -90,9 +91,21 @@ function createWindow(): void {
 
   if (isDev) {
     void win.loadURL(process.env['ELECTRON_RENDERER_URL'] as string)
+    const shot = process.env.RENDERER_VITE_DEMO_PLAYER && process.env.DEMO_SHOT
+    if (shot) {
+      win.webContents.once('did-finish-load', () => {
+        setTimeout(() => {
+          void win.webContents.capturePage().then((img) => writeFileSync(shot, img.toPNG()))
+        }, 15000)
+      })
+    }
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'))
   }
+}
+
+if (!app.isPackaged && process.env.RENDERER_VITE_DEMO_PLAYER) {
+  app.setPath('userData', join(app.getPath('appData'), 'mcsr-client-demo'))
 }
 
 if (!app.requestSingleInstanceLock()) {

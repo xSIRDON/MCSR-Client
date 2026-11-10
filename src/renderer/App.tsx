@@ -29,6 +29,14 @@ export function App() {
 
   useEffect(() => {
     let active = true
+    const demo = import.meta.env.DEV ? (import.meta.env.RENDERER_VITE_DEMO_PLAYER as string | undefined) : undefined
+    if (demo) {
+      const [uuid, name] = demo.split(':')
+      setProfile({ uuid, name })
+      setPacemanName(name)
+      setAuthReady(true)
+      return
+    }
     void (async () => {
       try {
         const [p, cfg, pace] = await Promise.all([
