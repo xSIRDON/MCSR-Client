@@ -45,44 +45,19 @@ export function Sidebar() {
                 end={end}
                 title={label}
                 className={({ isActive }) =>
-                  `group relative flex h-[50px] w-full flex-col items-center justify-center gap-[3px] rounded-xl transition-all duration-200 ${
+                  `relative flex h-[50px] w-full flex-col items-center justify-center gap-[3px] rounded-md transition-colors duration-150 ${
                     isActive
-                      ? 'text-[var(--gold)]'
-                      : 'text-muted hover:bg-white/[0.05] hover:text-text'
+                      ? 'bg-white/[0.07] text-[var(--gold)]'
+                      : 'text-muted hover:bg-white/[0.04] hover:text-text'
                   }`
                 }
               >
                 {({ isActive }) => (
                   <>
-                    {isActive && (
-                      <>
-                        <span
-                          className="absolute inset-0 rounded-xl"
-                          style={{
-                            background:
-                              'linear-gradient(90deg, rgba(245,200,66,0.16), rgba(245,200,66,0.05))',
-                            boxShadow: 'inset 0 0 0 1px rgba(245,200,66,0.22)'
-                          }}
-                        />
-                        <span className="absolute left-[-8px] top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--gold)] shadow-[0_0_8px_rgba(245,200,66,0.8)]" />
-                      </>
-                    )}
+                    {isActive && <span className="absolute left-[-8px] top-2 bottom-2 w-[3px] bg-[var(--gold)]" />}
+                    <Icon />
                     <span
-                      className={`relative transition-transform duration-200 ${
-                        isActive ? '' : 'group-hover:-translate-y-[1px]'
-                      }`}
-                      style={
-                        isActive
-                          ? { filter: 'drop-shadow(0 0 5px rgba(245,200,66,0.55))' }
-                          : undefined
-                      }
-                    >
-                      <Icon />
-                    </span>
-                    <span
-                      className={`relative text-[9px] tracking-[0.06em] transition-opacity duration-200 ${
-                        isActive ? 'font-semibold' : 'opacity-70 group-hover:opacity-100'
-                      }`}
+                      className={`text-[9px] tracking-[0.06em] ${isActive ? 'font-semibold' : 'opacity-70'}`}
                     >
                       {label}
                     </span>
@@ -98,8 +73,8 @@ export function Sidebar() {
         <div className="h-px w-6 bg-[var(--line)]" />
         {profile && (
           <div
-            className="rounded-lg p-0.5 transition-shadow duration-300 hover:shadow-[0_0_16px_rgba(245,200,66,0.25)]"
-            style={{ boxShadow: `0 0 0 1.5px ${rank.color}66, 0 0 12px ${rank.glow}33` }}
+            className="rounded-md p-0.5"
+            style={{ boxShadow: `0 0 0 1.5px ${rank.color}88` }}
           >
             <AccountMenu profile={profile} />
           </div>
