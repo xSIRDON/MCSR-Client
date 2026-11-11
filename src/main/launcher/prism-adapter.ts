@@ -8,7 +8,7 @@ import { paths } from '../paths'
 import { store } from '../store'
 import { logFailure } from '../log'
 import { MSA_CLIENT_ID, prismAccounts, readPrismRefresh, readPrismSecrets } from './prism-account'
-import { atomicText, preparePrismInstance, prismRunning } from './prism-instance'
+import { atomicText, preparePrismInstance, prismRunning, system32 } from './prism-instance'
 import { ensurePrismRuntime } from './prism-runtime'
 import { waitForPrismStart } from './prism-start'
 
@@ -56,10 +56,10 @@ export async function launchPrism(
   const accounts = join(root, 'accounts.json')
   let child: ChildProcessWithoutNullStreams | undefined
   try {
-    const { stdout } = await run('whoami.exe', ['/user', '/fo', 'csv', '/nh'], { windowsHide: true, timeout: 5000 })
+    const { stdout } = await run(system32('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], { windowsHide: true, timeout: 5000 })
     const sid = stdout.match(/S-1-[\d-]+/)?.[0]
     if (!sid) throw new Error('Could not secure the managed Prism account directory.')
-    await run('icacls.exe', [root, '/inheritance:r', '/grant:r', `*${sid}:(OI)(CI)F`], { windowsHide: true, timeout: 5000 })
+    await run(system32('icacls.exe'), [root, '/inheritance:r', '/grant:r', `*${sid}:(OI)(CI)F`], { windowsHide: true, timeout: 5000 })
     recoverAccount(accounts)
     const account = auth.prismAccount()
     const version = /^fabric-loader-([\d.]+)-([\d.]+)$/.exec(fabricVersion)

@@ -10,6 +10,8 @@ export function atomicText(file: string, text: string): void {
   renameSync(temporary, file)
 }
 
+export const system32 = (exe: string): string => join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', exe)
+
 export function prismRunning(pid: number): boolean {
   if (!Number.isSafeInteger(pid) || pid <= 0) return false
   if (process.platform !== 'win32') {
@@ -21,7 +23,7 @@ export function prismRunning(pid: number): boolean {
     }
   }
   try {
-    const out = execFileSync('tasklist.exe', ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'], {
+    const out = execFileSync(system32('tasklist.exe'), ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'], {
       windowsHide: true,
       timeout: 5000,
       encoding: 'utf8'
