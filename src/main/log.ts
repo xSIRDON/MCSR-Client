@@ -19,6 +19,10 @@ export function pushLog(source: LogLine['source'], text: string): void {
   }
 }
 
+export function logFailure(what: string, e: unknown): void {
+  pushLog('system', `${what}: ${e instanceof Error ? e.message : String(e)}`)
+}
+
 export function logHistory(): LogLine[] {
   return buffer.slice()
 }

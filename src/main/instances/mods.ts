@@ -2,6 +2,7 @@ import { existsSync, readdirSync, renameSync, mkdirSync, writeFileSync, rmSync }
 import { basename, join } from 'node:path'
 import type { InstanceId, ModInfo } from '../../shared/types'
 import { assertTrustedDownloadUrl, verifyBuffer, type PackModUpgrade } from './mrpack'
+import { logFailure } from '../log'
 
 const DISABLED = '.disabled'
 
@@ -88,7 +89,8 @@ export function pruneSupersededMods(modsDir: string, installed: string[]): strin
     try {
       rmSync(join(modsDir, entry), { force: true })
       removed.push(entry)
-    } catch {
+    } catch (e) {
+      logFailure(`Could not remove replaced mod ${entry}`, e)
     }
   }
   return removed

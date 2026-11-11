@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, readdirSync, exist
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { unzip } from '../security/safe-unzip'
+import { logFailure } from '../log'
 
 export const MCSR_MRPACK_URL =
   'https://redlime.github.io/MCSRMods/modpacks/v4/MCSRRanked-Windows-1.16.1-RSG.mrpack'
@@ -249,7 +250,8 @@ export async function installLatestRankedMod(
     if (f !== jarName && f.toLowerCase().startsWith('mcsrranked')) {
       try {
         rmSync(join(modsDir, f), { force: true })
-      } catch {
+      } catch (e) {
+        logFailure(`Could not remove old ranked mod ${f}, delete it from the mods folder`, e)
       }
     }
   }

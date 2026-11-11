@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { existsSync, renameSync, mkdirSync, copyFileSync, unlinkSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { isInstanceId, type InstanceId } from '../shared/types'
+import { logFailure } from './log'
 
 const DATA_DIR = 'data'
 
@@ -37,7 +38,8 @@ export function migrateDataDir(): void {
       if (existsSync(from) && !existsSync(to)) {
         try {
           renameSync(from, to)
-        } catch {
+        } catch (e) {
+          logFailure(`Could not move ${from} to ${to}`, e)
         }
       }
     }
@@ -58,7 +60,8 @@ export function migrateSessionState(): void {
       try {
         copyFileSync(from, to)
         unlinkSync(from)
-      } catch {
+      } catch (e) {
+        logFailure(`Could not move ${name} out of the install folder`, e)
       }
     }
   }
