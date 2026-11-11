@@ -37,7 +37,7 @@ export function ExtraOptionsPrompt() {
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-6 animate-fade-up"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-6"
       onClick={() => !busy && void dismiss()}
     >
       <div className="surface w-full max-w-[440px] p-5" onClick={(e) => e.stopPropagation()}>
@@ -60,8 +60,7 @@ export function ExtraOptionsPrompt() {
             disabled={busy}
             className="font-display rounded-lg px-5 py-2 text-sm tracking-wide text-[#07140a] disabled:opacity-60"
             style={{
-              background: 'linear-gradient(180deg,#6fcf57,#4ea73e)',
-              boxShadow: '0 8px 24px rgba(94,167,62,.4), inset 0 1px 0 rgba(255,255,255,.25)'
+              background: '#5fbf4c'
             }}
           >
             {busy ? 'Adding…' : 'Add it'}

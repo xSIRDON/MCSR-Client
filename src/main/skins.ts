@@ -111,7 +111,7 @@ export async function getSkin(idOrUuid: string, size: number, kind: SkinKind): P
   const p = withSlot(async () => {
     const buf = await fetchFirst(hosts(raw, size, kind))
     if (!buf) {
-      console.warn(`[skins] could not resolve ${key} — all hosts failed`)
+      console.warn(`[skins] could not resolve ${key}, all hosts failed`)
       return null
     }
     try {

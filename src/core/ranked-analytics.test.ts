@@ -72,7 +72,7 @@ describe('analyzeRanked', () => {
     expect(a.insights[0]).toMatchObject({ kind: 'note', label: 'No data' })
   })
 
-  it('excludes forfeit wins from completion times — an FF time is not a run', () => {
+  it('excludes forfeit wins from completion times, an FF time is not a run', () => {
     const a = analyzeRanked(ME, [
       match({ winner: ME, time: 720_000 }),
       match({ winner: ME, time: 224_000, forfeited: true })
@@ -357,7 +357,7 @@ describe('countDeaths + death insights', () => {
     timelines
   })
 
-  it('counts only real deaths — strategic spawnpoint resets and opponents excluded', () => {
+  it('counts only real deaths, strategic spawnpoint resets and opponents excluded', () => {
     const stats = countDeaths(ME, [
       withTimeline(
         tl([

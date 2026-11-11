@@ -78,15 +78,15 @@ export function Compare() {
 
   return (
     <div className="mx-auto max-w-[980px] space-y-4 px-5 py-4">
-      <header className="flex flex-wrap items-end justify-between gap-3 animate-fade-up">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.22em] text-faint">Head to head</div>
+          <div className="text-[11px] text-faint">Head to head</div>
           <h1 className="font-display text-2xl tracking-wide text-text">Compare players</h1>
         </div>
         <SeasonPicker value={seasonSel} onChange={setSeasonSel} />
       </header>
 
-      <div className="flex items-center gap-3 animate-fade-up" style={{ animationDelay: '40ms' }}>
+      <div className="flex items-center gap-3">
         <NameInput initial={p1} color={A_COLOR} placeholder="First player…" onSubmit={(v) => set('p1', v)} />
         <button
           onClick={swap}
@@ -102,7 +102,7 @@ export function Compare() {
 
       {!p2 ? (
         <div className="surface grid h-48 place-items-center text-center text-sm text-muted">
-          Search a second player to compare — splits, strengths, and who's actually faster.
+          Search a second player to compare, splits, strengths, and who's actually faster.
         </div>
       ) : (
         <>
@@ -173,10 +173,10 @@ function SideHero({ side, color }: { side: Side; color: string }) {
     <section
       onClick={user ? () => navigate(`/profile?name=${encodeURIComponent(user.nickname)}`) : undefined}
       title={user ? `Open ${user.nickname}'s profile` : undefined}
-      className={`surface flex items-center gap-3 p-4 animate-fade-up transition-all duration-200 ${
+      className={`surface flex items-center gap-3 p-4 transition-all duration-200 ${
         user ? 'cursor-pointer hover:-translate-y-[1px] hover:brightness-110' : ''
       }`}
-      style={{ animationDelay: '60ms', boxShadow: `inset 0 0 0 1px ${color}33, 0 12px 44px rgba(0,0,0,.4)` }}
+      style={{ boxShadow: `inset 0 0 0 1px ${color}33` }}
     >
       {user ? (
         <>
@@ -191,7 +191,7 @@ function SideHero({ side, color }: { side: Side; color: string }) {
             </div>
             {smallSample && (
               <div className="mt-0.5 text-[11px]" style={{ color: 'var(--gold)' }}>
-                Small sample — read these numbers loosely.
+                Small sample, read these numbers loosely.
               </div>
             )}
           </div>
@@ -238,9 +238,9 @@ function WinChance({ a, b }: { a: Side; b: Side }) {
   const chips = m.factors.filter((f) => f.favors !== 'even' && Math.abs(f.edge) >= 0.02).slice(0, 5)
 
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '70ms' }}>
+    <section className="surface p-5">
       <header className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Win chance</h2>
+        <h2 className="text-sm font-semibold text-text">Win chance</h2>
         <span className="text-xs text-faint">
           {m.eloOnly ? 'Elo only' : 'Elo + splits + form'}
         </span>
@@ -256,11 +256,11 @@ function WinChance({ a, b }: { a: Side; b: Side }) {
       <div className="flex h-3 overflow-hidden rounded-full bg-white/[0.04]">
         <div
           className="transition-[width] duration-500"
-          style={{ width: `${pctA}%`, background: `linear-gradient(90deg, ${A_COLOR}cc, ${A_COLOR})` }}
+          style={{ width: `${pctA}%`, background: A_COLOR }}
         />
         <div
           className="transition-[width] duration-500"
-          style={{ width: `${pctB}%`, background: `linear-gradient(90deg, ${B_COLOR}, ${B_COLOR}cc)` }}
+          style={{ width: `${pctB}%`, background: B_COLOR }}
         />
       </div>
 
@@ -287,9 +287,9 @@ function WinChance({ a, b }: { a: Side; b: Side }) {
 
       <p className="mt-3 text-[11px] text-faint">
         {m.eloOnly
-          ? `Textbook Elo expectation — not enough split data yet to fold in pace and form.`
+          ? `Textbook Elo expectation, not enough split data yet to fold in pace and form.`
           : tilt === 0
-            ? `Even on splits and the side stats — this is the raw Elo expectation.`
+            ? `Even on splits and the side stats, this is the raw Elo expectation.`
             : `Elo expectation, nudged ${Math.abs(tilt)} effective Elo toward ${
                 tilt > 0 ? nameA : nameB
               } for the edge in ${chips[0]?.label.toLowerCase() ?? 'the side stats'}. Seeds and nerves not included.`}
@@ -326,8 +326,8 @@ function HeadToHead({ a, b }: { a: Side; b: Side }) {
   const sampleOk = a.head.played >= SMALL_SAMPLE && b.head.played >= SMALL_SAMPLE
 
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '80ms' }}>
-      <h2 className="mb-3 font-display text-sm uppercase tracking-[0.16em] text-muted">Head to head</h2>
+    <section className="surface p-5">
+      <h2 className="mb-3 text-sm font-semibold text-text">Head to head</h2>
       <div className="space-y-0.5">
         {metrics.map((m) => {
           const comparable = m.a != null && m.b != null && m.a !== m.b && (!m.requireSample || sampleOk)
@@ -340,14 +340,14 @@ function HeadToHead({ a, b }: { a: Side; b: Side }) {
             >
               <span
                 className="tnum font-display text-left text-sm"
-                style={{ color: aWins ? A_COLOR : 'var(--muted)', textShadow: aWins ? `0 0 12px ${A_COLOR}55` : undefined }}
+                style={{ color: aWins ? A_COLOR : 'var(--muted)' }}
               >
                 {m.a != null ? m.fmt(m.a) : '—'}
               </span>
-              <span className="text-center text-[11px] uppercase tracking-[0.14em] text-faint">{m.label}</span>
+              <span className="text-center text-[11px] text-faint">{m.label}</span>
               <span
                 className="tnum font-display text-right text-sm"
-                style={{ color: bWins ? B_COLOR : 'var(--muted)', textShadow: bWins ? `0 0 12px ${B_COLOR}55` : undefined }}
+                style={{ color: bWins ? B_COLOR : 'var(--muted)' }}
               >
                 {m.b != null ? m.fmt(m.b) : '—'}
               </span>
@@ -377,10 +377,10 @@ function CompareRadar({ a, b }: { a: Side; b: Side }) {
   const loading = a.settling || b.settling
 
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '100ms' }}>
+    <section className="surface p-5">
       <header className="mb-1 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">
-          Split performance — vs the world
+        <h2 className="text-sm font-semibold text-text">
+          Split performance vs the world
         </h2>
         <span className="text-xs text-faint">
           {a.details.length > 0 || b.details.length > 0
@@ -462,9 +462,9 @@ function SplitDeltas({ a, b }: { a: Side; b: Side }) {
 
   if (rows.length === 0) return null
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '120ms' }}>
+    <section className="surface p-5">
       <header className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Average splits</h2>
+        <h2 className="text-sm font-semibold text-text">Average splits</h2>
         <span className="text-xs text-faint">gap to the faster player · ×N = runs counted</span>
       </header>
       <div className="space-y-0.5">
@@ -490,7 +490,7 @@ function SplitDeltas({ a, b }: { a: Side; b: Side }) {
                   </span>
                 )}
               </span>
-              <span className="text-center text-[11px] uppercase tracking-[0.14em] text-faint">{r.label}</span>
+              <span className="text-center text-[11px] text-faint">{r.label}</span>
               <span
                 className="tnum font-display text-right text-sm"
                 style={{ color: bFaster ? B_COLOR : r.bMs != null ? 'var(--muted)' : 'var(--faint)' }}

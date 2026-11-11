@@ -23,17 +23,14 @@ export function Login() {
 
   return (
     <div className="relative grid flex-1 place-items-center overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 opacity-60">
-        <div className="absolute left-1/2 top-1/3 h-80 w-80 -translate-x-1/2 rounded-full bg-[var(--gold)]/10 blur-[100px]" />
-        <div className="absolute bottom-10 right-10 h-72 w-72 rounded-full bg-[var(--portal)]/15 blur-[110px]" />
-      </div>
+      <div className="pointer-events-none absolute left-1/2 top-1/3 h-80 w-80 -translate-x-1/2 rounded-full bg-[var(--gold)]/10 blur-[100px]" />
 
-      <div className="relative w-[380px] text-center animate-fade-up">
+      <div className="relative w-[380px] text-center">
         <div className="mb-5 flex items-center justify-center">
           <McsrLogo size={68} />
         </div>
-        <h1 className="font-display text-4xl tracking-[0.14em] text-text">MCSR CLIENT</h1>
-        <p className="mt-2 text-sm text-muted">The clean MCSR client — Ranked &amp; RSG, one place.</p>
+        <h1 className="font-display text-4xl text-text">MCSR CLIENT</h1>
+        <p className="mt-2 text-sm text-muted">The clean MCSR client, Ranked &amp; RSG, one place.</p>
 
         <button
           onClick={signIn}

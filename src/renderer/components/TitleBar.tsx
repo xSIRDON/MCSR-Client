@@ -5,7 +5,7 @@ export function TitleBar() {
     <div className="drag flex h-10 shrink-0 items-center justify-between border-b border-[var(--line)] px-3">
       <div className="flex items-center gap-2.5 select-none">
         <McsrLogo size={22} />
-        <span className="font-display text-sm tracking-[0.18em] text-text">MCSR CLIENT</span>
+        <span className="font-display text-sm text-text">MCSR CLIENT</span>
       </div>
       <div className="no-drag flex items-center gap-1">
         <button

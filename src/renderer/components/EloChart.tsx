@@ -46,9 +46,9 @@ export function EloChart({ uuid, season }: { uuid: string; season?: number | 'al
   const pad = Math.max(20, Math.round((hi - lo) * 0.18))
 
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '60ms' }}>
+    <section className="surface p-5">
       <header className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">{title}</h2>
+        <h2 className="text-sm font-semibold text-text">{title}</h2>
         {points.length > 1 && (
           <span className="font-display text-sm" style={{ color: 'var(--gold)' }}>
             {points[points.length - 1].elo}

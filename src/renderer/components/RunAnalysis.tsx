@@ -28,7 +28,7 @@ const OW_SHORT: Record<string, string> = { bt: 'BT', dt: 'DT', rp: 'RP', ship: '
 const BASTION_SHORT: Record<string, string> = { bridge: 'Bridge', housing: 'Housing', stables: 'Stables', treasure: 'Treasure' }
 
 function sampleNote(n: number, low: number, ok: number, what: string): string {
-  if (n < low) return `A very low sample size — ${what} won't be reliable.`
+  if (n < low) return `A very low sample size, ${what} won't be reliable.`
   if (n < ok) return 'An OK sample size.'
   return 'A large sample size, so these reflect skill level properly.'
 }
@@ -78,7 +78,6 @@ export function OverworldRunsCard({ a, compareTo, loading }: { a: OverworldAnaly
       countsLabel="Overworlds"
       timesaves={a.timesaves}
       loading={loading}
-      delay={120}
     />
   )
 }
@@ -104,7 +103,6 @@ export function BastionRunsCard({ a, compareTo, loading }: { a: BastionAnalysis;
       oppDeaths={d(a.deaths.opp)}
       timesaves={a.timesaves}
       loading={loading}
-      delay={150}
     />
   )
 }
@@ -139,9 +137,9 @@ export function SeasonStandingCard({ s, compareTo }: { s: StandingInput; compare
     { label: 'Momentum', value: s.clutchReady ? s.clutch.momentum.toFixed(3) : '…', share: s.clutchReady ? shareBeaten(s.clutch.momentum, 'stats', 'momentum', false, compareTo) : null, hint: 'How streaky your results are: 1 is pure streaks, 0 is random, −1 always alternates.' }
   ]
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '60ms' }}>
+    <section className="surface p-5">
       <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Season standing</h2>
+        <h2 className="text-sm font-semibold text-text">Season standing</h2>
         <span className="text-[11px] text-faint">
           vs {compareTo === 'world' ? (POOL_PLAYERS ? `${POOL_PLAYERS.toLocaleString()} ` : '') : `${tierName(compareTo)} `}
           {POOL_SEASON ? `S${POOL_SEASON} ` : ''}players
@@ -150,7 +148,7 @@ export function SeasonStandingCard({ s, compareTo }: { s: StandingInput; compare
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {tiles.map((t) => (
           <div key={t.label} className="rounded-lg border border-[var(--line)] px-3 py-2" title={t.hint}>
-            <div className="text-[10px] uppercase tracking-[0.14em] text-faint">{t.label}</div>
+            <div className="text-[10px] text-faint">{t.label}</div>
             <div className="tnum font-display text-base text-text">{t.value}</div>
             <div className="text-[11px]" style={{ color: t.share == null ? 'var(--faint)' : t.share >= 0.5 ? '#5fd38d' : '#e2706e' }}>
               {t.share == null ? '—' : topLabel(t.share)}

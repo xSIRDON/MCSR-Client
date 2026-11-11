@@ -15,40 +15,34 @@ export function StatRow({ head, scope = 'season' }: { head: HeadStats; scope?: '
         value={`${winRate}%`}
         hint={`${head.wins}W · ${head.losses}L`}
         accent="var(--gold)"
-        delay={20}
       />
       <StatTile
         label="Record"
         value={`${head.wins}–${head.losses}`}
         hint={`${head.played} played`}
-        delay={50}
       />
       <StatTile
         label="Elo"
         value={head.elo != null ? String(head.elo) : '—'}
         hint={`${signedElo(head.netElo)} recent`}
         accent={netColor}
-        delay={80}
       />
       <StatTile
         label="Best Time"
         value={msToTime(head.bestTime)}
         hint={scope === 'total' ? 'career best' : 'season best'}
         accent="var(--portal)"
-        delay={110}
       />
       <StatTile
         label="Average"
         value={head.averageWin != null ? msToTime(head.averageWin) : '—'}
         hint={scope === 'total' ? 'career average' : 'season average'}
-        delay={140}
       />
       <StatTile
         label="Win Streak"
         value={head.currentStreak > 0 ? `${head.currentStreak}W` : '—'}
         hint={`best ${head.bestStreak}W`}
         accent={streakColor}
-        delay={170}
       />
     </div>
   )

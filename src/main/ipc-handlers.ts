@@ -331,7 +331,7 @@ async function startCompanions(id: InstanceId, javaw: string | null): Promise<vo
   if (cfg.toolscreen) {
     try {
       await spawnToolscreenWatcher(gmll.gameDir(id), javaw)
-      pushLog('system', 'Toolscreen watcher started — it will inject once the game window opens.')
+      pushLog('system', 'Toolscreen watcher started, it will inject once the game window opens.')
     } catch (e) {
       pushLog('system', `Toolscreen skipped: ${e instanceof Error ? e.message : e}`)
     }
@@ -772,7 +772,7 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.instTuneSeedQueue, (_e, id: InstanceId) => {
     const iid = assertInstanceId(id)
     if (BUSY_STATES.includes(states[iid].state)) {
-      throw new Error('Close the game first — SeedQueue settings can’t change while it’s running.')
+      throw new Error('Close the game first, SeedQueue settings can’t change while it’s running.')
     }
     const changes = tuneSeedQueue(iid)
     if (changes.length > 0) pushLog('system', `[${iid}] Tuned SeedQueue for this PC: ${changes.join(', ')}`)

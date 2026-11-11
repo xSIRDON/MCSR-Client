@@ -34,10 +34,10 @@ export function ChokeLine({ name }: { name: string | null }) {
   const clutch = sh > 0 ? Math.round((fin / sh) * 100) : null
 
   return (
-    <section className="surface p-5 animate-fade-up">
+    <section className="surface p-5">
       <header className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Choke Line</h2>
+          <h2 className="text-sm font-semibold text-text">Choke Line</h2>
           <p className="text-xs text-faint">Where your runs die{total ? ` · last ${total} runs` : ''}</p>
         </div>
         {clutch !== null && (
@@ -48,7 +48,7 @@ export function ChokeLine({ name }: { name: string | null }) {
             >
               {clutch}%
             </div>
-            <div className="text-[10px] uppercase tracking-wider text-faint">Clutch · finish from SH</div>
+            <div className="text-[10px] tracking-wider text-faint">Clutch · finish from SH</div>
           </div>
         )}
       </header>
@@ -58,7 +58,7 @@ export function ChokeLine({ name }: { name: string | null }) {
       ) : isLoading ? (
         <Empty>Crunching your runs…</Empty>
       ) : total === 0 ? (
-        <Empty>No paceman runs yet — play some RSG and this fills in.</Empty>
+        <Empty>No paceman runs yet, play some RSG and this fills in.</Empty>
       ) : (
         <div className="space-y-1">
           {rows.map((r, i) => {
@@ -72,8 +72,8 @@ export function ChokeLine({ name }: { name: string | null }) {
                     style={{
                       width: `${Math.max(3, r.pct * 100)}%`,
                       background: isKill
-                        ? 'linear-gradient(90deg,var(--loss),#7a1f1f)'
-                        : 'linear-gradient(90deg,var(--gold),#9a7a1e)',
+                        ? 'var(--loss)'
+                        : 'var(--gold)',
                       opacity: i === 0 ? 0.45 : 1
                     }}
                   />
@@ -97,7 +97,7 @@ export function ChokeLine({ name }: { name: string | null }) {
 
       {killIdx > 0 && total > 0 && rows[killIdx].drop > 0 && (
         <p className="mt-3 text-xs text-muted">
-          Biggest leak: <span className="text-[var(--loss)]">{rows[killIdx].label}</span> — you lose{' '}
+          Biggest leak: <span className="text-[var(--loss)]">{rows[killIdx].label}</span>, you lose{' '}
           <span className="text-text">{Math.round(rows[killIdx].drop * 100)}%</span> of runs that get
           there.
         </p>

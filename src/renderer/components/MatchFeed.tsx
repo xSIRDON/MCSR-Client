@@ -28,9 +28,9 @@ export function MatchFeed({ uuid, season }: { uuid: string; season?: number | 'a
   const hidden = all.length - PREVIEW
 
   return (
-    <section className="surface flex flex-col p-5 animate-fade-up" style={{ animationDelay: '110ms' }}>
+    <section className="surface flex flex-col p-5">
       <header className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Recent matches</h2>
+        <h2 className="text-sm font-semibold text-text">Recent matches</h2>
         {all.length > 0 && <span className="tnum text-xs text-faint">{all.length} ranked</span>}
       </header>
       <div className="space-y-1.5">

@@ -26,9 +26,9 @@ export function Home() {
       <HomeHero uuid={profile.uuid} name={profile.name} />
 
       <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(270px,1fr))]">
-        <RankedCard uuid={profile.uuid} delay={40} />
-        <RsgCard name={pacemanName} delay={110} />
-        <ZsgCard delay={180} />
+        <RankedCard uuid={profile.uuid} />
+        <RsgCard name={pacemanName} />
+        <ZsgCard />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
@@ -52,7 +52,7 @@ function HomeHero({ uuid, name }: { uuid: string; name: string }) {
   const rank = eloToRank(user?.eloRate)
 
   return (
-    <header className="flex flex-wrap items-center gap-4 animate-fade-up">
+    <header className="flex flex-wrap items-center gap-4">
       <div
         className="rounded-xl p-1"
         style={{ boxShadow: `0 0 0 1.5px ${rank.color}55, 0 0 22px ${rank.glow}33` }}
@@ -60,7 +60,7 @@ function HomeHero({ uuid, name }: { uuid: string; name: string }) {
         <PlayerHead id={uuid} uuid={uuid} size={52} className="rounded-lg" />
       </div>
       <div className="min-w-0">
-        <div className="text-[11px] uppercase tracking-[0.22em] text-faint">Welcome back</div>
+        <div className="text-[11px] text-faint">Welcome back</div>
         <div className="flex items-center gap-2.5">
           <h1 className="font-display text-2xl tracking-wide text-text">{name}</h1>
           <DonorBadge roleType={user?.roleType} withLabel />

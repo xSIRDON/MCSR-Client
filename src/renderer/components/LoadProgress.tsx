@@ -18,7 +18,7 @@ export function LoadProgress({ parts, label }: { parts: LoadPart[]; label: strin
   return (
     <div className="surface px-4 py-3" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={known ? pct : undefined}>
       <div className="mb-2 flex items-baseline justify-between gap-3 text-[11px]">
-        <span className="uppercase tracking-[0.16em] text-muted">{label}</span>
+        <span className="text-muted">{label}</span>
         <span className="tnum text-faint">
           {known ? `${done} / ${total} matches · ${pct}%` : 'Finding matches…'}
         </span>

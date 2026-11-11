@@ -7,7 +7,7 @@ import { ModeBadge } from './ModeBadge'
 const LABEL: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
 const INSTANCES: InstanceId[] = ['ranked', 'rsg', 'zsg']
 
-function InstanceIcon({ id, size = 20 }: { id: InstanceId; size?: number }) {
+function InstanceIcon({ id, size = 24 }: { id: InstanceId; size?: number }) {
   return <ModeBadge mode={id} size={size} />
 }
 
@@ -40,7 +40,6 @@ export function PlayBar() {
             style={{
               width: prog?.fraction != null ? `${Math.round(prog.fraction * 100)}%` : '100%',
               background: 'var(--win)',
-              boxShadow: '0 0 10px var(--win)',
               opacity: prog?.fraction != null ? 1 : 0.7,
               animation: prog?.fraction == null ? 'sheen 1.2s ease-in-out infinite' : undefined,
               transition: 'width .25s'
@@ -60,7 +59,7 @@ export function PlayBar() {
             {status.state === 'ready'
               ? `Installed${status.versionId ? ` · ${status.versionId}` : ''}`
               : status.state === 'not-installed'
-                ? 'Not installed — first launch downloads everything'
+                ? 'Not installed, first launch downloads everything'
                 : status.state === 'running'
                   ? 'Game is running'
                   : status.state === 'error'
@@ -96,9 +95,7 @@ export function PlayBar() {
           className="font-display group relative flex min-w-[190px] items-center justify-center gap-2.5 rounded-xl px-6 py-3 text-base tracking-wide transition-all disabled:cursor-not-allowed"
           style={{
             color: '#07140a',
-            background: busy
-              ? 'linear-gradient(180deg,#3a4a36,#2c3a2a)'
-              : 'linear-gradient(180deg,#6fcf57,#4ea73e)',
+            background: busy ? 'linear-gradient(180deg,#3a4a36,#2c3a2a)' : 'linear-gradient(180deg,#6fcf57,#4ea73e)',
             boxShadow: busy ? 'none' : '0 8px 24px rgba(94,167,62,.4), inset 0 1px 0 rgba(255,255,255,.25)',
             opacity: busy ? 0.85 : 1
           }}
@@ -191,7 +188,7 @@ function InstanceSelect({ selected, onSelect }: { selected: InstanceId; onSelect
           ref={menuRef}
           role="menu"
           onKeyDown={onMenuKey}
-          className="absolute bottom-full left-0 z-40 mb-2 w-[184px] overflow-hidden rounded-xl border border-[var(--line-strong)] bg-[#0e0e16] p-1 shadow-[0_14px_44px_rgba(0,0,0,.6)] animate-fade-up"
+          className="absolute bottom-full left-0 z-40 mb-2 w-[184px] overflow-hidden rounded-xl border border-[var(--line-strong)] bg-[#0e0e16] p-1 shadow-lg"
         >
           {INSTANCES.map((id) => {
             const active = selected === id

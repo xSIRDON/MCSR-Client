@@ -97,7 +97,7 @@ export function Settings() {
       <Card title="Accounts">
         <div className="space-y-1.5">
           {accounts.length === 0 ? (
-            <div className="text-sm text-muted">No accounts yet — add one to sign in.</div>
+            <div className="text-sm text-muted">No accounts yet, add one to sign in.</div>
           ) : (
             accounts.map((a) => (
               <div
@@ -109,7 +109,7 @@ export function Settings() {
                   <PlayerHead id={a.uuid} uuid={a.uuid} size={26} className="rounded" />
                   <span className={a.active ? 'text-sm text-text' : 'text-sm text-muted'}>{a.name}</span>
                   {a.active && (
-                    <span className="rounded-full bg-[var(--gold)]/15 px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--gold)]">
+                    <span className="rounded-full bg-[var(--gold)]/15 px-2 py-0.5 text-[10px] tracking-wide text-[var(--gold)]">
                       Active
                     </span>
                   )}
@@ -149,7 +149,7 @@ export function Settings() {
             {java === null
               ? 'Checking…'
               : java.bundled
-                ? 'Bundled Java 21 — ready'
+                ? 'Bundled Java 21, ready'
                 : 'Bundled Java 21 downloads with your next launch'}
           </span>
         </div>
@@ -159,8 +159,8 @@ export function Settings() {
           </div>
         )}
         <p className="mt-2 text-xs text-faint">
-          The game runs on Mojang’s own Java 21 with the ZGC garbage collector — the setup SeedQueue
-          recommends — and the paceman tracker, Toolscreen and Ninjabrain Bot run on it too. A system
+          The game runs on Mojang’s own Java 21 with the ZGC garbage collector, the setup SeedQueue
+          recommends, and the paceman tracker, Toolscreen and Ninjabrain Bot run on it too. A system
           Java 17+ is only a fallback for the tools until that download is done.
           {java && !java.bundled && !java.ok && (
             <>
@@ -212,7 +212,7 @@ export function Settings() {
         </div>
         <p className="mt-2 text-xs text-faint">
           Get a key at paceman.gg → sign in with Discord → Generate Access Token. The tracker starts
-          automatically when you launch RSG — no Julti or Jingle needed.
+          automatically when you launch RSG, no Julti or Jingle needed.
         </p>
         <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm">
           <input
@@ -224,7 +224,7 @@ export function Settings() {
           <span className="text-muted">Show the tracker window while it runs</span>
         </label>
         <p className="mt-1 pl-6 text-xs text-faint">
-          Off, it tracks in the background with no window — your runs still upload, and the RSG card
+          Off, it tracks in the background with no window, your runs still upload, and the RSG card
           shows TRACKING while it's on.
         </p>
 
@@ -332,7 +332,7 @@ export function Settings() {
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="surface p-5">
-      <h2 className="mb-3 font-display text-sm uppercase tracking-[0.16em] text-muted">{title}</h2>
+      <h2 className="mb-3 text-sm font-semibold text-text">{title}</h2>
       {children}
     </section>
   )

@@ -17,24 +17,24 @@ interface Meta {
 const META: Record<InstanceId, Meta> = {
   ranked: {
     title: 'Ranked',
-    tagline: '1v1 ladder — the full MCSR Ranked modpack.',
+    tagline: '1v1 ladder, the full MCSR Ranked modpack.',
     accent: 'var(--gold)',
     mods: '22 mods · MCSR Ranked',
-    icon: () => <ModeBadge mode="ranked" size={22} />
+    icon: () => <ModeBadge mode="ranked" size={26} />
   },
   rsg: {
     title: 'RSG',
-    tagline: 'Random Seed Glitchless — SeedQueue wall + paceman. No ranked mod.',
+    tagline: 'Random Seed Glitchless, SeedQueue wall + paceman. No ranked mod.',
     accent: 'var(--portal)',
     mods: 'SeedQueue · SpeedRunIGT · paceman',
-    icon: () => <ModeBadge mode="rsg" size={22} />
+    icon: () => <ModeBadge mode="rsg" size={26} />
   },
   zsg: {
     title: 'ZSG',
     tagline: 'RSG set + the FSG (filtered-seed) mod. No ranked mod.',
     accent: '#4fd6b0',
     mods: 'SeedQueue · SpeedRunIGT · FSG',
-    icon: () => <ModeBadge mode="zsg" size={22} />
+    icon: () => <ModeBadge mode="zsg" size={26} />
   }
 }
 
@@ -65,13 +65,8 @@ export function InstanceCard({ id }: { id: InstanceId }) {
   return (
     <div
       className="surface relative flex flex-col overflow-hidden p-4"
-      style={{ boxShadow: `inset 0 0 50px ${meta.accent}0a, 0 8px 26px rgba(0,0,0,.5)` }}
       onMouseEnter={() => select(id)}
     >
-      <div
-        className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full blur-3xl"
-        style={{ background: meta.accent, opacity: 0.1 }}
-      />
       <div className="relative flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           {meta.icon()}

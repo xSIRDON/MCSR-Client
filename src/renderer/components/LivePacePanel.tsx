@@ -22,17 +22,11 @@ export function LivePacePanel({ name }: { name: string | null }) {
   const live = !!world?.isLive
 
   return (
-    <section
-      className="surface p-5 animate-fade-up"
-      style={{
-        animationDelay: '90ms',
-        boxShadow: live ? '0 0 0 1px rgba(74,255,140,.25), 0 0 36px rgba(74,255,140,.12)' : undefined
-      }}
-    >
+    <section className="surface p-5">
       <header className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <PortalBlock size={18} />
-          <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Live Pace</h2>
+          <h2 className="text-sm font-semibold text-text">Live Pace</h2>
         </div>
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${

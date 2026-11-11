@@ -36,7 +36,7 @@ export function Profile() {
   return (
     <div className="mx-auto max-w-[980px] space-y-4 px-5 py-4">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-base uppercase tracking-[0.2em] text-muted">
+        <h1 className="font-display text-base text-muted">
           {queried ? 'Player' : 'Your profile'}
         </h1>
         <div className="w-60">
@@ -102,7 +102,7 @@ function ProfileAnalytics({ uuid, season }: { uuid: string; season?: SeasonSel }
   if (!hasData) return null
   return (
     <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(360px,1fr))]">
-      <PlayStyleRadar dims={scorecard} delay={110} />
+      <PlayStyleRadar dims={scorecard} />
       <SplitRunsCard a={runs.splits} compareTo="world" loading={detailsLoading} />
     </div>
   )

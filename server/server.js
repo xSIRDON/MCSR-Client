@@ -8,7 +8,7 @@ if (!SECRET) {
   console.error('SERVER_SECRET is required (any long random string).')
   process.exit(1)
 }
-if (DEV_UNVERIFIED) console.warn('!! DEV_ALLOW_UNVERIFIED is ON — identity checks are OFF. Never run like this in production.')
+if (DEV_UNVERIFIED) console.warn('!! DEV_ALLOW_UNVERIFIED is ON, identity checks are OFF. Never run like this in production.')
 
 const PORT = Number(process.env.PORT ?? 8787)
 const TRUST_PROXY = process.env.TRUST_PROXY === '1'

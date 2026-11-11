@@ -32,7 +32,7 @@ export function DonorBadge({
       />
       {withLabel && (
         <span
-          className="text-[10px] font-semibold uppercase tracking-wide"
+          className="text-[10px] font-semibold tracking-wide"
           style={{ color: d.color }}
         >
           {d.label}

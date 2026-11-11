@@ -15,9 +15,9 @@ export function Leaderboard({ limit = 12 }: { limit?: number }) {
   const users = data?.users?.slice(0, limit) ?? []
 
   return (
-    <section className="surface flex min-h-0 flex-col p-5 animate-fade-up" style={{ animationDelay: '150ms' }}>
+    <section className="surface flex min-h-0 flex-col p-5">
       <header className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Leaderboard</h2>
+        <h2 className="text-sm font-semibold text-text">Leaderboard</h2>
         <div className="w-48">
           <PlayerSearch placeholder="Look up player…" />
         </div>

@@ -91,7 +91,7 @@ async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     stop()
     session = null
     store.secret.delete(SESSION_SECRET)
-    lastError = 'Session expired — reconnecting on next launch.'
+    lastError = 'Session expired, reconnecting on next launch.'
     emit()
     throw new Error('unauthorized')
   }

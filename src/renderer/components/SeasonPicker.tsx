@@ -13,7 +13,7 @@ export function SeasonPicker({
   const seasons = Array.from({ length: current }, (_, i) => current - i)
   const active = value === 'all' ? 'all' : String(value ?? current)
   return (
-    <label className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-faint">
+    <label className="flex items-center gap-1.5 text-[11px] text-faint">
       Season
       <select
         value={active}

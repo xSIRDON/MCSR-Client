@@ -61,11 +61,11 @@ export function Practice() {
 
   return (
     <div className="mx-auto max-w-[980px] space-y-4 px-5 py-4">
-      <header className="animate-fade-up">
-        <div className="text-[11px] uppercase tracking-[0.22em] text-faint">Practice</div>
+      <header className="">
+        <div className="text-[11px] text-faint">Practice</div>
         <h1 className="font-display text-2xl tracking-wide text-text">Play the same seeds as the best</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Draw a top-runner match, paste its seeds into a ranked private room, and play it out — then
+          Draw a top-runner match, paste its seeds into a ranked private room, and play it out, then
           see where your pace breaks, split by split, and jump straight to their POV.
         </p>
         <p className="mt-1.5 text-xs text-faint">
@@ -78,7 +78,7 @@ export function Practice() {
           >
             GapCheck
           </a>{' '}
-          — built by cylorun, Luxvored and marmarounos.{' '}
+          built by cylorun, Luxvored and marmarounos.{' '}
           <a
             href="https://ko-fi.com/gapcheck"
             target="_blank"
@@ -91,8 +91,8 @@ export function Practice() {
         </p>
       </header>
 
-      <section className="surface p-4 animate-fade-up" style={{ animationDelay: '40ms' }}>
-        <div className="mb-2 text-[11px] uppercase tracking-[0.16em] text-muted">Overworld</div>
+      <section className="surface p-4">
+        <div className="mb-2 text-[11px] text-muted">Overworld</div>
         <div className="flex flex-wrap gap-1.5">
           <Pill on={filters.seedType === null} onClick={() => set('seedType', null)}>
             Any {counts?.total ? <Count n={counts.total} /> : null}
@@ -104,7 +104,7 @@ export function Practice() {
           ))}
         </div>
 
-        <div className="mb-2 mt-4 text-[11px] uppercase tracking-[0.16em] text-muted">Bastion</div>
+        <div className="mb-2 mt-4 text-[11px] text-muted">Bastion</div>
         <div className="flex flex-wrap gap-1.5">
           <Pill on={filters.bastionType === null} onClick={() => set('bastionType', null)}>
             Any
@@ -121,7 +121,7 @@ export function Practice() {
           <Num label="Over (min)" value={filters.minMinutes} onChange={(v) => set('minMinutes', v)} />
           <Num label="Top rank #" value={filters.minRank} onChange={(v) => set('minRank', v)} step={50} />
           <label className="min-w-[180px] flex-1">
-            <span className="mb-1 block text-[11px] uppercase tracking-[0.16em] text-muted">
+            <span className="mb-1 block text-[11px] text-muted">
               Top runner
             </span>
             <PlayerAutocomplete
@@ -158,18 +158,18 @@ export function Practice() {
         )}
         {typingRunner && runnerMissing && (
           <div className="mt-2 text-xs text-[var(--loss)]">
-            No player called “{runnerName}” on MCSR Ranked — check the spelling.
+            No player called “{runnerName}” on MCSR Ranked, check the spelling.
           </div>
         )}
         {runnerUuid && counts?.total === 0 && (
           <div className="mt-2 text-xs text-[var(--loss)]">
-            GapCheck has no seeds for {runner?.nickname ?? runnerName} — their collection only covers
+            GapCheck has no seeds for {runner?.nickname ?? runnerName}, their collection only covers
             matches from top-ranked players. Clear the name to draw from the whole collection.
           </div>
         )}
         {!runnerUuid && counts?.total === 0 && (
           <div className="mt-2 text-xs text-[var(--loss)]">
-            No seeds match these filters — try a longer time limit or a higher rank number.
+            No seeds match these filters, try a longer time limit or a higher rank number.
           </div>
         )}
         {error && <div className="mt-2 text-xs text-[var(--loss)]">{error}</div>}
@@ -181,13 +181,12 @@ export function Practice() {
         </div>
       ) : (
         <div className="space-y-4">
-          {seeds.map((seed, i) => (
+          {seeds.map((seed) => (
             <SeedCard
               key={seed.matchId}
               seed={seed}
               myUuid={profile?.uuid ?? null}
               myDetails={mine.details}
-              delay={i === 0 ? 0 : 40}
             />
           ))}
         </div>
@@ -199,13 +198,11 @@ export function Practice() {
 function SeedCard({
   seed,
   myUuid,
-  myDetails,
-  delay
+  myDetails
 }: {
   seed: GapCheckSeed
   myUuid: string | null
   myDetails: MatchInfo[]
-  delay: number
 }) {
   const [revealed, setRevealed] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
@@ -246,7 +243,7 @@ function SeedCard({
   ] as const
 
   return (
-    <section className="surface p-4 animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
+    <section className="surface p-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           {runner && <PlayerHead id={runner.uuid} uuid={runner.uuid} size={34} className="rounded-lg" />}
@@ -297,7 +294,7 @@ function SeedCard({
       <div className="mt-3 space-y-1">
         {allSeeds.map(([label, value]) => (
           <div key={label} className="flex items-center gap-2">
-            <span className="w-[74px] shrink-0 text-[11px] uppercase tracking-wider text-faint">
+            <span className="w-[74px] shrink-0 text-[11px] tracking-wider text-faint">
               {label}
             </span>
             <code className="min-w-0 flex-1 truncate rounded-md bg-black/25 px-2 py-1 text-[11px] text-text">
@@ -369,7 +366,7 @@ function SeedCard({
           {seed.endTowers.length > 0 && (
             <div className="mb-2 text-[11px] text-faint">End towers: {seed.endTowers.join(' / ')}</div>
           )}
-          <div className="mb-1 grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-3 text-[10px] uppercase tracking-wider text-faint">
+          <div className="mb-1 grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-3 text-[10px] tracking-wider text-faint">
             <span>Split</span>
             <span className="text-right">Them</span>
             <span className="text-right">You (typical)</span>
@@ -415,8 +412,8 @@ function SeedCard({
             {!myUuid
               ? 'Sign in to compare against your own splits.'
               : typed
-                ? `Your median over ${typed} ${seedStructureLabel(seed.seedType)} run${typed === 1 ? '' : 's'} — a bad run doesn’t skew it`
-                : 'Your overall median — not enough of this seed type yet'}
+                ? `Your median over ${typed} ${seedStructureLabel(seed.seedType)} run${typed === 1 ? '' : 's'}, a bad run doesn’t skew it`
+                : 'Your overall median, not enough of this seed type yet'}
           </p>
         </div>
       )}
@@ -464,7 +461,7 @@ function Num({
 }) {
   return (
     <label className="w-[104px]">
-      <span className="mb-1 block text-[11px] uppercase tracking-[0.16em] text-muted">{label}</span>
+      <span className="mb-1 block text-[11px] text-muted">{label}</span>
       <input
         type="number"
         min={1}

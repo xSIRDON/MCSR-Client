@@ -24,7 +24,7 @@ export async function fetchVerified(
   }
   const got = sha512Of(buf)
   if (got !== sha512) {
-    throw new Error(`${label}: sha512 mismatch — expected ${sha512.slice(0, 16)}…, got ${got.slice(0, 16)}…`)
+    throw new Error(`${label}: sha512 mismatch, expected ${sha512.slice(0, 16)}…, got ${got.slice(0, 16)}…`)
   }
   return buf
 }

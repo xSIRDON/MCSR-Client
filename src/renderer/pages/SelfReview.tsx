@@ -103,7 +103,7 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
 
   return (
     <div className="mx-auto max-w-[980px] space-y-4 px-5 py-4">
-      <header className="flex flex-wrap items-center gap-4 animate-fade-up">
+      <header className="flex flex-wrap items-center gap-4">
         <div
           className="rounded-xl p-1"
           style={{ boxShadow: `0 0 0 1.5px ${rank.color}55, 0 0 22px ${rank.glow}33` }}
@@ -111,7 +111,7 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
           <PlayerHead id={uuid} uuid={uuid} size={48} className="rounded-lg" />
         </div>
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-[0.22em] text-faint">Your numbers</div>
+          <div className="text-[11px] text-faint">Your numbers</div>
           <h1 className="font-display text-2xl tracking-wide text-text">
             {user?.nickname ?? name} · Ranked Review
           </h1>
@@ -160,7 +160,7 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
             <WinRateBars analytics={analytics} />
           </div>
           {analyzedN > 0 && (
-            <div className="px-1 text-[11px] uppercase tracking-[0.16em] text-faint">
+            <div className="px-1 text-[11px] text-faint">
               Split detail below from your last {analyzedN} ranked{' '}
               {analyzedN === 1 ? 'match' : 'matches'} this season
             </div>
@@ -223,10 +223,10 @@ function TargetSplitsCard({
   targets: { key: string; label: string; yours: number; target: number; delta: number }[]
 }) {
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '110ms' }}>
+    <section className="surface p-5">
       <header className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">
-          Target splits — {tierLabel} pace
+        <h2 className="text-sm font-semibold text-text">
+          Target splits: {tierLabel} pace
         </h2>
         <span className="text-xs text-faint">you · their median · gap</span>
       </header>
@@ -257,7 +257,7 @@ function TargetSplitsCard({
         })}
       </div>
       <p className="mt-2 text-[11px] text-faint">
-        Median split times of {tierLabel} players. Close the red gaps — biggest gap first — to rank
+        Median split times of {tierLabel} players. Close the red gaps, biggest gap first, to rank
         up fastest.
       </p>
     </section>
@@ -267,9 +267,9 @@ function TargetSplitsCard({
 function SplitsCard({ splits, loading }: { splits: SplitStat[]; loading: boolean }) {
   const hasAny = splits.some((s) => s.count > 0)
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '90ms' }}>
+    <section className="surface p-5">
       <header className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">Splits</h2>
+        <h2 className="text-sm font-semibold text-text">Splits</h2>
         <span className="text-xs text-faint">best · avg · runs</span>
       </header>
       {loading ? (
@@ -312,8 +312,8 @@ function SplitsCard({ splits, loading }: { splits: SplitStat[]; loading: boolean
 
 function InsightsCard({ insights }: { insights: RankedInsight[] }) {
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '120ms' }}>
-      <h2 className="mb-3 font-display text-sm uppercase tracking-[0.16em] text-muted">Insights</h2>
+    <section className="surface p-5">
+      <h2 className="mb-3 text-sm font-semibold text-text">Insights</h2>
       {insights.length === 0 ? (
         <div className="text-sm text-muted">No standout patterns yet.</div>
       ) : (
@@ -324,13 +324,13 @@ function InsightsCard({ insights }: { insights: RankedInsight[] }) {
               <li key={`${ins.label}-${i}`} className="flex gap-3">
                 <span
                   className="mt-[7px] h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: color, boxShadow: `0 0 8px ${color}66` }}
+                  style={{ background: color }}
                 />
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2">
                     <span className="font-display text-sm tracking-wide text-text">{ins.label}</span>
                     <span
-                      className="text-[10px] uppercase tracking-[0.16em]"
+                      className="text-[10px]"
                       style={{ color }}
                     >
                       {KIND_LABEL[ins.kind]}
@@ -379,9 +379,9 @@ function WinRateBars({ analytics }: { analytics: ReturnType<typeof analyzeRanked
     { label: 'Recent', rate: analytics.recentWinRate, n: analytics.recentSample }
   ].filter((d) => d.n > 0)
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '160ms' }}>
+    <section className="surface p-5">
       <header className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">
+        <h2 className="text-sm font-semibold text-text">
           By opponent strength
         </h2>
         <span className="text-xs text-faint">recent win%</span>
@@ -457,9 +457,9 @@ function CompletionHistogram({ times }: { times: number[] }) {
   const buckets = useMemo(() => bucketTimes(times), [times])
 
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: '200ms' }}>
+    <section className="surface p-5">
       <header className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">
+        <h2 className="text-sm font-semibold text-text">
           Completion times
         </h2>
         <span className="text-xs text-faint">{times.length} wins</span>

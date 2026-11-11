@@ -28,12 +28,12 @@ function RadarTooltip({
   )
 }
 
-export function PlayStyleRadar({ dims, delay = 70 }: { dims: ScoreDim[]; delay?: number }) {
+export function PlayStyleRadar({ dims }: { dims: ScoreDim[] }) {
   const data = dims.map((d) => ({ axis: d.label, score: d.score, detail: d.detail }))
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
+    <section className="surface p-5">
       <header className="mb-2 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">
+        <h2 className="text-sm font-semibold text-text">
           Strengths &amp; weaknesses
         </h2>
         <span className="text-xs text-faint">0–100</span>

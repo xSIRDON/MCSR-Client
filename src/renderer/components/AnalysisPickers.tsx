@@ -6,7 +6,7 @@ const SELECT =
 
 export function SelectionPicker({ value, onChange }: { value: Selection; onChange: (s: Selection) => void }) {
   return (
-    <label className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-faint">
+    <label className="flex items-center gap-1.5 text-[11px] text-faint">
       Matches
       <select value={value} onChange={(e) => onChange(Number(e.target.value) as Selection)} className={SELECT}>
         {SELECTIONS.map((n) => (
@@ -21,7 +21,7 @@ export function SelectionPicker({ value, onChange }: { value: Selection; onChang
 
 export function CompareToPicker({ value, onChange }: { value: CompareTo; onChange: (c: CompareTo) => void }) {
   return (
-    <label className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-faint">
+    <label className="flex items-center gap-1.5 text-[11px] text-faint">
       Compare to
       <select value={value} onChange={(e) => onChange(e.target.value as CompareTo)} className={SELECT}>
         {(['world', ...TIER_ORDER] as CompareTo[]).map((c) => (

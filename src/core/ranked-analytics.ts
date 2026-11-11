@@ -553,7 +553,7 @@ export function buildScorecard(
       key: 'speed',
       label: 'Speed',
       score: pct,
-      detail: `run pace — faster than ~${pct}% of the field`,
+      detail: `run pace, faster than ~${pct}% of the field`,
       sample: speed.sample
     })
   }
@@ -598,7 +598,7 @@ export function scorecardInsights(
     out.push({
       kind: 'weakness',
       label: 'Dies too much',
-      detail: `${deaths.total} death${deaths.total === 1 ? '' : 's'} in ${deaths.matches} games — each one costs time and runs.`
+      detail: `${deaths.total} death${deaths.total === 1 ? '' : 's'} in ${deaths.matches} games, each one costs time and runs.`
     })
   }
 
@@ -949,12 +949,12 @@ export function splitCallouts(
       out.push({
         kind: 'strength',
         label: 'Best split',
-        detail: `${best.label} — ${best.pctLabel}.`
+        detail: `${best.label}: ${best.pctLabel}.`
       })
       out.push({
         kind: 'weakness',
         label: 'Weakest split',
-        detail: `${worst.label} — ${worst.pctLabel}.`
+        detail: `${worst.label}: ${worst.pctLabel}.`
       })
     }
   }

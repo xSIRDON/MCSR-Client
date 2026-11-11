@@ -78,8 +78,7 @@ export function RunPerformanceCard({
   oppDeaths,
   timesaves,
   timesaveKeys,
-  loading,
-  delay = 90
+  loading
 }: {
   title: string
   description: ReactNode
@@ -90,7 +89,6 @@ export function RunPerformanceCard({
   timesaves: HeadToHead
   timesaveKeys?: string[]
   loading: boolean
-  delay?: number
 }) {
   const [tab, setTab] = useState<'performance' | 'timesaves'>('performance')
   const byLabel = Object.fromEntries(items.map((p) => [p.label, p]))
@@ -102,9 +100,9 @@ export function RunPerformanceCard({
   const maxGap = Math.max(1000, ...tsItems.map((p) => Math.abs(timesaves.median[p.key] ?? 0)))
 
   return (
-    <section className="surface p-5 animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
+    <section className="surface p-5">
       <header className="mb-1 flex items-center justify-between gap-2">
-        <h2 className="font-display text-sm uppercase tracking-[0.16em] text-muted">{title}</h2>
+        <h2 className="text-sm font-semibold text-text">{title}</h2>
         <div className="flex overflow-hidden rounded-lg border border-[var(--line)] text-[11px]">
           {(['performance', 'timesaves'] as const).map((t) => (
             <button
@@ -147,7 +145,7 @@ export function RunPerformanceCard({
           )}
           <table className="mt-3 w-full table-fixed text-center text-xs">
             <thead>
-              <tr className="text-[10px] uppercase tracking-[0.12em] text-faint">
+              <tr className="text-[10px] text-faint">
                 <th className="w-[84px]" />
                 {items.map((p) => (
                   <th key={p.key} className="pb-1 font-medium">
@@ -215,7 +213,7 @@ export function RunPerformanceCard({
 function Extreme({ title, p, colour }: { title: string; p: PerfItem; colour: string }) {
   return (
     <div className="rounded-lg border border-[var(--line)] px-3 py-2">
-      <div className="text-[10px] uppercase tracking-[0.14em] text-faint">
+      <div className="text-[10px] text-faint">
         {title} · {p.label}
       </div>
       <div className="tnum font-display text-sm" style={{ color: colour }}>

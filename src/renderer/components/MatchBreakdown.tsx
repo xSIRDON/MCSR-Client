@@ -99,7 +99,7 @@ function Timestamps({ bd, meName, oppName }: { bd: Breakdown; meName: string; op
       </div>
 
       <div className="px-1">
-        <div className="mb-1.5 text-center text-[10px] uppercase tracking-wider text-faint">vs</div>
+        <div className="mb-1.5 text-center text-[10px] tracking-wider text-faint">vs</div>
         <ul className="space-y-1">
           {deltas.map((r) => (
             <li key={r.key} className="whitespace-nowrap text-center">
@@ -135,7 +135,7 @@ function Splits({ bd, meName, oppName }: { bd: Breakdown; meName: string; oppNam
         <span className="truncate" title={meName}>
           {meName}
         </span>
-        <span className="text-center text-[10px] uppercase tracking-wider text-faint">split</span>
+        <span className="text-center text-[10px] tracking-wider text-faint">split</span>
         <span className="truncate text-right" title={oppName}>
           {oppName}
         </span>

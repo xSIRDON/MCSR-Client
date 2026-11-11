@@ -66,10 +66,10 @@ function DangerCard({ id, onDeleted }: { id: InstanceId; onDeleted: () => void }
 
   return (
     <section className="surface p-5">
-      <h2 className="mb-3 font-display text-sm uppercase tracking-[0.16em] text-[var(--loss)]">Danger zone</h2>
+      <h2 className="mb-3 font-display text-sm text-[var(--loss)]">Danger zone</h2>
       <div className="flex items-center justify-between gap-3">
         <div className="text-sm text-muted">
-          Delete this instance — removes its mods, saves, configs and downloaded files.{' '}
+          Delete this instance, removes its mods, saves, configs and downloaded files.{' '}
           <span className="text-faint">Shared game files (assets/libraries) are kept.</span>
         </div>
         {!confirm ? (
@@ -133,7 +133,7 @@ function MemoryCard({ id }: { id: InstanceId }) {
       <div className="mt-1 text-xs text-faint">
         {id === 'ranked'
           ? '3–4 GB is plenty for Ranked.'
-          : 'SeedQueue needs about 2 GB plus 250 MB per queued seed — Wall performance below keeps them in step.'}{' '}
+          : 'SeedQueue needs about 2 GB plus 250 MB per queued seed, Wall performance below keeps them in step.'}{' '}
         Applies to this instance only.
       </div>
     </Card>
@@ -237,7 +237,7 @@ function WallCard({ id, onTuned }: { id: InstanceId; onTuned: () => void }) {
                 <span className="text-text">More RAM than this queue needs.</span>{' '}
                 {info.current.maxCapacity} seeds need {(info.neededRamMb / 1024).toFixed(1)} GB; the
                 extra leaves the rest of your {Math.round(info.totalMemMb / 1024)} GB PC short, and when
-                Windows runs out it pages to disk — which freezes the game.
+                Windows runs out it pages to disk, which freezes the game.
               </div>
               <button
                 onClick={() => void applyRam(info.lowerRamTo!)}
@@ -279,7 +279,7 @@ function LastSession({ report }: { report: GcSessionReport }) {
   const worst = report.worstFreezeMs != null ? `${(report.worstFreezeMs / 1000).toFixed(2)}s` : null
   const advice =
     froze && pcLow
-      ? 'Both at once means the queue is too big for this PC — queue fewer seeds.'
+      ? 'Both at once means the queue is too big for this PC, queue fewer seeds.'
       : froze
         ? 'The game ran out of heap mid-burst. Raise RAM above, or queue fewer seeds.'
         : pcLow
@@ -336,7 +336,7 @@ function JavaCard({ id }: { id: InstanceId }) {
             className="accent-[var(--gold)]"
           />
           <span className={java === null ? 'text-text' : 'text-muted'}>Automatic</span>
-          <span className="text-xs text-faint">— bundled Java 21 with ZGC, recommended</span>
+          <span className="text-xs text-faint">bundled Java 21 with ZGC, recommended</span>
         </label>
         <label className="flex cursor-pointer items-center gap-2 text-sm">
           <input
@@ -374,7 +374,7 @@ function FilesCard({ id }: { id: InstanceId }) {
     <Card title="Files">
       <div className="flex items-center justify-between gap-3">
         <div className="text-sm text-muted">
-          Open this instance’s game folder — <span className="text-faint">mods, saves, config, logs</span>.
+          Open this instance’s game folder: <span className="text-faint">mods, saves, config, logs</span>.
         </div>
         <button
           onClick={() => void window.mcsr.instances.openFolder(id)}
@@ -425,7 +425,7 @@ function ModsCard({ id }: { id: InstanceId }) {
       {canAddExtraOptions && (
         <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-[var(--gold)]/30 bg-[var(--gold)]/[0.06] px-3 py-2">
           <div className="min-w-0 text-sm text-muted">
-            <span className="text-text">extra-options</span> — a legal MCSR mod, not installed on
+            <span className="text-text">extra-options</span>, a legal MCSR mod, not installed on
             this instance.
           </div>
           <button
@@ -441,7 +441,7 @@ function ModsCard({ id }: { id: InstanceId }) {
       {!mods ? (
         <div className="text-sm text-muted">Loading…</div>
       ) : mods.length === 0 ? (
-        <div className="text-sm text-muted">No mods yet — install or launch this instance first.</div>
+        <div className="text-sm text-muted">No mods yet, install or launch this instance first.</div>
       ) : (
         <div className="max-h-[320px] space-y-1.5 overflow-y-auto pr-1">
           {mods.map((m) => (
@@ -573,7 +573,7 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
 
       <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
         <div className="min-w-0 text-sm text-muted">
-          …or import from <span className="text-text">any folder</span> — another launcher’s instance,
+          …or import from <span className="text-text">any folder</span>: another launcher’s instance,
           an old <code>.minecraft</code>, anywhere. We find the settings inside it.
         </div>
         <button
@@ -668,7 +668,7 @@ function MapsCard({ id }: { id: InstanceId }) {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-text">{m.name}</span>
-                <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-faint">
+                <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[9px] tracking-wider text-faint">
                   {m.category}
                 </span>
               </div>
@@ -709,7 +709,7 @@ function Toggle({ on, onChange, disabled }: { on: boolean; onChange: (v: boolean
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="surface p-5">
-      <h2 className="mb-3 font-display text-sm uppercase tracking-[0.16em] text-muted">{title}</h2>
+      <h2 className="mb-3 text-sm font-semibold text-text">{title}</h2>
       {children}
     </section>
   )

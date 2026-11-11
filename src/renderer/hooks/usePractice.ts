@@ -52,7 +52,7 @@ export function usePractice(filters: PracticeFilters) {
     try {
       const seed = await window.mcsr.gapcheck.seed(query)
       if (!seed) {
-        setError('No seed matches those filters — try loosening them.')
+        setError('No seed matches those filters, try loosening them.')
         return
       }
       setSeeds((prev) => [seed, ...prev.filter((s) => s.matchId !== seed.matchId)].slice(0, 12))

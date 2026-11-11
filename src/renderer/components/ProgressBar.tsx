@@ -18,7 +18,7 @@ export function ProgressBar({ fraction, label, color = 'var(--gold)' }: Props) {
         ) : (
           <div
             className="h-full rounded-full transition-[width] duration-300"
-            style={{ width: `${pct}%`, background: color, boxShadow: `0 0 12px ${color}` }}
+            style={{ width: `${pct}%`, background: color }}
           />
         )}
       </div>

@@ -60,7 +60,7 @@ export function Console() {
         className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-[var(--line)] bg-black/40 p-3 font-mono text-xs leading-relaxed"
       >
         {lines.length === 0 ? (
-          <div className="text-faint">No output yet — launch an instance to see boot and live logs here.</div>
+          <div className="text-faint">No output yet, launch an instance to see boot and live logs here.</div>
         ) : (
           lines.map((l, i) => (
             <div

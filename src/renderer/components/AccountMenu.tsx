@@ -46,7 +46,7 @@ export function AccountMenu({ profile }: { profile: Profile }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        title={`${profile.name} — accounts`}
+        title={`${profile.name}: accounts`}
         className="block rounded-md"
       >
         <PlayerHead id={profile.uuid} uuid={profile.uuid} size={40} className="rounded-md" />
@@ -54,7 +54,7 @@ export function AccountMenu({ profile }: { profile: Profile }) {
 
       {open && (
         <div className="absolute bottom-0 left-[52px] z-50 w-56 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-1.5 shadow-2xl">
-          <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-faint">Accounts</div>
+          <div className="px-2 py-1 text-[10px] tracking-wider text-faint">Accounts</div>
           {accounts.map((a) => (
             <button
               key={a.uuid}

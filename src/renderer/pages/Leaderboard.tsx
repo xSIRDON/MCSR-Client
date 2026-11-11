@@ -18,13 +18,13 @@ export function Leaderboard() {
   return (
     <div className="mx-auto max-w-[980px] space-y-4 px-5 py-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-base uppercase tracking-[0.2em] text-muted">Leaderboard</h1>
+        <h1 className="font-display text-base text-muted">Leaderboard</h1>
         <div className="w-60">
           <PlayerSearch placeholder="Look up player…" />
         </div>
       </div>
 
-      <section className="surface p-2 animate-fade-up">
+      <section className="surface p-2">
         {isLoading ? (
           <div className="space-y-1 p-1">
             {Array.from({ length: 14 }).map((_, i) => (

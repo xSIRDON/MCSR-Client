@@ -123,7 +123,7 @@ function Splash() {
         <div className="animate-pulse-glow">
           <McsrLogo size={46} />
         </div>
-        <div className="font-display text-sm tracking-[0.3em] text-muted">MCSR CLIENT</div>
+        <div className="font-display text-sm text-muted">MCSR CLIENT</div>
       </div>
     </div>
   )

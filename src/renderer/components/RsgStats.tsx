@@ -62,9 +62,9 @@ export function RsgStats({ name }: { name: string | null }) {
     enabled: !!name
   })
 
-  if (!name) return <Empty>No paceman name — set it in Settings to see your RSG stats.</Empty>
+  if (!name) return <Empty>No paceman name, set it in Settings to see your RSG stats.</Empty>
   if (isLoading) return <Empty>Crunching your paceman stats…</Empty>
-  if (!session) return <Empty>No paceman data yet — play some RSG to start tracking.</Empty>
+  if (!session) return <Empty>No paceman data yet, play some RSG to start tracking.</Empty>
 
   const netherCount = session.nether?.count ?? 0
   const completions = session.finish?.count ?? 0
@@ -93,14 +93,14 @@ export function RsgStats({ name }: { name: string | null }) {
       </div>
 
       <section className="surface p-5">
-        <h2 className="mb-3 font-display text-sm uppercase tracking-[0.16em] text-muted">
-          Recent runs — actual splits, not averages
+        <h2 className="mb-3 text-sm font-semibold text-text">
+          Recent runs (actual splits, not averages)
         </h2>
         {!runs || runs.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted">No tracked runs yet.</p>
         ) : (
           <div className="space-y-0.5 overflow-x-auto">
-            <div className="grid min-w-[560px] grid-cols-[0.9fr_repeat(7,1fr)] gap-2 rounded-md px-3 py-1.5 text-[10px] uppercase tracking-wider text-faint">
+            <div className="grid min-w-[560px] grid-cols-[0.9fr_repeat(7,1fr)] gap-2 rounded-md px-3 py-1.5 text-[10px] tracking-wider text-faint">
               <span>Run</span>
               {RUN_COLS.map((c) => (
                 <span key={c.key}>{c.label}</span>
@@ -139,8 +139,8 @@ export function RsgStats({ name }: { name: string | null }) {
       </section>
 
       <section className="surface p-5">
-        <h2 className="mb-3 font-display text-sm uppercase tracking-[0.16em] text-muted">
-          Split funnel — reached, session average &amp; conversion
+        <h2 className="mb-3 text-sm font-semibold text-text">
+          Split funnel: reached, session average &amp; conversion
         </h2>
         <div className="space-y-0.5">
           <Row label="Split" reached="Reached" avg="Session avg" conv="Convert" head />
@@ -162,7 +162,7 @@ export function RsgStats({ name }: { name: string | null }) {
         </div>
         <p className="mt-2 text-[11px] text-faint">
           All-time, from your tracked paceman runs. “Convert” is the share of your Nethers that reach
-          each split; averages are paceman’s session averages — see the runs table above for real
+          each split; averages are paceman’s session averages, see the runs table above for real
           per-run times.
         </p>
       </section>
@@ -173,7 +173,7 @@ export function RsgStats({ name }: { name: string | null }) {
 function Big({ label, value, accent, sub }: { label: string; value: string; accent: string; sub?: string }) {
   return (
     <div className="surface p-4">
-      <div className="text-[10px] uppercase tracking-[0.16em] text-muted">{label}</div>
+      <div className="text-[10px] text-muted">{label}</div>
       <div className="font-display tnum whitespace-nowrap text-2xl leading-tight" style={{ color: accent }}>
         {value}
       </div>
@@ -200,7 +200,7 @@ function Row({
   return (
     <div
       className={`grid grid-cols-[1.4fr_1fr_1fr_1fr] items-center gap-2 rounded-md px-3 py-1.5 ${
-        head ? 'text-[10px] uppercase tracking-wider text-faint' : 'text-sm'
+        head ? 'text-[10px] tracking-wider text-faint' : 'text-sm'
       }`}
       style={{ background: highlight ? 'rgba(74,255,140,.08)' : undefined }}
     >

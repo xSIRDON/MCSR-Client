@@ -96,7 +96,7 @@ export function InstallMapPicker() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-6 animate-fade-up" onClick={cancel}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-6" onClick={cancel}>
       <div
         className="surface flex max-h-[90vh] w-full max-w-[520px] flex-col p-5"
         onClick={(e) => e.stopPropagation()}
@@ -112,8 +112,8 @@ export function InstallMapPicker() {
           <label className="block text-sm text-text">Import settings (optional)</label>
           <p className="mt-1 text-xs text-faint">
             Copy <code>options.txt</code>, <code>hotbar.nbt</code>, <code>config/</code>, and your{' '}
-            <code>resourcepacks/</code> (your seedwall) from another instance — or any folder (another{' '}
-            launcher’s instance, an old <code>.minecraft</code>) — and pick which of its worlds to
+            <code>resourcepacks/</code> (your seedwall) from another instance, or any folder (another{' '}
+            launcher’s instance, an old <code>.minecraft</code>), and pick which of its worlds to
             bring along.
           </p>
           {importFolder ? (
@@ -136,7 +136,7 @@ export function InstallMapPicker() {
                   onChange={(e) => setImportFrom(e.target.value as InstanceId | '')}
                   className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--bg-2)] px-3 py-2 text-sm text-text outline-none focus:border-[var(--gold)]/40"
                 >
-                  <option value="">Don’t import — fresh install</option>
+                  <option value="">Don’t import (fresh install)</option>
                   {sources.map((s) => (
                     <option key={s} value={s}>
                       From {TITLES[s]}
@@ -201,7 +201,7 @@ export function InstallMapPicker() {
                 )}
                 {visibleWorlds.length > shownWorlds.length && (
                   <div className="px-2 py-1 text-[11px] text-faint">
-                    Showing {shownWorlds.length} of {visibleWorlds.length} — filter to find others.
+                    Showing {shownWorlds.length} of {visibleWorlds.length}, filter to find others.
                   </div>
                 )}
                 {shownWorlds.map((w) => (
@@ -223,7 +223,7 @@ export function InstallMapPicker() {
           )}
         </div>
 
-        <div className="mb-1 mt-3 text-xs uppercase tracking-wider text-faint">Practice maps</div>
+        <div className="mb-1 mt-3 text-xs tracking-wider text-faint">Practice maps</div>
         <div className="mb-2 flex gap-2">
           <button
             onClick={() => setSel(new Set(ALL_MAP_IDS))}
@@ -248,7 +248,7 @@ export function InstallMapPicker() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-text">{m.name}</span>
-                  <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-faint">
+                  <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[9px] tracking-wider text-faint">
                     {m.category}
                   </span>
                 </div>
@@ -276,8 +276,7 @@ export function InstallMapPicker() {
             onClick={install}
             className="font-display rounded-lg px-5 py-2 text-sm tracking-wide text-[#07140a]"
             style={{
-              background: 'linear-gradient(180deg,#6fcf57,#4ea73e)',
-              boxShadow: '0 8px 24px rgba(94,167,62,.4), inset 0 1px 0 rgba(255,255,255,.25)'
+              background: '#5fbf4c'
             }}
           >
             Install &amp; Play{sel.size > 0 ? ` · ${sel.size} map${sel.size === 1 ? '' : 's'}` : ''}
