@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Icon } from './Icon'
 import { useNavigate } from 'react-router-dom'
 import { useUi } from '../store/uiStore'
 import { mcsr } from '../lib/clients'
@@ -48,7 +49,7 @@ export function FriendsRail() {
           title="Friends"
           className="relative grid h-9 w-9 place-items-center rounded-lg text-muted transition-colors hover:bg-white/[0.06] hover:text-text"
         >
-          <FriendsIcon />
+          <Icon name="friends" />
           {requests > 0 ? (
             <Badge color="var(--gold)">{requests}</Badge>
           ) : totalUnread > 0 ? (
@@ -59,7 +60,7 @@ export function FriendsRail() {
         </button>
         <div className="mt-2 flex flex-col items-center gap-1.5">
           {preview.map((f) => (
-            <button key={f.uuid} onClick={() => setOpen(true)} title={`${f.nickname} — ${f.detail}`} className="relative">
+            <button key={f.uuid} onClick={() => setOpen(true)} title={`${f.nickname}: ${f.detail}`} className="relative">
               <PlayerHead id={f.uuid} uuid={f.uuid} size={26} className="rounded-md opacity-90 transition-opacity hover:opacity-100" />
               <span
                 className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-2 ring-[#0d0d14]"
@@ -140,7 +141,7 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className="relative flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-display text-[11px] uppercase tracking-[0.12em] transition-colors"
+      className="relative flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-display text-[11px] transition-colors"
       style={{
         color: active ? 'var(--gold)' : 'var(--muted)',
         background: active ? 'rgba(245,200,66,0.12)' : 'transparent'
@@ -215,7 +216,7 @@ function FriendsList({
       ))}
       {empty && (
         <div className="px-2 py-6 text-center text-[11px] leading-relaxed text-faint">
-          No friends yet — open a player's profile and hit Add friend, or search below.
+          No friends yet, open a player's profile and hit Add friend, or search below.
         </div>
       )}
     </div>
@@ -228,7 +229,7 @@ function WatchlistList({ watchlist }: { watchlist: FriendPresence[] }) {
     <div className="space-y-0.5">
       {watchlist.length === 0 ? (
         <div className="px-2 py-6 text-center text-[11px] leading-relaxed text-faint">
-          Star runners from their profile — or search below — to follow their games here.
+          Star runners from their profile, or search below, to follow their games here.
         </div>
       ) : (
         watchlist.map((f) => <PresenceRow key={f.uuid} f={f} onRemove={(u) => void toggle(u)} />)
@@ -490,7 +491,7 @@ function DmThread({
       <div ref={listRef} className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-2.5 py-3">
         {msgs.length === 0 ? (
           <div className="px-2 py-10 text-center text-[11px] leading-relaxed text-faint">
-            No messages yet — say hi.
+            No messages yet, say hi.
           </div>
         ) : (
           msgs.map((m, i) => {
@@ -499,7 +500,7 @@ function DmThread({
             return (
               <div key={m.id}>
                 {showDay && (
-                  <div className="my-2 text-center text-[10px] uppercase tracking-wider text-faint">
+                  <div className="my-2 text-center text-[10px] tracking-wider text-faint">
                     {fmtDay(m.at)}
                   </div>
                 )}
@@ -584,12 +585,3 @@ function XIcon() {
   )
 }
 
-function FriendsIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <circle cx="6" cy="6.5" r="2.6" stroke="currentColor" strokeWidth="1.3" />
-      <circle cx="12" cy="6.5" r="2.6" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M2 15a4 4 0 018 0M8 15a4 4 0 018 0" stroke="currentColor" strokeWidth="1.3" />
-    </svg>
-  )
-}

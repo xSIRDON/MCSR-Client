@@ -4,22 +4,30 @@ import { useUi } from '../store/uiStore'
 import { mcsr } from '../lib/clients'
 import { eloToRank } from '@core/rank'
 import { AccountMenu } from './AccountMenu'
+import { Icon, type IconName } from './Icon'
 
-const NAV_GROUPS: { to: string; label: string; icon: () => JSX.Element; end?: boolean }[][] = [
+interface Item {
+  to: string
+  label: string
+  icon: IconName
+  end?: boolean
+}
+
+const NAV: Item[][] = [
   [
-    { to: '/', label: 'Home', icon: HomeIcon, end: true },
-    { to: '/play', label: 'Play', icon: PlayIcon }
+    { to: '/', label: 'Home', icon: 'home', end: true },
+    { to: '/play', label: 'Play', icon: 'play' }
   ],
   [
-    { to: '/leaderboard', label: 'Leaders', icon: LeaderboardIcon },
-    { to: '/review', label: 'Review', icon: ReviewIcon },
-    { to: '/compare', label: 'Compare', icon: CompareIcon },
-    { to: '/practice', label: 'Practice', icon: TargetIcon }
+    { to: '/leaderboard', label: 'Leaders', icon: 'trophy' },
+    { to: '/review', label: 'Review', icon: 'chart' },
+    { to: '/compare', label: 'Compare', icon: 'swords' },
+    { to: '/practice', label: 'Practice', icon: 'target' }
   ],
   [
-    { to: '/console', label: 'Console', icon: ConsoleIcon },
-    { to: '/profile', label: 'Profile', icon: UserIcon },
-    { to: '/settings', label: 'Settings', icon: GearIcon }
+    { to: '/console', label: 'Console', icon: 'console' },
+    { to: '/profile', label: 'Profile', icon: 'profile' },
+    { to: '/settings', label: 'Settings', icon: 'settings' }
   ]
 ]
 
@@ -33,33 +41,26 @@ export function Sidebar() {
   const rank = eloToRank(user?.eloRate)
 
   return (
-    <aside className="flex w-[72px] shrink-0 flex-col items-center border-r border-[var(--line)] bg-black/25 py-3">
-      <nav className="flex w-full flex-col items-center px-2">
-        {NAV_GROUPS.map((group, gi) => (
-          <div key={gi} className="flex w-full flex-col items-center gap-0.5">
-            {gi > 0 && <div className="my-2 h-px w-6 bg-[var(--line)]" />}
-            {group.map(({ to, label, icon: Icon, end }) => (
+    <aside className="flex w-[76px] shrink-0 flex-col items-center border-r border-[var(--line)] bg-black/25 py-3">
+      <nav className="flex w-full flex-col items-center px-1.5">
+        {NAV.map((group, i) => (
+          <div key={i} className="flex w-full flex-col items-center gap-0.5">
+            {i > 0 && <div className="my-2 h-px w-6 bg-[var(--line)]" />}
+            {group.map(({ to, label, icon, end }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={end}
-                title={label}
                 className={({ isActive }) =>
-                  `relative flex h-[50px] w-full flex-col items-center justify-center gap-[3px] rounded-md transition-colors duration-150 ${
-                    isActive
-                      ? 'bg-white/[0.07] text-[var(--gold)]'
-                      : 'text-muted hover:bg-white/[0.04] hover:text-text'
+                  `flex h-[50px] w-full flex-col items-center justify-center gap-1 rounded-md transition-colors ${
+                    isActive ? 'bg-white/[0.07] text-text' : 'text-muted hover:bg-white/[0.04] hover:text-text'
                   }`
                 }
               >
                 {({ isActive }) => (
                   <>
-                    <Icon />
-                    <span
-                      className={`text-[9px] tracking-[0.06em] ${isActive ? 'font-semibold' : 'opacity-70'}`}
-                    >
-                      {label}
-                    </span>
+                    <Icon name={icon} className={isActive ? undefined : 'opacity-60'} />
+                    <span className="text-[10px] font-medium leading-none">{label}</span>
                   </>
                 )}
               </NavLink>
@@ -68,103 +69,16 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="mt-auto flex flex-col items-center gap-2.5 pt-3">
-        <div className="h-px w-6 bg-[var(--line)]" />
+      <div className="mt-auto flex flex-col items-center gap-2 pt-3">
         {profile && (
-          <div
-            className="rounded-md p-0.5"
-            style={{ boxShadow: `0 0 0 1.5px ${rank.color}88` }}
-          >
+          <div className="rounded-md p-0.5" style={{ boxShadow: `0 0 0 1.5px ${rank.color}88` }}>
             <AccountMenu profile={profile} />
           </div>
         )}
-        <div className="font-display text-[9px] tracking-wide text-faint/70" title="MCSR Client version">
-          v{__APP_VERSION__}
+        <div className="text-[10px] text-muted" title="MCSR Client version">
+          {__APP_VERSION__}
         </div>
       </div>
     </aside>
-  )
-}
-
-function HomeIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
-      <path d="M3 8l6-5 6 5v6a1 1 0 01-1 1h-3v-4H7v4H4a1 1 0 01-1-1V8z" stroke="currentColor" strokeWidth="1.3" />
-    </svg>
-  )
-}
-function PlayIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
-      <path d="M5 3.5l9 5.5-9 5.5v-11z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-    </svg>
-  )
-}
-function ConsoleIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
-      <rect x="2.5" y="3.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
-      <path
-        d="M5.5 7l2 1.6-2 1.6M9.5 11h3"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-function UserIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
-      <circle cx="9" cy="6" r="3" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M3.5 15a5.5 5.5 0 0111 0" stroke="currentColor" strokeWidth="1.3" />
-    </svg>
-  )
-}
-function GearIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
-      <circle cx="9" cy="9" r="2.4" stroke="currentColor" strokeWidth="1.3" />
-      <path
-        d="M9 2v2M9 14v2M2 9h2M14 9h2M4 4l1.5 1.5M12.5 12.5L14 14M14 4l-1.5 1.5M5.5 12.5L4 14"
-        stroke="currentColor"
-        strokeWidth="1.3"
-      />
-    </svg>
-  )
-}
-function LeaderboardIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
-      <rect x="2.5" y="9" width="3.4" height="6" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-      <rect x="7.3" y="4" width="3.4" height="11" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-      <rect x="12.1" y="11" width="3.4" height="4" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-    </svg>
-  )
-}
-function CompareIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
-      <path d="M9 2.5v13" stroke="currentColor" strokeWidth="1.1" strokeDasharray="2 1.6" />
-      <path d="M6.5 5.5L2.5 9l4 3.5M11.5 5.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-function ReviewIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
-      <path d="M3 3v12h12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M5.5 11l3-3 2.4 2L15 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-function TargetIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
-      <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.3" />
-      <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.3" />
-      <circle cx="9" cy="9" r="0.6" fill="currentColor" />
-    </svg>
   )
 }

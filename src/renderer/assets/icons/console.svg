@@ -1,0 +1,18 @@
+<svg shape-rendering="crispEdges" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <g>
+    <path fill="#a97816" d="M192 64H832V128H896V192H960V832H896V896H832V960H192V896H128V832H64V192H128V128H192Z" />
+    <path fill="#f5c842" d="M192 128H832V192H896V320H128V192H192Z" />
+    <path fill="#ffe8a0" d="M192 128H832V192H192V256H128V320H64V192H128V128Z" />
+    <g fill="#ffe8a0">
+      <rect x="192" y="192" width="64" height="64" />
+      <rect x="320" y="192" width="64" height="64" />
+      <rect x="448" y="192" width="64" height="64" />
+    </g>
+    <path fill="#f5c842" d="M64 384H960V832H896V896H832V960H192V896H128V832H64ZM128 448V768H192V832H832V768H896V448Z" fill-rule="evenodd" />
+    <path fill="#a97816" d="M128 448H896V768H832V832H192V768H128Z" />
+    <path fill="#f5c842" d="M256 448H320V512H384V576H448V640H384V704H320V768H256V704H320V640H384V576H320V512H256Z" />
+    <rect x="512" y="704" width="256" height="64" fill="#f5c842" />
+    <path fill="#ffe8a0" d="M64 384H960V448H128V768H64Z" />
+    <path fill="#a97816" d="M192 896H832V960H192Z" />
+  </g>
+</svg>
