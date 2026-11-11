@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { LOW_FREE_MEM_MB, type AppConfig, type GcSessionReport, INSTANCE_LABEL, isInstanceId, type InstanceId, type ModInfo, type SeedQueueInfo } from '@shared/types'
+import { LOW_FREE_MEM_MB, type AppConfig, type GcSessionReport, INSTANCE_LABEL, isInstanceId, type InstanceId, type LogFile, type ModInfo, type SeedQueueInfo } from '@shared/types'
 import { MAP_CATALOG, ALL_MAP_IDS } from '@shared/maps'
 import { ipcMessage } from '../lib/ipc-error'
 
@@ -35,6 +35,7 @@ export function Instance() {
       )}
       <JavaCard id={instanceId} />
       <FilesCard id={instanceId} />
+      <LogsCard id={instanceId} />
       <SettingsImportCard id={instanceId} />
       <MapsCard id={instanceId} />
       <ModsCard id={instanceId} />
@@ -483,6 +484,116 @@ function ModsCard({ id }: { id: InstanceId }) {
         Disabling a mod parks it as <code>.disabled</code>. Note: removing pack mods can make a run
         illegal or break Ranked.
       </p>
+    </Card>
+  )
+}
+
+function LogsCard({ id }: { id: InstanceId }) {
+  const [files, setFiles] = useState<LogFile[]>([])
+  const [pick, setPick] = useState(0)
+  const [text, setText] = useState('')
+  const [wrap, setWrap] = useState(false)
+  const [confirm, setConfirm] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+  const file = files[pick]
+
+  const refresh = useCallback(() => {
+    void window.mcsr.instances.logs(id).then((list) => {
+      setFiles(list)
+      setPick(0)
+    })
+  }, [id])
+  useEffect(refresh, [refresh])
+
+  useEffect(() => {
+    setNote(null)
+    setConfirm(false)
+    if (!file) return setText('')
+    let live = true
+    window.mcsr.instances
+      .readLog(id, file.kind, file.name)
+      .then((t) => live && setText(t))
+      .catch((e) => live && setText(ipcMessage(e, 'Could not read that log.')))
+    return () => {
+      live = false
+    }
+  }, [id, file])
+
+  async function upload() {
+    if (!file) return
+    setConfirm(false)
+    setBusy(true)
+    try {
+      const url = await window.mcsr.instances.uploadLog(id, file.kind, file.name)
+      await navigator.clipboard.writeText(url)
+      setNote(`${url} (copied)`)
+    } catch (e) {
+      setNote(ipcMessage(e, 'Upload failed.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const button =
+    'shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted hover:text-text disabled:opacity-40'
+  return (
+    <Card title="Logs">
+      {files.length === 0 ? (
+        <div className="text-sm text-muted">No logs yet. Launch this instance once and they show up here.</div>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={pick}
+              onChange={(e) => setPick(Number(e.target.value))}
+              className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--bg-2)] px-2 py-1.5 text-sm text-text"
+            >
+              {files.map((f, i) => (
+                <option key={`${f.kind}/${f.name}`} value={i}>
+                  {f.kind === 'crash' ? 'crash: ' : ''}
+                  {f.name} ({Math.max(1, Math.round(f.size / 1024))} KB)
+                </option>
+              ))}
+            </select>
+            <label className="flex items-center gap-1.5 text-xs text-muted">
+              <input type="checkbox" checked={wrap} onChange={(e) => setWrap(e.target.checked)} />
+              Wrap
+            </label>
+            <button onClick={refresh} className={button}>
+              Refresh
+            </button>
+            <button onClick={() => void navigator.clipboard.writeText(text).then(() => setNote('Copied.'))} className={button}>
+              Copy
+            </button>
+            <button onClick={() => setConfirm(true)} disabled={busy || !text} className={button}>
+              {busy ? 'Uploading…' : 'Upload'}
+            </button>
+          </div>
+          {confirm && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+              <span>This posts the log to mclo.gs, where anyone with the link can read it.</span>
+              <button onClick={() => void upload()} className="text-[var(--gold)] hover:underline">
+                Upload
+              </button>
+              <button onClick={() => setConfirm(false)} className="hover:text-text">
+                Cancel
+              </button>
+            </div>
+          )}
+          {note && <div className="mt-2 break-all text-xs text-faint">{note}</div>}
+          <pre
+            className={`mt-3 h-64 overflow-auto rounded-lg border border-[var(--line)] bg-black/40 p-3 text-[11px] leading-relaxed text-muted ${
+              wrap ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'
+            }`}
+          >
+            {text}
+          </pre>
+          <p className="mt-2 text-xs text-faint">
+            Your login token and Windows user name are removed before a log is shown or uploaded.
+          </p>
+        </>
+      )}
     </Card>
   )
 }

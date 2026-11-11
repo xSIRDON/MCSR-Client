@@ -10,6 +10,7 @@ import type {
   GapCheckFilters,
   InstanceId,
   InstanceStatus,
+  LogKind,
   ProgressEvent,
   SeedQueueInfo,
   StandardSettings
@@ -53,6 +54,7 @@ import { readStandardSettings, writeStandardSettings, importOptionsFile } from '
 import { copyInstanceSettings, resolveGameDir, listWorlds } from './instances/copy-instance'
 import { formatBytes, type CopyProgress } from './instances/copy-tree'
 import { exportPack } from './instances/export-pack'
+import { listLogs, readLog, uploadLog } from './instances/logs'
 import { makeLineScrubber } from './line-scrub'
 import { getSkin } from './skins'
 import { getCachedMatch, putCachedMatch } from './match-cache'
@@ -739,6 +741,16 @@ export function registerIpc(): void {
     })
     pushLog('system', `Exported ${files} files to ${res.filePath}`)
     return res.filePath
+  })
+  ipcMain.handle(IPC.instLogs, (_e, rawId: unknown) => listLogs(gmll.gameDir(assertInstanceId(rawId))))
+  ipcMain.handle(IPC.instLogRead, (_e, rawId: unknown, kind: LogKind, name: string) =>
+    readLog(gmll.gameDir(assertInstanceId(rawId)), kind, String(name), launchSecrets())
+  )
+  ipcMain.handle(IPC.instLogUpload, async (_e, rawId: unknown, kind: LogKind, name: string) => {
+    const id = assertInstanceId(rawId)
+    const url = await uploadLog(await readLog(gmll.gameDir(id), kind, String(name), launchSecrets()))
+    pushLog('system', `Uploaded ${name} to ${url}`)
+    return url
   })
   ipcMain.handle(IPC.instStdGet, (_e, id: unknown) =>
     readStandardSettings(gmll.gameDir(assertInstanceId(id)))

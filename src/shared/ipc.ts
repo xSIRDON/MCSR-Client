@@ -6,6 +6,8 @@ import type {
   InstanceId,
   InstanceStatus,
   JavaInfo,
+  LogFile,
+  LogKind,
   LogLine,
   MessagesEvent,
   MessageStore,
@@ -46,6 +48,9 @@ export const IPC = {
   instDismissExtraOptionsPrompt: 'inst:dismissExtraOptionsPrompt',
   instOpenFolder: 'inst:openFolder',
   instExport: 'inst:export',
+  instLogs: 'inst:logs',
+  instLogRead: 'inst:logRead',
+  instLogUpload: 'inst:logUpload',
   instStdGet: 'inst:stdGet',
   instStdSet: 'inst:stdSet',
   instImportSettings: 'inst:importSettings',
@@ -130,6 +135,9 @@ export interface McsrApi {
     dismissExtraOptionsPrompt(): Promise<void>
     openFolder(id: InstanceId): Promise<void>
     exportPack(id: InstanceId): Promise<string | null>
+    logs(id: InstanceId): Promise<LogFile[]>
+    readLog(id: InstanceId, kind: LogKind, name: string): Promise<string>
+    uploadLog(id: InstanceId, kind: LogKind, name: string): Promise<string>
     getStandardSettings(id: InstanceId): Promise<StandardSettings>
     setStandardSettings(id: InstanceId, patch: StandardSettings): Promise<StandardSettings>
     importSettings(id: InstanceId): Promise<{ imported: number } | null>

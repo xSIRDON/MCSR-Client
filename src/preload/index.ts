@@ -6,6 +6,7 @@ import type {
   FriendsNetState,
   GapCheckFilters,
   InstanceId,
+  LogKind,
   InstanceStatus,
   LogLine,
   MessagesEvent,
@@ -57,6 +58,9 @@ const api: McsrApi = {
     dismissExtraOptionsPrompt: () => ipcRenderer.invoke(IPC.instDismissExtraOptionsPrompt),
     openFolder: (id: InstanceId) => ipcRenderer.invoke(IPC.instOpenFolder, id),
     exportPack: (id: InstanceId) => ipcRenderer.invoke(IPC.instExport, id),
+    logs: (id: InstanceId) => ipcRenderer.invoke(IPC.instLogs, id),
+    readLog: (id: InstanceId, kind: LogKind, name: string) => ipcRenderer.invoke(IPC.instLogRead, id, kind, name),
+    uploadLog: (id: InstanceId, kind: LogKind, name: string) => ipcRenderer.invoke(IPC.instLogUpload, id, kind, name),
     getStandardSettings: (id: InstanceId) => ipcRenderer.invoke(IPC.instStdGet, id),
     setStandardSettings: (id: InstanceId, patch: StandardSettings) =>
       ipcRenderer.invoke(IPC.instStdSet, id, patch),
