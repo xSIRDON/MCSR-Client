@@ -3,7 +3,7 @@
 A launcher and stats client for Minecraft 1.16.1 speedrunning on Windows. It installs and runs the
 Ranked, RSG and ZSG setups for you and shows your MCSR Ranked and paceman stats in the same window.
 
-**[Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)** (v1.9.0, updates itself after that)
+**[Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)** (v1.9.1, updates itself after that)
 
 ![home screen](.github/assets/home.png)
 
