@@ -17,7 +17,8 @@ Ranked, RSG and ZSG setups for you and shows your MCSR Ranked and paceman stats 
 - Ranked: the MCSR Ranked pack, with the ranked mod pulled from Modrinth so it stays current.
 - RSG: the legal mod set without the ranked mod, plus SeedQueue with a wall already set up.
 - ZSG: the RSG set with FSG added.
-- Downloads Minecraft, Fabric and Java on first launch. No other launcher needed.
+- Downloads Minecraft, Fabric and Java on first launch, then starts the game through an unmodified
+  copy of Prism Launcher running in the background. Your existing instances are used as they are.
 - Runs the game on Java 21 with ZGC, since Java 8's GC pauses freeze the SeedQueue wall.
 - Sizes the SeedQueue settings and RAM to your PC before launch (can be turned off per instance).
 - Imports `options.txt`, `hotbar.nbt`, `config/`, resource packs and worlds from another instance.
@@ -66,5 +67,8 @@ npm run dev
 
 Thanks to the people behind MCSR Ranked, SeedQueue, FSG, Ninjabrain Bot, paceman, Toolscreen,
 Fabric and Modrinth, and to cylorun, Luxvored and marmarounos for GapCheck.
+
+Games are started with [Prism Launcher](https://github.com/PrismLauncher/PrismLauncher) (GPL-3.0), downloaded
+from its official release and checked against a pinned hash.
 
 MIT licensed.
