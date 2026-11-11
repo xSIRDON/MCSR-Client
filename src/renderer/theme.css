@@ -177,3 +177,37 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .load-sweep { animation: none; left: 0; width: 100%; opacity: 0.35; }
 }
+
+input[type='checkbox'] {
+  appearance: none;
+  flex-shrink: 0;
+  display: inline-grid;
+  place-content: center;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: #0b0b11;
+  cursor: pointer;
+}
+input[type='checkbox']::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--gold);
+  transform: scale(0);
+}
+input[type='checkbox']:checked {
+  border-color: var(--gold);
+}
+input[type='checkbox']:checked::before {
+  transform: scale(1);
+}
+input[type='checkbox']:hover {
+  border-color: var(--gold-dim);
+}
+input[type='checkbox']:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
