@@ -45,8 +45,8 @@ function createWindow(): void {
     title: 'MCSR Client',
     icon: paths.resource('icon.png'),
     webPreferences: {
-      preload: join(__dirname, '../preload/index.mjs'),
-      sandbox: false,
+      preload: join(__dirname, '../preload/index.cjs'),
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false
     }
