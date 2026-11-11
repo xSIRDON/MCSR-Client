@@ -183,3 +183,9 @@ export interface LogLine {
   source: 'game' | 'system'
   text: string
 }
+
+export type AppConfigPatch = Partial<Omit<AppConfig, "ram" | "java" | "maps">> & {
+  ram?: Partial<AppConfig["ram"]>
+  java?: Partial<AppConfig["java"]>
+  maps?: Partial<AppConfig["maps"]>
+}

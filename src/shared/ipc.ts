@@ -1,6 +1,7 @@
 import type {
   Account,
   AppConfig,
+  AppConfigPatch,
   InstanceId,
   InstanceStatus,
   JavaInfo,
@@ -170,7 +171,7 @@ export interface McsrApi {
   }
   config: {
     get(): Promise<AppConfig>
-    set(patch: Partial<AppConfig>): Promise<AppConfig>
+    set(patch: AppConfigPatch): Promise<AppConfig>
     pickJar(): Promise<string | null>
     pickJava(): Promise<string | null>
     pickFolder(): Promise<string | null>

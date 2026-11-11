@@ -1,4 +1,4 @@
-import type { AppConfig, InstanceId } from '../../shared/types'
+import type { AppConfigPatch, InstanceId } from '../../shared/types'
 import { store } from '../store'
 
 const pickedPaths = new Set<string>()
@@ -15,9 +15,9 @@ export function assertPicked(path: unknown): string {
   return path
 }
 
-export function guardConfigPatch(patch: Partial<AppConfig>): Partial<AppConfig> {
+export function guardConfigPatch(patch: AppConfigPatch): AppConfigPatch {
   const cur = store.getConfig()
-  const out: Partial<AppConfig> = { ...patch }
+  const out: AppConfigPatch = { ...patch }
   if (patch.java) {
     const java = { ...cur.java }
     for (const id of Object.keys(java) as InstanceId[]) {

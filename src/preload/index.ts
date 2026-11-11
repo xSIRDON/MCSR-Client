@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipc'
 import type { McsrApi } from '../shared/ipc'
 import type {
-  AppConfig,
+  AppConfigPatch,
   GapCheckFilters,
   InstanceId,
   LogKind,
@@ -103,7 +103,7 @@ const api: McsrApi = {
   },
   config: {
     get: () => ipcRenderer.invoke(IPC.cfgGet),
-    set: (patch: Partial<AppConfig>) => ipcRenderer.invoke(IPC.cfgSet, patch),
+    set: (patch: AppConfigPatch) => ipcRenderer.invoke(IPC.cfgSet, patch),
     pickJar: () => ipcRenderer.invoke(IPC.cfgPickJar),
     pickJava: () => ipcRenderer.invoke(IPC.cfgPickJava),
     pickFolder: () => ipcRenderer.invoke(IPC.cfgPickFolder)

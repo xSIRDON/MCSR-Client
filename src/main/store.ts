@@ -2,7 +2,7 @@ import { safeStorage } from 'electron'
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { paths } from './paths'
-import { DEFAULT_CONFIG, type AppConfig, type InstanceId } from '../shared/types'
+import { DEFAULT_CONFIG, type AppConfig, type AppConfigPatch, type InstanceId } from '../shared/types'
 import { ALL_MAP_IDS } from '../shared/maps'
 import { encodeSecret, decodeSecret } from './secret-codec'
 
@@ -97,8 +97,13 @@ export const store = {
     if (!config) config = normalizeConfig(readJson<RawConfig>(paths.configFile(), {}))
     return config
   },
-  setConfig(patch: Partial<AppConfig>): AppConfig {
-    config = normalizeConfig({ ...this.getConfig(), ...patch } as RawConfig)
+  setConfig(patch: AppConfigPatch): AppConfig {
+    const current = this.getConfig()
+    config = normalizeConfig({ ...current, ...patch,
+      ram: { ...current.ram, ...patch.ram },
+      java: { ...current.java, ...patch.java },
+      maps: { ...current.maps, ...patch.maps }
+    })
     writeJson(paths.configFile(), config)
     return config
   },
