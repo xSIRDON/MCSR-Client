@@ -45,14 +45,14 @@ export function Sidebar() {
       <nav className="flex w-full flex-col items-center px-1.5">
         {NAV.map((group, i) => (
           <div key={i} className="flex w-full flex-col items-center gap-0.5">
-            {i > 0 && <div className="my-2 h-px w-6 bg-[var(--line)]" />}
+            {i > 0 && <div className="my-1.5 h-px w-6 bg-[var(--line)]" />}
             {group.map(({ to, label, icon, end }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={end}
                 className={({ isActive }) =>
-                  `flex h-[50px] w-full flex-col items-center justify-center gap-1 rounded-[3px] ${
+                  `flex h-[46px] w-full flex-col items-center justify-center gap-1 rounded-[3px] ${
                     isActive ? 'nav-on text-[var(--gold)]' : 'text-muted hover:bg-white/[0.04] hover:text-text'
                   }`
                 }
