@@ -9,7 +9,7 @@ import {
 import { cp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import extract from 'extract-zip'
+import { unzip } from '../security/safe-unzip'
 import { MAP_CATALOG, type MapDef } from '../../shared/maps'
 
 const MANIFEST = '.mcsrclient-maps.json'
@@ -80,7 +80,7 @@ async function installMap(savesDir: string, map: MapDef): Promise<string[]> {
   mkdirSync(out, { recursive: true })
   writeFileSync(zip, buf)
   try {
-    await extract(zip, { dir: out })
+    await unzip(zip, out)
     return await placeWorlds(out, savesDir, map.name)
   } finally {
     await rm(zip, { force: true })

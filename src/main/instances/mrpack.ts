@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync, cpSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
-import extract from 'extract-zip'
+import { unzip } from '../security/safe-unzip'
 
 export const MCSR_MRPACK_URL =
   'https://redlime.github.io/MCSRMods/modpacks/v4/MCSRRanked-Windows-1.16.1-RSG.mrpack'
@@ -148,7 +148,7 @@ export async function fetchPack(
   const zipPath = join(work, 'pack.mrpack')
   writeFileSync(zipPath, buf)
   try {
-    await extract(zipPath, { dir: work })
+    await unzip(zipPath, work)
     const indexPath = join(work, 'modrinth.index.json')
     const index = parseIndex(JSON.parse(readFileSync(indexPath, 'utf8')))
     return index
