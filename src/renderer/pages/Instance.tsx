@@ -308,6 +308,23 @@ function LastSession({ report }: { report: GcSessionReport }) {
   )
 }
 
+const ON = 'bg-[var(--gold)]/[0.12] text-[var(--gold)]'
+const OFF = 'text-muted hover:text-text'
+const ROW_BUTTON =
+  'shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted transition-colors hover:text-text disabled:opacity-50'
+
+function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="row flex items-center justify-between gap-3 py-2.5">
+      <div className="min-w-0">
+        <div className="text-sm text-text">{label}</div>
+        {hint && <div className="truncate text-xs text-faint">{hint}</div>}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">{children}</div>
+    </div>
+  )
+}
+
 function JavaCard({ id }: { id: InstanceId }) {
   const [config, setConfig] = useState<AppConfig | null>(null)
   useEffect(() => {
@@ -326,43 +343,28 @@ function JavaCard({ id }: { id: InstanceId }) {
 
   return (
     <Card title="Java">
-      <div className="space-y-2">
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input
-            type="radio"
-            checked={java === null}
-            onChange={() => set(null)}
-            className="accent-[var(--gold)]"
-          />
-          <span className={java === null ? 'text-text' : 'text-muted'}>Automatic</span>
-          <span className="text-xs text-faint">bundled Java 21 with ZGC, recommended</span>
-        </label>
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input
-            type="radio"
-            checked={java !== null}
-            onChange={browse}
-            className="accent-[var(--gold)]"
-          />
-          <span className={java !== null ? 'text-text' : 'text-muted'}>Custom java executable</span>
-        </label>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex overflow-hidden rounded-lg border border-[var(--line)] text-xs">
+          <button onClick={() => set(null)} className={`px-3 py-1.5 ${java === null ? ON : OFF}`}>
+            Bundled Java 21
+          </button>
+          <button onClick={browse} className={`px-3 py-1.5 ${java !== null ? ON : OFF}`}>
+            Custom
+          </button>
+        </div>
         {java !== null && (
-          <div className="flex items-center gap-2 pl-6">
+          <>
             <code className="min-w-0 flex-1 truncate rounded border border-[var(--line)] bg-[var(--bg-2)] px-2 py-1 text-xs text-text">
               {java}
             </code>
-            <button
-              onClick={browse}
-              className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1 text-sm text-muted hover:text-text"
-            >
+            <button onClick={browse} className={ROW_BUTTON}>
               Browse…
             </button>
-          </div>
+          </>
         )}
       </div>
       <p className="mt-2 text-xs text-faint">
-        A custom Java 17+ (e.g. GraalVM 21) also runs with ZGC; anything older gets G1. The console
-        log notes which Java the game started on.
+        {java === null ? 'Runs with ZGC, which keeps the wall from freezing.' : 'Needs Java 17 or newer for ZGC. Older versions fall back to G1.'}
       </p>
     </Card>
   )
@@ -385,25 +387,18 @@ function FilesCard({ id }: { id: InstanceId }) {
     }
   }
 
-  const button = 'shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted hover:text-text'
   return (
     <Card title="Files">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-sm text-muted">
-          Open this instance’s game folder: <span className="text-faint">mods, saves, config, logs</span>.
-        </div>
-        <button onClick={() => void window.mcsr.instances.openFolder(id)} className={button}>
+      <Row label="Game folder" hint="Mods, saves, config, logs">
+        <button onClick={() => void window.mcsr.instances.openFolder(id)} className={ROW_BUTTON}>
           Open folder
         </button>
-      </div>
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <div className="text-sm text-muted">
-          Export for MultiMC or Prism: <span className="text-faint">mods, config, options and resource packs</span>.
-        </div>
-        <button onClick={() => void exportPack()} disabled={busy} className={`${button} disabled:opacity-40`}>
+      </Row>
+      <Row label="Export for MultiMC or Prism" hint="Mods, config, options and resource packs">
+        <button onClick={() => void exportPack()} disabled={busy} className={ROW_BUTTON}>
           {busy ? 'Exporting…' : 'Export zip'}
         </button>
-      </div>
+      </Row>
       {note && <div className="mt-2 break-all text-xs text-faint">{note}</div>}
     </Card>
   )
@@ -690,13 +685,7 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
 
   return (
     <Card title="Import settings">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0 text-sm text-muted">
-          Copy <code>options.txt</code>, <code>hotbar.nbt</code>, <code>config/</code>, and your{' '}
-          <code>resourcepacks/</code> (keybinds, sensitivity, StandardSettings, world options, and
-          your seedwall) from another instance.
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
+      <Row label="From another instance">
           <select
             value={source}
             onChange={(e) => setSource(e.target.value as InstanceId | '')}
@@ -720,35 +709,17 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
           >
             Import
           </button>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
-        <div className="min-w-0 text-sm text-muted">
-          …or import from <span className="text-text">any folder</span>: another launcher’s instance,
-          an old <code>.minecraft</code>, anywhere. We find the settings inside it.
-        </div>
-        <button
-          onClick={importFolder}
-          disabled={busy}
-          className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted transition-colors hover:text-text disabled:opacity-50"
-        >
+      </Row>
+      <Row label="From a folder" hint="Another launcher's instance or a .minecraft folder">
+        <button onClick={importFolder} disabled={busy} className={ROW_BUTTON}>
           Choose folder…
         </button>
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
-        <div className="min-w-0 text-sm text-muted">
-          …or pull just keybinds/sensitivity/video from an external <code>options.txt</code>.
-        </div>
-        <button
-          onClick={importFile}
-          disabled={busy}
-          className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted transition-colors hover:text-text disabled:opacity-50"
-        >
-          {busy ? 'Importing…' : 'Browse to options.txt…'}
+      </Row>
+      <Row label="From an options.txt" hint="Keybinds, sensitivity and video only">
+        <button onClick={importFile} disabled={busy} className={ROW_BUTTON}>
+          {busy ? 'Importing…' : 'Browse…'}
         </button>
-      </div>
+      </Row>
 
       {result && (
         <div className={`mt-2 text-xs ${result.ok ? 'text-[var(--win)]' : 'text-[var(--loss)]'}`}>
@@ -756,8 +727,7 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
         </div>
       )}
       <p className="mt-2 text-xs text-faint">
-        Importing from an instance overwrites this instance’s matching files; your world saves aren’t
-        touched.
+        Copies options, hotbar, config and resource packs over this instance’s. Worlds are left alone.
       </p>
     </Card>
   )
