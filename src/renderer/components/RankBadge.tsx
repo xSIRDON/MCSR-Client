@@ -21,7 +21,7 @@ export function RankBadge({ elo, size = 'md' }: Props) {
       }}
       title={`${rank.name} · ${elo ?? 'unranked'} ELO`}
     >
-      <RankGem color={rank.color} glow={rank.glow} size={gem} />
+      <RankGem color={rank.color} size={gem} />
       <span className="tracking-wide">{rank.name}</span>
     </span>
   )

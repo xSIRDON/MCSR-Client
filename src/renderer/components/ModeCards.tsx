@@ -9,7 +9,7 @@ import type { ProgressEvent } from '@shared/types'
 import { RankBadge } from './RankBadge'
 import { ModeBadge } from './ModeBadge'
 
-export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }) {
+export function RankedCard({ uuid }: { uuid: string }) {
   const { data: user } = useQuery({ queryKey: ['user', uuid], queryFn: () => mcsr.getUser(uuid) })
   const { statuses, progress, launch } = useInstances()
   const status = statuses.ranked
@@ -19,19 +19,19 @@ export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }
   const rank = eloToRank(user?.eloRate)
 
   return (
-    <ModeShell accent={rank.color} glow={rank.glow} delay={delay}>
+    <ModeShell glow={rank.glow}>
       <header className="relative flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <ModeBadge mode="ranked" size={28} />
+          <ModeBadge mode="ranked" />
           <div className="min-w-0">
             <div className="font-display text-lg leading-none tracking-wide text-[var(--gold)]">RANKED</div>
-            <div className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-faint">1v1 Ladder</div>
+            <div className="mt-1 truncate text-[10px] text-faint">1v1 Ladder</div>
           </div>
         </div>
         <RankBadge elo={user?.eloRate} size="sm" />
       </header>
 
-      <Hero label="Elo" value={user?.eloRate ?? '—'} color={rank.color} glow={`${rank.glow}66`} />
+      <Hero label="Elo" value={user?.eloRate ?? '—'} color={rank.color} />
 
       <PlayButton
         busy={busy}
@@ -43,7 +43,7 @@ export function RankedCard({ uuid, delay = 0 }: { uuid: string; delay?: number }
   )
 }
 
-export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: number }) {
+export function RsgCard({ name }: { name: string | null }) {
   const navigate = useNavigate()
   const { data: pbData } = useQuery({
     queryKey: ['rsg-card-pb', name],
@@ -88,13 +88,13 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
     )
 
   return (
-    <ModeShell accent="var(--portal)" glow="var(--portal)" delay={delay}>
+    <ModeShell glow="var(--portal)">
       <header className="relative flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <ModeBadge mode="rsg" size={28} />
+          <ModeBadge mode="rsg" />
           <div className="min-w-0">
             <div className="font-display text-lg leading-none tracking-wide text-[var(--portal)]">RSG</div>
-            <div className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-faint">Random Seed Glitchless</div>
+            <div className="mt-1 truncate text-[10px] text-faint">Random seed</div>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -103,7 +103,7 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
         </div>
       </header>
 
-      <Hero label="Personal best" value={pbValue} color="var(--portal)" glow="rgba(159,107,255,.5)" />
+      <Hero label="Personal best" value={pbValue} color="var(--portal)" />
 
       <PlayButton
         busy={busy}
@@ -115,22 +115,22 @@ export function RsgCard({ name, delay = 0 }: { name: string | null; delay?: numb
   )
 }
 
-export function ZsgCard({ delay = 0 }: { delay?: number }) {
+export function ZsgCard() {
   const { statuses, progress, launch } = useInstances()
   const status = statuses.zsg
   const prog = progress.zsg
   const busy = isBusy(status.state)
 
   return (
-    <ModeShell accent="#4fd6b0" glow="#4fd6b0" delay={delay}>
+    <ModeShell glow="#4fd6b0">
       <header className="relative flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <ModeBadge mode="zsg" size={28} />
+          <ModeBadge mode="zsg" />
           <div className="min-w-0">
             <div className="font-display text-lg leading-none tracking-wide" style={{ color: '#4fd6b0' }}>
               ZSG
             </div>
-            <div className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-faint">Filtered seed practice</div>
+            <div className="mt-1 truncate text-[10px] text-faint">Filtered seeds</div>
           </div>
         </div>
         <StatusPill live={false} />
@@ -164,15 +164,15 @@ function launchLabel(state: string, ready: string): string {
           : 'INSTALL & PLAY'
 }
 
-function Hero({ label, value, color, glow }: { label: string; value: ReactNode; color: string; glow: string }) {
+function Hero({ label, value, color }: { label: string; value: ReactNode; color: string }) {
   const len = typeof value === 'string' ? value.length : 0
   const sizeClass = len > 9 ? 'text-[1.9rem]' : len > 6 ? 'text-4xl' : 'text-5xl'
   return (
     <div className="relative flex flex-1 flex-col justify-center py-3">
-      <div className="text-[10px] uppercase tracking-[0.16em] text-muted">{label}</div>
+      <div className="text-[10px] text-muted">{label}</div>
       <div
         className={`font-display tnum whitespace-nowrap leading-none ${sizeClass}`}
-        style={{ color, textShadow: `0 0 34px ${glow}` }}
+        style={{ color, textShadow: `0 0 34px ${color}66` }}
       >
         {value}
       </div>
@@ -195,8 +195,8 @@ function TrackerPill() {
       className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium"
       style={{
         color: 'var(--portal)',
-        background: 'rgba(159,107,255,.12)',
-        border: '1px solid rgba(159,107,255,.3)'
+        background: 'rgba(91,159,240,.12)',
+        border: '1px solid rgba(91,159,240,.3)'
       }}
       title="The paceman tracker is running and uploading your splits to paceman.gg"
     >
@@ -224,28 +224,12 @@ function StatusPill({ live }: { live: boolean }) {
   )
 }
 
-function ModeShell({
-  accent,
-  glow,
-  delay,
-  children
-}: {
-  accent: string
-  glow: string
-  delay: number
-  children: ReactNode
-}) {
+function ModeShell({ glow, children }: { glow: string; children: ReactNode }) {
   return (
-    <section
-      className="surface group relative flex min-h-[208px] flex-col overflow-hidden p-4 animate-fade-up"
-      style={{
-        animationDelay: `${delay}ms`,
-        boxShadow: `0 12px 44px rgba(0,0,0,.5), inset 0 0 70px ${accent}0d`
-      }}
-    >
+    <section className="surface group relative flex min-h-[208px] flex-col overflow-hidden p-4">
       <div
-        className="pointer-events-none absolute -right-16 -top-20 h-60 w-60 rounded-full blur-3xl transition-opacity duration-500 group-hover:opacity-100"
-        style={{ background: glow, opacity: 0.16 }}
+        className="pointer-events-none absolute -right-16 -top-20 h-60 w-60 rounded-full opacity-[0.16] blur-3xl transition-opacity duration-500 group-hover:opacity-30"
+        style={{ background: glow }}
       />
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.04]"
@@ -274,12 +258,8 @@ function PlayButton({
       className="font-display relative mt-auto w-full overflow-hidden rounded-xl px-5 py-2.5 text-base tracking-wide transition-all hover:brightness-110 disabled:cursor-not-allowed"
       style={{
         color: '#07140a',
-        background: busy
-          ? 'linear-gradient(180deg,#3a4a36,#2c3a2a)'
-          : 'linear-gradient(180deg,#6fcf57,#4ea73e)',
-        boxShadow: busy
-          ? 'none'
-          : '0 8px 24px rgba(94,167,62,.4), inset 0 1px 0 rgba(255,255,255,.25)',
+        background: busy ? 'linear-gradient(180deg,#3a4a36,#2c3a2a)' : 'linear-gradient(180deg,#6fcf57,#4ea73e)',
+        boxShadow: busy ? 'none' : '0 8px 24px rgba(94,167,62,.4), inset 0 1px 0 rgba(255,255,255,.25)',
         opacity: busy ? 0.85 : 1
       }}
     >

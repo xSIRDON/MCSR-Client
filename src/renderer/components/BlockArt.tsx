@@ -3,7 +3,7 @@ interface BlockProps {
   className?: string
 }
 
-export function RankGem({ color, glow, size = 22 }: { color: string; glow: string; size?: number }) {
+export function RankGem({ color, size = 22 }: { color: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" className="pixelated" aria-hidden>
       <g>
@@ -18,9 +18,6 @@ export function RankGem({ color, glow, size = 22 }: { color: string; glow: strin
         <rect x="11" y="7" width="2" height="2" fill="#000000" opacity="0.28" />
         <rect x="9" y="11" width="2" height="2" fill="#000000" opacity="0.28" />
       </g>
-      <filter id={`g-${color}`}>
-        <feDropShadow dx="0" dy="0" stdDeviation="0.6" floodColor={glow} />
-      </filter>
     </svg>
   )
 }
