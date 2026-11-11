@@ -1,0 +1,8 @@
+<svg viewBox="0 0 1024 1024" width="16" height="16" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+
+  <path fill="#0d3a31" d="M64 0H960V64H1024V960H960V1024H64V960H0V64H64ZM64 64V960H960V64Z" fill-rule="evenodd" />
+  <path fill="#c5ffeb" d="M64 64H960V128H128V960H64Z" />
+  <path fill="#207f70" d="M960 128V960H128V896H896V128Z" />
+  <rect x="128" y="128" width="768" height="704" fill="#4fd6b0" />
+  <rect x="128" y="832" width="768" height="64" fill="#45c2a0" />
+</svg>

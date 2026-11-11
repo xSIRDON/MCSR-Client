@@ -34,6 +34,8 @@ const META: Record<InstanceId, Meta> = {
   }
 }
 
+const TONE: Record<InstanceId, string> = { ranked: 'gold', rsg: 'blue', zsg: 'teal' }
+
 const STATE_LABEL: Record<string, string> = {
   running: 'Running',
   launching: 'Launching…',
@@ -94,9 +96,13 @@ export function InstanceCard({ id }: { id: InstanceId }) {
         <button
           onClick={() => launch(id)}
           disabled={!profile || busy}
-          className="col-span-2 rounded-lg px-4 py-2 text-sm transition-all disabled:cursor-not-allowed disabled:opacity-40"
-          style={{ background: meta.accent, color: '#0a0a10' }}
+          className={`pbtn pbtn-${TONE[id]} font-display col-span-2 flex items-center justify-center gap-2 px-4 py-1 text-sm tracking-wide`}
         >
+          {!busy && (
+            <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden>
+              <path d="M3 2.5l8 4.5-8 4.5v-9z" fill="currentColor" />
+            </svg>
+          )}
           {status.state === 'running' ? 'PLAYING' : busy ? 'WORKING…' : status.state === 'ready' ? 'PLAY' : 'INSTALL'}
         </button>
         <button

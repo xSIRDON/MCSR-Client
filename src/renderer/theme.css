@@ -215,3 +215,37 @@ input[type='checkbox']:disabled {
   opacity: 0.4;
   cursor: default;
 }
+
+.pbtn {
+  border-style: solid;
+  border-color: transparent;
+  border-width: 6px 6px 9px;
+  border-image-slice: 2 2 3 fill;
+  border-image-source: url('./assets/buttons/green.svg');
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+  background: none;
+  color: #0b1a08;
+}
+.pbtn-gold {
+  border-image-source: url('./assets/buttons/gold.svg');
+  color: #1c1503;
+}
+.pbtn-blue {
+  border-image-source: url('./assets/buttons/blue.svg');
+  color: #081428;
+}
+.pbtn-teal {
+  border-image-source: url('./assets/buttons/teal.svg');
+  color: #062019;
+}
+.pbtn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.pbtn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.pbtn:disabled {
+  filter: saturate(0.35) brightness(0.7);
+  cursor: not-allowed;
+}

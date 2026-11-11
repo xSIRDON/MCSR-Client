@@ -83,13 +83,7 @@ export function PlayBar() {
         <button
           onClick={() => launch(selected)}
           disabled={busy}
-          className="font-display group relative flex min-w-[190px] items-center justify-center gap-2.5 rounded-xl px-6 py-3 text-base tracking-wide transition-all disabled:cursor-not-allowed"
-          style={{
-            color: '#07140a',
-            background: busy ? 'linear-gradient(180deg,#3a4a36,#2c3a2a)' : 'linear-gradient(180deg,#6fcf57,#4ea73e)',
-            boxShadow: busy ? 'none' : '0 8px 24px rgba(94,167,62,.4), inset 0 1px 0 rgba(255,255,255,.25)',
-            opacity: busy ? 0.85 : 1
-          }}
+          className="pbtn font-display flex min-w-[190px] items-center justify-center gap-2.5 px-5 py-2 text-base tracking-wide"
         >
           {!busy && (
             <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>

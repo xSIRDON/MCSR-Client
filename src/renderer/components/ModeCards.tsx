@@ -253,13 +253,7 @@ function PlayButton({
     <button
       onClick={onClick}
       disabled={busy}
-      className="font-display relative mt-auto w-full overflow-hidden rounded-xl px-5 py-2.5 text-base tracking-wide transition-all hover:brightness-110 disabled:cursor-not-allowed"
-      style={{
-        color: '#07140a',
-        background: busy ? 'linear-gradient(180deg,#3a4a36,#2c3a2a)' : 'linear-gradient(180deg,#6fcf57,#4ea73e)',
-        boxShadow: busy ? 'none' : '0 8px 24px rgba(94,167,62,.4), inset 0 1px 0 rgba(255,255,255,.25)',
-        opacity: busy ? 0.85 : 1
-      }}
+      className="pbtn font-display relative mt-auto w-full overflow-hidden px-4 py-1.5 text-base tracking-wide"
     >
       {busy && progress?.fraction != null && (
         <div className="absolute inset-y-0 left-0 bg-white/25" style={{ width: `${progress.fraction * 100}%` }} />
