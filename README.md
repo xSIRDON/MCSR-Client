@@ -3,8 +3,8 @@
 A launcher and stats client for Minecraft 1.16.1 speedrunning on Windows. It installs and runs the
 Ranked, RSG and ZSG setups for you and shows your MCSR Ranked and paceman stats in the same window.
 
-> **Note:** MCSR Client is not fully legal yet. Getting it approved is in progress, so check the
-> current rules before using it for runs you plan to submit.
+> **Note:** the game is started by an unmodified Prism Launcher, which the speedrun rules allow
+> (see [Speedrun rules](#speedrun-rules)). Approval from MCSR Ranked staff is still pending.
 
 **[Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)** (v2.0.0, updates itself after that)
 
@@ -51,6 +51,22 @@ your splits against theirs once you've played it, with links to the runner's VOD
 
 Star any runner and the rail on the right shows when they are in a ranked match or on pace, with a
 live run timer and a link to their stream.
+
+## Speedrun rules
+
+How the client lines up with the [Minecraft speedrunning rules](https://mc.sr/rules/):
+
+- **A.1.1** allowed launcher: the game is launched by stock Prism Launcher (A.1.1.c), unmodified and
+  checked against its official release hash.
+- **A.8.5** legal mods: instances are installed with the MCSR Ranked pack and the legal RSG/ZSG mod
+  sets. Mods you add yourself, like a SeedQueue beta jar, are your responsibility.
+- **A.8.16** DLL injection: only Toolscreen, which is whitelisted.
+- **A.8.15** Hermes data: only the paceman tracker reads it, which is allowed by name.
+- **A.8.18 / A.8.19**: no debug flags and no Java agents. The game runs on Java 21 with ZGC.
+- **A.9.1** multiple instances: Ranked, RSG and ZSG each have their own game folder.
+
+These are the leaderboard rules. MCSR Ranked has its own rules, so check with Ranked staff for
+anything specific to ranked play.
 
 ## Building
 
