@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useUi } from '../store/uiStore'
 import { McsrLogo } from '../components/Logo'
+import { ipcMessage } from '../lib/ipc-error'
+import { SIGN_IN_CANCELLED } from '@shared/types'
 
 export function Login() {
   const { setProfile, setPacemanName } = useUi()
@@ -15,7 +17,8 @@ export function Login() {
       setProfile(p)
       setPacemanName(p.name)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Sign-in failed. Please try again.')
+      const msg = ipcMessage(e, 'Sign-in failed. Please try again.')
+      if (msg !== SIGN_IN_CANCELLED) setError(msg)
     } finally {
       setBusy(false)
     }

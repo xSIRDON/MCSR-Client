@@ -1,7 +1,8 @@
 import { Auth } from 'msmc'
 import type { types as MsmcTypes } from 'msmc'
 import { store } from '../store'
-import type { Account, Profile } from '../../shared/types'
+import { logFailure } from '../log'
+import { SIGN_IN_CANCELLED, type Account, type Profile } from '../../shared/types'
 
 type GmllUser = MsmcTypes.GmllUser
 
@@ -31,7 +32,8 @@ function readState(): AccountsState {
     try {
       const s = JSON.parse(raw) as AccountsState
       if (Array.isArray(s.list)) return { active: s.active ?? null, list: s.list }
-    } catch {
+    } catch (e) {
+      logFailure('Saved accounts could not be read, sign in again', e)
     }
   }
   const legacy = store.secret.get(LEGACY_SECRET)
@@ -62,7 +64,9 @@ export function listAccounts(): Account[] {
 
 export async function addAccount(): Promise<Profile> {
   const auth = new Auth('select_account')
-  const xbox = await auth.launch('electron', { width: 480, height: 640 })
+  const xbox = await auth.launch('electron', { width: 480, height: 640 }).catch((e: unknown) => {
+    throw e === 'error.gui.closed' ? new Error(SIGN_IN_CANCELLED) : e
+  })
   const mc = await xbox.getMinecraft()
   if (!mc.profile) throw new Error('No Minecraft profile on this account (Java Edition required).')
   const profile = toProfile(mc.profile.name, mc.profile.id)

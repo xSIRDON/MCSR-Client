@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Account, Profile } from '@shared/types'
+import { SIGN_IN_CANCELLED, type Account, type Profile } from '@shared/types'
+import { ipcMessage } from '../lib/ipc-error'
 import { useUi } from '../store/uiStore'
 import { PlayerHead } from './PlayerHead'
 
@@ -9,6 +10,7 @@ export function AccountMenu({ profile }: { profile: Profile }) {
   const { setProfile, setPacemanName } = useUi()
   const [open, setOpen] = useState(false)
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [addError, setAddError] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -32,12 +34,18 @@ export function AccountMenu({ profile }: { profile: Profile }) {
   }
 
   async function add() {
+    setAddError(null)
     try {
       const p = await window.mcsr.auth.login()
       setProfile(p)
       setPacemanName(p.name)
       setAccounts(await window.mcsr.auth.accounts())
-    } catch {
+    } catch (e) {
+      const msg = ipcMessage(e, 'Sign-in failed. Please try again.')
+      if (msg !== SIGN_IN_CANCELLED) {
+        setAddError(msg)
+        return
+      }
     }
     setOpen(false)
   }
@@ -76,6 +84,7 @@ export function AccountMenu({ profile }: { profile: Profile }) {
             </span>
             Add account
           </button>
+          {addError && <div className="px-2 pb-1 text-[11px] leading-snug text-[var(--loss)]">{addError}</div>}
           <button
             onClick={() => {
               navigate('/settings')

@@ -3,6 +3,8 @@ import { ALL_MAP_IDS } from './maps'
 export type InstanceId = 'ranked' | 'rsg' | 'zsg'
 
 export const INSTANCE_IDS = ['ranked', 'rsg', 'zsg'] as const
+
+export const SIGN_IN_CANCELLED = 'Sign-in cancelled.'
 export const INSTANCE_LABEL: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
 
 export type LogKind = 'log' | 'crash'
