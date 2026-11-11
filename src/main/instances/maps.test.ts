@@ -1,8 +1,9 @@
-import { describe, it, expect, afterEach } from 'vitest'
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readdirSync, rmSync } from 'node:fs'
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { sanitize, placeWorlds } from './maps'
+import { sanitize, placeWorlds, syncMaps } from './maps'
+import { MAP_CATALOG } from '../../shared/maps'
 
 describe('sanitize', () => {
   it('strips illegal filename characters', async () => {
@@ -68,5 +69,26 @@ describe('placeWorlds', () => {
 
     expect(existsSync(join(saves, 'My Map', 'keep.txt'))).toBe(true)
     expect(existsSync(join(saves, 'My Map (2)', 'level.dat'))).toBe(true)
+  })
+})
+
+describe('syncMaps', () => {
+  const made: string[] = []
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    for (const d of made.splice(0)) rmSync(d, { recursive: true, force: true })
+  })
+
+  it('reports maps that failed to download and leaves them out of the manifest', async () => {
+    const saves = mkdtempSync(join(tmpdir(), 'mcsr-sync-'))
+    made.push(saves)
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 503 })))
+    const map = MAP_CATALOG[0]
+
+    const failed = await syncMaps(saves, [map.id])
+
+    expect(failed).toEqual([map.name])
+    const manifest = JSON.parse(readFileSync(join(saves, '.mcsrclient-maps.json'), 'utf8'))
+    expect(manifest).not.toHaveProperty(map.id)
   })
 })

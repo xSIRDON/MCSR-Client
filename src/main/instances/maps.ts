@@ -10,6 +10,7 @@ import { cp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { unzip } from '../security/safe-unzip'
+import { logFailure } from '../log'
 import { MAP_CATALOG, type MapDef } from '../../shared/maps'
 
 const MANIFEST = '.mcsrclient-maps.json'
@@ -92,7 +93,7 @@ export async function syncMaps(
   savesDir: string,
   selectedIds: string[],
   onProgress?: (done: number, total: number, label: string) => void
-): Promise<void> {
+): Promise<string[]> {
   mkdirSync(savesDir, { recursive: true })
   const manifest = readManifest(savesDir)
   const selected = new Set(selectedIds)
@@ -102,7 +103,8 @@ export async function syncMaps(
       for (const folder of manifest[mapId]) {
         try {
           await rm(join(savesDir, folder), { recursive: true, force: true })
-        } catch {
+        } catch (e) {
+          logFailure(`Could not remove old map world ${folder}`, e)
         }
       }
       delete manifest[mapId]
@@ -110,14 +112,18 @@ export async function syncMaps(
   }
 
   const toInstall = MAP_CATALOG.filter((m) => selected.has(m.id) && !(m.id in manifest))
+  const failed: string[] = []
   for (let i = 0; i < toInstall.length; i++) {
     onProgress?.(i, toInstall.length, toInstall[i].name)
     try {
       manifest[toInstall[i].id] = await installMap(savesDir, toInstall[i])
-    } catch {
+    } catch (e) {
+      logFailure(`Could not install ${toInstall[i].name}`, e)
+      failed.push(toInstall[i].name)
     }
   }
 
   writeManifest(savesDir, manifest)
   onProgress?.(toInstall.length, toInstall.length, 'done')
+  return failed
 }
