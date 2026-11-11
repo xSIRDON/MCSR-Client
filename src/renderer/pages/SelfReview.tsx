@@ -17,7 +17,6 @@ import { DEFAULT_SELECTION, usePlayerAnalytics } from '../hooks/usePlayerAnalyti
 import type { SeasonSel, Selection } from '../hooks/usePlayerAnalytics'
 import { nextTierAbove, type CompareTo } from '../lib/baseline'
 import { PlayerHead } from '../components/PlayerHead'
-import { RankBadge } from '../components/RankBadge'
 import { StatRow } from '../components/StatRow'
 import { PlayStyleRadar } from '../components/PlayStyleRadar'
 import { SeasonPicker } from '../components/SeasonPicker'
@@ -64,7 +63,6 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
     details,
     analytics,
     season,
-    scope,
     seasonWinRate,
     head,
     deaths,
@@ -111,18 +109,15 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
           <PlayerHead id={uuid} uuid={uuid} size={48} className="rounded-lg" />
         </div>
         <div className="min-w-0">
-          <div className="text-[11px] text-faint">Your numbers</div>
+          <div className="text-[11px] text-faint">Ranked review</div>
           <h1 className="font-display text-2xl tracking-wide text-text">
-            {user?.nickname ?? name} · Ranked Review
+            {user?.nickname ?? name}
           </h1>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-3">
           <SeasonPicker value={seasonSel} onChange={setSeasonSel} />
           <SelectionPicker value={selection} onChange={setSelection} />
           <CompareToPicker value={compareTo} onChange={setCompareTo} />
-          <div className="hidden sm:block">
-            <RankBadge elo={head.elo} size="md" />
-          </div>
         </div>
       </header>
 
@@ -136,7 +131,7 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
         </div>
       ) : (
         <>
-          <StatRow head={head} scope={scope} />
+          <StatRow head={head} />
           <SeasonStandingCard
             compareTo={compareTo}
             s={{

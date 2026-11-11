@@ -145,12 +145,12 @@ export function SeasonStandingCard({ s, compareTo }: { s: StandingInput; compare
           {POOL_SEASON ? `S${POOL_SEASON} ` : ''}players
         </span>
       </header>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-y-4 sm:grid-cols-4">
         {tiles.map((t) => (
-          <div key={t.label} className="rounded-lg border border-[var(--line)] px-3 py-2" title={t.hint}>
+          <div key={t.label} className="min-w-0 border-l border-[var(--line)] pl-3 sm:[&:nth-child(4n+1)]:border-l-0 sm:[&:nth-child(4n+1)]:pl-0" title={t.hint}>
             <div className="text-[10px] text-faint">{t.label}</div>
-            <div className="tnum font-display text-base text-text">{t.value}</div>
-            <div className="text-[11px]" style={{ color: t.share == null ? 'var(--faint)' : t.share >= 0.5 ? '#5fd38d' : '#e2706e' }}>
+            <div className="tnum mt-0.5 text-base text-text">{t.value}</div>
+            <div className="truncate text-[11px]" style={{ color: t.share == null ? 'var(--faint)' : t.share >= 0.5 ? '#5fd38d' : '#e2706e' }}>
               {t.share == null ? '—' : topLabel(t.share)}
               {t.extra && <span className="ml-1.5 text-faint">{t.extra}</span>}
             </div>

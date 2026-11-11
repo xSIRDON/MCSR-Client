@@ -1,26 +1,16 @@
-import { msToTime, signedElo } from '@core/format'
+import { signedElo } from '@core/format'
 import { StatTile } from './StatTile'
 import type { HeadStats } from '../hooks/usePlayerAnalytics'
 
-export function StatRow({ head, scope = 'season' }: { head: HeadStats; scope?: 'season' | 'total' }) {
+export function StatRow({ head }: { head: HeadStats }) {
   const decided = head.wins + head.losses
   const winRate = decided > 0 ? Math.round((head.wins / decided) * 1000) / 10 : 0
   const netColor = head.netElo > 0 ? 'var(--win)' : head.netElo < 0 ? 'var(--loss)' : undefined
-  const streakColor = head.currentStreak > 0 ? 'var(--win)' : undefined
 
   return (
-    <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(128px,1fr))]">
-      <StatTile
-        label="Win Rate"
-        value={`${winRate}%`}
-        hint={`${head.wins}W · ${head.losses}L`}
-        accent="var(--gold)"
-      />
-      <StatTile
-        label="Record"
-        value={`${head.wins}–${head.losses}`}
-        hint={`${head.played} played`}
-      />
+    <section className="surface grid grid-cols-2 gap-y-4 px-5 py-4 sm:grid-cols-4">
+      <StatTile label="Win rate" value={`${winRate}%`} hint={`${head.played} played`} accent="var(--gold)" />
+      <StatTile label="Record" value={`${head.wins}–${head.losses}`} />
       <StatTile
         label="Elo"
         value={head.elo != null ? String(head.elo) : '—'}
@@ -28,22 +18,10 @@ export function StatRow({ head, scope = 'season' }: { head: HeadStats; scope?: '
         accent={netColor}
       />
       <StatTile
-        label="Best Time"
-        value={msToTime(head.bestTime)}
-        hint={scope === 'total' ? 'career best' : 'season best'}
-        accent="var(--portal)"
-      />
-      <StatTile
-        label="Average"
-        value={head.averageWin != null ? msToTime(head.averageWin) : '—'}
-        hint={scope === 'total' ? 'career average' : 'season average'}
-      />
-      <StatTile
-        label="Win Streak"
+        label="Win streak"
         value={head.currentStreak > 0 ? `${head.currentStreak}W` : '—'}
         hint={`best ${head.bestStreak}W`}
-        accent={streakColor}
       />
-    </div>
+    </section>
   )
 }

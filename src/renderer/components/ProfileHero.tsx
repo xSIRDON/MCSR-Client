@@ -164,17 +164,17 @@ export function ProfileHero({
         </div>
       </div>
 
-      <div className="relative mt-4 grid gap-2.5 grid-cols-[repeat(auto-fit,minmax(130px,1fr))]">
-        <StatTile label="Win Rate" value={`${wr}%`} accent={wr >= 50 ? 'var(--win)' : undefined} hint={`${stats.wins}W · ${stats.loses}L`} />
-        <StatTile label="Win Streak" value={stats.currentStreak} hint={`best ${stats.bestStreak}`} />
-        <StatTile label="Best Time" value={msToTime(stats.bestTime)} accent="var(--gold)" />
+      <div className="relative mt-4 grid grid-cols-3 gap-y-4 border-t border-[var(--line)] pt-4 md:grid-cols-6">
+        <StatTile label="Win rate" value={`${wr}%`} accent={wr >= 50 ? 'var(--win)' : undefined} hint={`${stats.wins}W · ${stats.loses}L`} />
+        <StatTile label="Win streak" value={stats.currentStreak} hint={`best ${stats.bestStreak}`} />
+        <StatTile label="Best time" value={msToTime(stats.bestTime)} accent="var(--gold)" />
         <StatTile
           label="Average"
           value={stats.averageTime != null ? msToTime(stats.averageTime) : '—'}
-          hint={`${stats.completions} completions`}
+          hint={`${stats.completions} finishes`}
         />
         <StatTile
-          label="Forfeit Rate"
+          label="Forfeit rate"
           value={stats.forfeitRate != null ? `${stats.forfeitRate}%` : '—'}
           hint={`${stats.forfeits} forfeits`}
         />

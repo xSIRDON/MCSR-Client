@@ -38,22 +38,28 @@ function Tick(props: {
   x?: number
   y?: number
   cx?: number
+  cy?: number
   payload?: { value: string }
   items?: Record<string, PerfItem>
 }) {
-  const { x = 0, y = 0, cx = 0, payload, items } = props
+  const { x = 0, cx = 0, cy = 0, payload, items } = props
   const p = payload && items ? items[payload.value] : undefined
   const anchor = x > cx + 8 ? 'start' : x < cx - 8 ? 'end' : 'middle'
   const dx = anchor === 'start' ? 6 : anchor === 'end' ? -6 : 0
+  const y = (props.y ?? 0) - (anchor === 'middle' && (props.y ?? 0) < cy ? 18 : 0)
   return (
     <g>
-      <text x={x + dx} y={y - 5} textAnchor={anchor} fill="#cdcdd8" fontSize={12} className="font-display">
+      <text x={x + dx} y={y - 5} textAnchor={anchor} fill="#cdcdd8" fontSize={11}>
         {payload?.value}
       </text>
-      <text x={x + dx} y={y + 10} textAnchor={anchor} fontSize={11}>
-        <tspan fill="#8b8b9e">{p?.ms != null ? msToTime(p.ms) : 'No data'}</tspan>
-        {p?.share != null ? <tspan fill={shareColour(p.share)}> · {topLabel(p.share)}</tspan> : null}
+      <text x={x + dx} y={y + 9} textAnchor={anchor} fontSize={10} fill="#8b8b9e">
+        {p?.ms != null ? msToTime(p.ms) : 'No data'}
       </text>
+      {p?.share != null && (
+        <text x={x + dx} y={y + 22} textAnchor={anchor} fontSize={10} fill={shareColour(p.share)}>
+          {topLabel(p.share)}
+        </text>
+      )}
     </g>
   )
 }
@@ -127,9 +133,9 @@ export function RunPerformanceCard({
         </div>
       ) : tab === 'performance' ? (
         <>
-          <div className="h-[300px]">
+          <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={data} outerRadius="60%" margin={{ top: 24, right: 62, bottom: 24, left: 62 }}>
+              <RadarChart data={data} outerRadius="56%" margin={{ top: 28, right: 76, bottom: 34, left: 76 }}>
                 <PolarGrid stroke="rgba(255,255,255,0.08)" />
                 <PolarAngleAxis dataKey="axis" tick={<Tick items={byLabel} />} />
                 <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
@@ -157,10 +163,10 @@ export function RunPerformanceCard({
             <tbody>
               <Row label={countsLabel} items={items} cell={(p) => String(p.count)} />
               {deaths && (
-                <Row label="Deaths" items={items} cell={(p) => `${deaths[p.key].count} · ${rate(deaths[p.key].rate)}`} />
+                <Row label="Deaths" items={items} cell={(p) => String(deaths[p.key].count)} sub={(p) => rate(deaths[p.key].rate)} />
               )}
               {oppDeaths && (
-                <Row label="Opp. deaths" items={items} cell={(p) => `${oppDeaths[p.key].count} · ${rate(oppDeaths[p.key].rate)}`} />
+                <Row label="Opp. deaths" items={items} cell={(p) => String(oppDeaths[p.key].count)} sub={(p) => rate(oppDeaths[p.key].rate)} />
               )}
             </tbody>
           </table>
@@ -224,13 +230,24 @@ function Extreme({ title, p, colour }: { title: string; p: PerfItem; colour: str
   )
 }
 
-function Row({ label, items, cell }: { label: string; items: PerfItem[]; cell: (p: PerfItem) => string }) {
+function Row({
+  label,
+  items,
+  cell,
+  sub
+}: {
+  label: string
+  items: PerfItem[]
+  cell: (p: PerfItem) => string
+  sub?: (p: PerfItem) => string
+}) {
   return (
     <tr className="odd:bg-white/[0.02]">
-      <td className="py-1 pl-1 text-left text-muted">{label}</td>
+      <td className="py-1 pl-1 text-left align-top text-muted">{label}</td>
       {items.map((p) => (
-        <td key={p.key} className="tnum py-1 text-text">
+        <td key={p.key} className="tnum py-1 align-top text-text">
           {cell(p)}
+          {sub && <div className="text-[10px] leading-tight text-faint">{sub(p)}</div>}
         </td>
       ))}
     </tr>
