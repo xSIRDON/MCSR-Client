@@ -14,7 +14,7 @@ import type {
   SeedQueueInfo,
   StandardSettings
 } from '../shared/types'
-import { isInstanceId } from '../shared/types'
+import { INSTANCE_LABEL, isInstanceId } from '../shared/types'
 import { store } from './store'
 import * as auth from './auth/msmc-auth'
 import * as gmll from './launcher/gmll-adapter'
@@ -52,6 +52,7 @@ import {
 import { readStandardSettings, writeStandardSettings, importOptionsFile } from './instances/standard-settings'
 import { copyInstanceSettings, resolveGameDir, listWorlds } from './instances/copy-instance'
 import { formatBytes, type CopyProgress } from './instances/copy-tree'
+import { exportPack } from './instances/export-pack'
 import { makeLineScrubber } from './line-scrub'
 import { getSkin } from './skins'
 import { getCachedMatch, putCachedMatch } from './match-cache'
@@ -717,6 +718,27 @@ export function registerIpc(): void {
       return
     }
     return shell.openPath(dir)
+  })
+  ipcMain.handle(IPC.instExport, async (_e, rawId: unknown) => {
+    const id = assertInstanceId(rawId)
+    const dir = gmll.gameDir(id)
+    if (!existsSync(join(dir, 'mods'))) throw new Error('Install this instance before exporting it.')
+    const { dependencies } = await getIndex()
+    const name = `MCSR ${INSTANCE_LABEL[id]}`
+    const res = await dialog.showSaveDialog({
+      title: 'Export for MultiMC or Prism',
+      defaultPath: `${name}.zip`,
+      filters: [{ name: 'Instance zip', extensions: ['zip'] }]
+    })
+    if (res.canceled || !res.filePath) return null
+    const files = await exportPack(dir, res.filePath, {
+      name,
+      minecraft: dependencies['minecraft'],
+      loader: dependencies['fabric-loader'],
+      ramMb: store.getConfig().ram[id]
+    })
+    pushLog('system', `Exported ${files} files to ${res.filePath}`)
+    return res.filePath
   })
   ipcMain.handle(IPC.instStdGet, (_e, id: unknown) =>
     readStandardSettings(gmll.gameDir(assertInstanceId(id)))

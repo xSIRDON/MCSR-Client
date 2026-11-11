@@ -45,6 +45,7 @@ export const IPC = {
   instAddExtraOptions: 'inst:addExtraOptions',
   instDismissExtraOptionsPrompt: 'inst:dismissExtraOptionsPrompt',
   instOpenFolder: 'inst:openFolder',
+  instExport: 'inst:export',
   instStdGet: 'inst:stdGet',
   instStdSet: 'inst:stdSet',
   instImportSettings: 'inst:importSettings',
@@ -128,6 +129,7 @@ export interface McsrApi {
     addExtraOptions(instances: InstanceId[]): Promise<void>
     dismissExtraOptionsPrompt(): Promise<void>
     openFolder(id: InstanceId): Promise<void>
+    exportPack(id: InstanceId): Promise<string | null>
     getStandardSettings(id: InstanceId): Promise<StandardSettings>
     setStandardSettings(id: InstanceId, patch: StandardSettings): Promise<StandardSettings>
     importSettings(id: InstanceId): Promise<{ imported: number } | null>

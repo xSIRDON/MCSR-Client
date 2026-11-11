@@ -18,6 +18,7 @@ Ranked, RSG and ZSG setups for you and shows your MCSR Ranked and paceman stats 
 - Runs the game on Java 21 with ZGC, since Java 8's GC pauses freeze the SeedQueue wall.
 - Sizes the SeedQueue settings and RAM to your PC before launch (can be turned off per instance).
 - Imports `options.txt`, `hotbar.nbt`, `config/`, resource packs and worlds from another instance.
+- Exports an instance as a zip that MultiMC and Prism can import.
 - Sign in with Microsoft. Multiple accounts are supported.
 
 **Ranked stats**

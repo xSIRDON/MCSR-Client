@@ -56,6 +56,7 @@ const api: McsrApi = {
       ipcRenderer.invoke(IPC.instAddExtraOptions, instances),
     dismissExtraOptionsPrompt: () => ipcRenderer.invoke(IPC.instDismissExtraOptionsPrompt),
     openFolder: (id: InstanceId) => ipcRenderer.invoke(IPC.instOpenFolder, id),
+    exportPack: (id: InstanceId) => ipcRenderer.invoke(IPC.instExport, id),
     getStandardSettings: (id: InstanceId) => ipcRenderer.invoke(IPC.instStdGet, id),
     setStandardSettings: (id: InstanceId, patch: StandardSettings) =>
       ipcRenderer.invoke(IPC.instStdSet, id, patch),

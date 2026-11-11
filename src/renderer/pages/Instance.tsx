@@ -367,19 +367,42 @@ function JavaCard({ id }: { id: InstanceId }) {
 }
 
 function FilesCard({ id }: { id: InstanceId }) {
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+
+  async function exportPack() {
+    setBusy(true)
+    setNote(null)
+    try {
+      const file = await window.mcsr.instances.exportPack(id)
+      if (file) setNote(`Saved to ${file}`)
+    } catch (e) {
+      setNote(ipcMessage(e, 'Could not export the instance.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const button = 'shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted hover:text-text'
   return (
     <Card title="Files">
       <div className="flex items-center justify-between gap-3">
         <div className="text-sm text-muted">
           Open this instance’s game folder: <span className="text-faint">mods, saves, config, logs</span>.
         </div>
-        <button
-          onClick={() => void window.mcsr.instances.openFolder(id)}
-          className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted hover:text-text"
-        >
+        <button onClick={() => void window.mcsr.instances.openFolder(id)} className={button}>
           Open folder
         </button>
       </div>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="text-sm text-muted">
+          Export for MultiMC or Prism: <span className="text-faint">mods, config, options and resource packs</span>.
+        </div>
+        <button onClick={() => void exportPack()} disabled={busy} className={`${button} disabled:opacity-40`}>
+          {busy ? 'Exporting…' : 'Export zip'}
+        </button>
+      </div>
+      {note && <div className="mt-2 break-all text-xs text-faint">{note}</div>}
     </Card>
   )
 }
