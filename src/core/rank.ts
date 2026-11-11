@@ -19,11 +19,11 @@ interface TierDef {
 }
 
 const TIERS: TierDef[] = [
-  { tier: 'Coal', color: '#aaaaaa', glow: '#cccccc', base: 0, divisions: [199, 399, 599] },
+  { tier: 'Coal', color: '#aaaaaa', glow: '#cccccc', base: 0, divisions: [399, 499, 599] },
   { tier: 'Iron', color: '#d4d4d4', glow: '#f0f0f0', base: 600, divisions: [699, 799, 899] },
   { tier: 'Gold', color: '#f5c842', glow: '#ffd966', base: 900, divisions: [999, 1099, 1199] },
   { tier: 'Emerald', color: '#4aff8c', glow: '#7fffb0', base: 1200, divisions: [1299, 1399, 1499] },
-  { tier: 'Diamond', color: '#4af0d8', glow: '#7fffd4', base: 1500, divisions: [1666, 1833, 1999] },
+  { tier: 'Diamond', color: '#4af0d8', glow: '#7fffd4', base: 1500, divisions: [1649, 1799, 1999] },
   { tier: 'Netherite', color: '#c0a0ff', glow: '#dfc0ff', base: 2000, divisions: [] }
 ]
 

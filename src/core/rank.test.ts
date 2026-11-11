@@ -33,6 +33,19 @@ describe('eloToRank', () => {
     expect(eloToRank(1500)).toMatchObject({ tier: 'Diamond', division: 1 })
   })
 
+  it('splits Diamond at 1650 and 1800', () => {
+    expect(eloToRank(1649).division).toBe(1)
+    expect(eloToRank(1650).division).toBe(2)
+    expect(eloToRank(1799).division).toBe(2)
+    expect(eloToRank(1806)).toMatchObject({ tier: 'Diamond', division: 3 })
+  })
+
+  it('splits Coal at 400 and 500', () => {
+    expect(eloToRank(399).division).toBe(1)
+    expect(eloToRank(400).division).toBe(2)
+    expect(eloToRank(500).division).toBe(3)
+  })
+
   it('maps 1900 to Diamond III', () => {
     expect(eloToRank(1900)).toMatchObject({ tier: 'Diamond', division: 3 })
   })
