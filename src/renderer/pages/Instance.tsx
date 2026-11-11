@@ -30,17 +30,17 @@ export function Instance() {
         </h1>
       </header>
 
-      <MemoryCard key={memoryKey} id={instanceId} />
+      <MemoryCard key={`${instanceId}-${memoryKey}`} id={instanceId} />
       {instanceId !== 'ranked' && (
-        <WallCard id={instanceId} onTuned={() => setMemoryKey((k) => k + 1)} />
+        <WallCard key={instanceId} id={instanceId} onTuned={() => setMemoryKey((k) => k + 1)} />
       )}
-      <JavaCard id={instanceId} />
-      <FilesCard id={instanceId} />
-      <LogsCard id={instanceId} />
-      <SettingsImportCard id={instanceId} />
-      <MapsCard id={instanceId} />
-      <ModsCard id={instanceId} />
-      <DangerCard id={instanceId} onDeleted={() => navigate('/play')} />
+      <JavaCard key={instanceId} id={instanceId} />
+      <FilesCard key={instanceId} id={instanceId} />
+      <LogsCard key={instanceId} id={instanceId} />
+      <SettingsImportCard key={instanceId} id={instanceId} />
+      <MapsCard key={instanceId} id={instanceId} />
+      <ModsCard key={instanceId} id={instanceId} />
+      <DangerCard key={instanceId} id={instanceId} onDeleted={() => navigate('/play')} />
     </div>
   )
 }
@@ -111,10 +111,11 @@ function MemoryCard({ id }: { id: InstanceId }) {
   const mb = config.ram[id]
   const setLocal = (v: number) => setConfig({ ...config, ram: { ...config.ram, [id]: v } })
   const commit = (v: number) =>
-    void window.mcsr.config.set({ ram: { ...config.ram, [id]: v } }).then(setConfig)
+    void window.mcsr.config.set({ ram: { [id]: v } }).then(setConfig)
 
   return (
     <Card title="Memory">
+      <p className="mb-2 text-xs text-faint">Applies to the next launch.</p>
       <div className="mb-2 flex items-center justify-between text-sm">
         <span className="text-muted">Allocated RAM</span>
         <span className="font-display text-text">{(mb / 1024).toFixed(1)} GB</span>
@@ -126,7 +127,8 @@ function MemoryCard({ id }: { id: InstanceId }) {
         step={512}
         value={mb}
         onChange={(e) => setLocal(Number(e.target.value))}
-        onMouseUp={(e) => commit(Number((e.target as HTMLInputElement).value))}
+        onPointerUp={(e) => commit(Number(e.currentTarget.value))}
+        onKeyUp={(e) => commit(Number(e.currentTarget.value))}
         className="w-full accent-[var(--gold)]"
       />
       <div className="mt-1 text-xs text-faint">
@@ -144,18 +146,30 @@ function WallCard({ id, onTuned }: { id: InstanceId; onTuned: () => void }) {
   const [config, setConfig] = useState<AppConfig | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   useEffect(() => {
-    void window.mcsr.instances.seedQueue(id).then(setInfo)
-    void window.mcsr.config.get().then(setConfig)
+    setLoadError(null)
+    Promise.all([window.mcsr.instances.seedQueue(id), window.mcsr.config.get()])
+      .then(([sq, cfg]) => {
+        setInfo(sq)
+        setConfig(cfg)
+      })
+      .catch((e) => setLoadError(ipcMessage(e, 'Could not read the SeedQueue settings.')))
   }, [id])
+  if (loadError) {
+    return (
+      <Card title="Wall performance">
+        <div className="text-sm text-[var(--loss)]">{loadError}</div>
+      </Card>
+    )
+  }
   if (info === undefined || !config) return null
 
   const setAuto = (on: boolean) =>
     void window.mcsr.config.set({ seedQueueAutoTune: on }).then(setConfig)
 
   async function applyRam(mb: number) {
-    const cfg = await window.mcsr.config.get()
-    await window.mcsr.config.set({ ram: { ...cfg.ram, [id]: mb } })
+    await window.mcsr.config.set({ ram: { [id]: mb } })
     setInfo(await window.mcsr.instances.seedQueue(id))
     onTuned()
   }
@@ -334,7 +348,7 @@ function JavaCard({ id }: { id: InstanceId }) {
 
   const java = config.java[id]
   const set = (value: string | null) =>
-    void window.mcsr.config.set({ java: { ...config.java, [id]: value } }).then(setConfig)
+    void window.mcsr.config.set({ java: { [id]: value } }).then(setConfig)
 
   async function browse() {
     const p = await window.mcsr.config.pickJava()
@@ -343,6 +357,7 @@ function JavaCard({ id }: { id: InstanceId }) {
 
   return (
     <Card title="Java">
+      <p className="mb-2 text-xs text-faint">Applies to the next launch.</p>
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex overflow-hidden rounded-lg border border-[var(--line)] text-xs">
           <button onClick={() => set(null)} className={`px-3 py-1.5 ${java === null ? ON : OFF}`}>
@@ -748,7 +763,7 @@ function MapsCard({ id }: { id: InstanceId }) {
     setSyncing(true)
     setError(null)
     try {
-      const updated = await window.mcsr.config.set({ maps: { ...config!.maps, [id]: next } })
+      const updated = await window.mcsr.config.set({ maps: { [id]: next } })
       setConfig(updated)
       await window.mcsr.instances.syncMaps(id)
     } catch (e) {
