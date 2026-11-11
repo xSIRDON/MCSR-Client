@@ -1,8 +1,8 @@
-# MCSR Client — friends server
+# Friends server
 
 The backend for mutual friend requests and "in the client" presence. One file, **zero
 dependencies** (Node 22.13+ with built-in SQLite). Identity is proven through Mojang's
-session server — the same handshake real Minecraft servers use — so there are no
+session server (the same handshake real Minecraft servers use), so there are no
 passwords or accounts to manage.
 
 ## Run it
@@ -13,12 +13,12 @@ SERVER_SECRET="any-long-random-string" node server.js
 
 | Env | Default | Notes |
 | --- | --- | --- |
-| `SERVER_SECRET` | *(required)* | HMAC key for session tokens. Generate once (`openssl rand -hex 32`), never change it casually — changing it signs everyone out. |
+| `SERVER_SECRET` | *(required)* | HMAC key for session tokens. Generate once (`openssl rand -hex 32`), changing it signs everyone out. |
 | `PORT` | `8787` | |
 | `DB_PATH` | `./friends.db` | SQLite file; put it on a persistent volume. |
-| `DEV_ALLOW_UNVERIFIED` | off | `1` skips Mojang verification. Local testing only — never in production. |
+| `DEV_ALLOW_UNVERIFIED` | off | `1` skips Mojang verification. Local testing only. |
 | `BIND` | `0.0.0.0` | Set to `127.0.0.1` when a TLS proxy fronts this, so the raw HTTP port isn't reachable from the internet. |
-| `TRUST_PROXY` | off | `1` makes the auth rate limiter read `X-Forwarded-For`. **Set this whenever you run behind a proxy** — otherwise every client shares one rate-limit bucket and a single caller can block all sign-ins. Only enable together with `BIND=127.0.0.1`, or a direct caller could spoof the header. |
+| `TRUST_PROXY` | off | `1` makes the auth rate limiter read `X-Forwarded-For`. Set this whenever you run behind a proxy, otherwise every client shares one rate-limit bucket and a single caller can block all sign-ins. Only enable together with `BIND=127.0.0.1`, or a direct caller could spoof the header. |
 
 ## Deploy (Railway / Fly / any VPS)
 
