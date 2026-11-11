@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, statSync } from 'node:fs'
-import { readFile, rm } from 'node:fs/promises'
+import { readFile, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import type { LogFile, LogKind } from '../../shared/types'
@@ -9,6 +9,7 @@ const DIRS: Record<LogKind, string> = { log: 'logs', crash: 'crash-reports' }
 const NAME = /^[\w.+ -]+\.(log|log\.gz|txt)$/
 const MAX_LINES = 25_000
 const MAX_BYTES = 10 * 1024 * 1024
+const MAX_FILE = 64 * 1024 * 1024
 const UPLOAD_URL = 'https://api.mclo.gs/1/log'
 
 export function listLogs(gameDir: string): LogFile[] {
@@ -39,8 +40,10 @@ export function hideUser(text: string): string {
 
 export async function readLog(gameDir: string, kind: LogKind, name: string, secrets: readonly string[]): Promise<string> {
   if (!(kind in DIRS) || !NAME.test(name)) throw new Error('Unknown log file.')
-  const raw = await readFile(join(gameDir, DIRS[kind], name))
-  const text = name.endsWith('.gz') ? gunzipSync(raw).toString('utf8') : raw.toString('utf8')
+  const file = join(gameDir, DIRS[kind], name)
+  if ((await stat(file)).size > MAX_FILE) throw new Error('That log is too big to open here, use Open folder.')
+  const raw = await readFile(file)
+  const text = name.endsWith('.gz') ? gunzipSync(raw, { maxOutputLength: MAX_FILE }).toString('utf8') : raw.toString('utf8')
   return trimLog(hideUser(redact(text, secrets)))
 }
 

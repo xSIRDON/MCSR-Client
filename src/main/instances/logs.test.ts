@@ -71,6 +71,14 @@ describe('deleting', () => {
   })
 })
 
+describe('size limits', () => {
+  it('refuses a gzip that inflates past 64MB', async () => {
+    const dir = game()
+    writeFileSync(join(dir, 'logs', 'bomb.log.gz'), gzipSync(Buffer.alloc(80 * 1024 * 1024)))
+    await expect(readLog(dir, 'log', 'bomb.log.gz', [])).rejects.toThrow()
+  })
+})
+
 describe('trimLog', () => {
   it('keeps the last 25000 lines', () => {
     const text = Array.from({ length: 25_010 }, (_, i) => `line ${i}`).join('\n')
