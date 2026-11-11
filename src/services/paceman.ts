@@ -183,8 +183,6 @@ export function createPacemanClient(fetchImpl: FetchLike, base = PACEMAN_BASE) {
   }
 }
 
-export type PacemanClient = ReturnType<typeof createPacemanClient>
-
 export const SPLIT_ORDER: { key: keyof RunSplits; label: string }[] = [
   { key: 'nether', label: 'Enter Nether' },
   { key: 'bastion', label: 'Bastion' },

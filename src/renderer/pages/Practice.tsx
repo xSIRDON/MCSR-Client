@@ -61,7 +61,7 @@ export function Practice() {
 
   return (
     <div className="mx-auto max-w-[980px] space-y-4 px-5 py-4">
-      <header className="">
+      <header>
         <h1 className="font-display text-xl text-text">Practice</h1>
         <p className="mt-1 text-xs text-muted">
           Draw a top runner's ranked match, play its seeds in a private room, then compare splits.
@@ -303,7 +303,7 @@ function SeedCard({
               disabled={!value}
               className="shrink-0 rounded-md border border-[var(--line)] px-2 py-1 text-[11px] text-muted transition-colors hover:text-text disabled:opacity-40"
             >
-              {copied === label ? 'Copied ✓' : 'Copy'}
+              {copied === label ? 'Copied' : 'Copy'}
             </button>
           </div>
         ))}
@@ -322,7 +322,7 @@ function SeedCard({
           }
           className="rounded-lg border border-[var(--gold)]/40 bg-[var(--gold)]/10 px-3 py-1.5 text-xs font-medium text-[var(--gold)] transition-all hover:bg-[var(--gold)]/20"
         >
-          {copied === 'all' ? 'Copied all ✓' : 'Copy all four'}
+          {copied === 'all' ? 'Copied all' : 'Copy all four'}
         </button>
         {seed.players.map(
           (p) =>
@@ -344,7 +344,7 @@ function SeedCard({
           rel="noreferrer"
           className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs text-muted transition-colors hover:text-text"
         >
-          Compare on GapCheck ↗
+          Compare on GapCheck
         </a>
         <button
           onClick={() => setRevealed((r) => !r)}

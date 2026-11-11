@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { InstanceId } from '@shared/types'
+import { INSTANCE_LABEL, type InstanceId } from '@shared/types'
 import { ipcMessage } from '../lib/ipc-error'
-
-const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
 
 export function ExtraOptionsPrompt() {
   const [prompt, setPrompt] = useState<{ show: boolean; instances: InstanceId[] } | null>(null)
@@ -33,7 +31,7 @@ export function ExtraOptionsPrompt() {
     setPrompt({ show: false, instances: [] })
   }
 
-  const names = prompt.instances.map((i) => TITLES[i]).join(' and ')
+  const names = prompt.instances.map((i) => INSTANCE_LABEL[i]).join(' and ')
 
   return (
     <div

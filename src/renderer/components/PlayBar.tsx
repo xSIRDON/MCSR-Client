@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { InstanceId } from '@shared/types'
+import { INSTANCE_IDS, INSTANCE_LABEL, type InstanceId, type InstanceState } from '@shared/types'
 import { useInstances, isBusy } from '../hooks/useInstances'
 import { ModeBadge } from './ModeBadge'
 
-const LABEL: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
-const INSTANCES: InstanceId[] = ['ranked', 'rsg', 'zsg']
-
-function InstanceIcon({ id, size = 24 }: { id: InstanceId; size?: number }) {
-  return <ModeBadge mode={id} size={size} />
+const PLAY_LABEL: Partial<Record<InstanceState, string>> = {
+  running: 'PLAYING',
+  launching: 'LAUNCHING',
+  installing: 'INSTALLING',
+  ready: 'PLAY'
 }
 
 export function PlayBar() {
@@ -20,16 +20,7 @@ export function PlayBar() {
   const prog = progress[selected]
   const busy = isBusy(status.state)
 
-  const playLabel =
-    status.state === 'running'
-      ? 'PLAYING'
-      : status.state === 'launching'
-        ? 'LAUNCHING'
-        : status.state === 'installing'
-          ? 'INSTALLING'
-          : status.state === 'ready'
-            ? 'PLAY'
-            : 'INSTALL & PLAY'
+  const playLabel = PLAY_LABEL[status.state] ?? 'INSTALL & PLAY'
 
   return (
     <div className="relative z-20 shrink-0 border-t border-[var(--line)] bg-[#0b0b11]/95 backdrop-blur">
@@ -53,7 +44,7 @@ export function PlayBar() {
 
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm text-text">
-            {busy && prog ? prog.message : status.state === 'error' ? (status.error ?? 'Error') : LABEL[selected]}
+            {busy && prog ? prog.message : status.state === 'error' ? (status.error ?? 'Error') : INSTANCE_LABEL[selected]}
           </div>
           <div className="truncate text-xs text-faint">
             {status.state === 'ready'
@@ -134,7 +125,7 @@ function InstanceSelect({ selected, onSelect }: { selected: InstanceId; onSelect
   useEffect(() => {
     if (!open) return
     const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
-    items?.[Math.max(0, INSTANCES.indexOf(selected))]?.focus()
+    items?.[Math.max(0, INSTANCE_IDS.indexOf(selected))]?.focus()
   }, [open, selected])
 
   function onMenuKey(e: React.KeyboardEvent) {
@@ -163,8 +154,8 @@ function InstanceSelect({ selected, onSelect }: { selected: InstanceId; onSelect
           borderColor: open ? 'rgba(74,255,140,0.5)' : 'var(--line)'
         }}
       >
-        <InstanceIcon id={selected} />
-        <span className="font-display tracking-wide">{LABEL[selected]}</span>
+        <ModeBadge mode={selected} size={24} />
+        <span className="font-display tracking-wide">{INSTANCE_LABEL[selected]}</span>
         <svg
           width="12"
           height="12"
@@ -190,7 +181,7 @@ function InstanceSelect({ selected, onSelect }: { selected: InstanceId; onSelect
           onKeyDown={onMenuKey}
           className="absolute bottom-full left-0 z-40 mb-2 w-[184px] overflow-hidden rounded-xl border border-[var(--line-strong)] bg-[#0e0e16] p-1 shadow-lg"
         >
-          {INSTANCES.map((id) => {
+          {INSTANCE_IDS.map((id) => {
             const active = selected === id
             return (
               <button
@@ -207,8 +198,8 @@ function InstanceSelect({ selected, onSelect }: { selected: InstanceId; onSelect
                   background: active ? 'rgba(74,255,140,0.12)' : undefined
                 }}
               >
-                <InstanceIcon id={id} />
-                <span className="font-display tracking-wide">{LABEL[id]}</span>
+                <ModeBadge mode={id} size={24} />
+                <span className="font-display tracking-wide">{INSTANCE_LABEL[id]}</span>
                 {active && (
                   <svg className="ml-auto" width="13" height="13" viewBox="0 0 14 14" aria-hidden>
                     <path

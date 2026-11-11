@@ -30,7 +30,7 @@ export function Login() {
           <McsrLogo size={68} />
         </div>
         <h1 className="font-display text-4xl text-text">MCSR CLIENT</h1>
-        <p className="mt-2 text-sm text-muted">The clean MCSR client, Ranked &amp; RSG, one place.</p>
+        <p className="mt-2 text-sm text-muted">Ranked and RSG in one launcher.</p>
 
         <button
           onClick={signIn}

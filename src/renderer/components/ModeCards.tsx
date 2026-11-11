@@ -152,16 +152,14 @@ export function ZsgCard() {
   )
 }
 
+const BUSY_LABEL: Record<string, string> = {
+  running: 'PLAYING',
+  launching: 'LAUNCHING…',
+  installing: 'INSTALLING…'
+}
+
 function launchLabel(state: string, ready: string): string {
-  return state === 'running'
-    ? 'PLAYING'
-    : state === 'launching'
-      ? 'LAUNCHING…'
-      : state === 'installing'
-        ? 'INSTALLING…'
-        : state === 'ready'
-          ? ready
-          : 'INSTALL & PLAY'
+  return BUSY_LABEL[state] ?? (state === 'ready' ? ready : 'INSTALL & PLAY')
 }
 
 function Hero({ label, value, color }: { label: string; value: ReactNode; color: string }) {

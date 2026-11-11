@@ -36,7 +36,7 @@ export function usePractice(filters: PracticeFilters) {
   const query = useMemo(() => toGapCheckFilters(filters), [filters])
   const countsKey = useMemo(() => ({ ...query, seedType: null }), [query])
 
-  const { data: counts, isLoading: countsLoading } = useQuery({
+  const { data: counts } = useQuery({
     queryKey: ['gapcheck-counts', countsKey],
     queryFn: () => window.mcsr.gapcheck.counts(countsKey),
     staleTime: 10 * 60_000
@@ -68,5 +68,5 @@ export function usePractice(filters: PracticeFilters) {
     setError(null)
   }, [])
 
-  return { counts, countsLoading, seeds, draw, drawing, error, clear }
+  return { counts, seeds, draw, drawing, error, clear }
 }

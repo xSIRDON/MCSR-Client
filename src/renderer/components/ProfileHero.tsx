@@ -22,7 +22,7 @@ function AddFriendButton({ uuid, nickname }: { uuid: string; nickname: string })
   const isIncoming = net.incoming.some((f) => normUuid(f.uuid) === id)
 
   if (isFriend)
-    return <span className="rounded-full bg-[var(--win)]/12 px-2.5 py-1 text-[11px] text-[var(--win)]">Friends ✓</span>
+    return <span className="rounded-full bg-[var(--win)]/12 px-2.5 py-1 text-[11px] text-[var(--win)]">Friends</span>
   if (isOutgoing)
     return <span className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] text-faint">Request sent</span>
   if (isIncoming)

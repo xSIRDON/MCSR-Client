@@ -6,32 +6,16 @@ interface BlockProps {
 export function RankGem({ color, size = 22 }: { color: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" className="pixelated" aria-hidden>
-      <g>
-        <rect x="6" y="1" width="4" height="2" fill={color} />
-        <rect x="4" y="3" width="8" height="2" fill={color} />
-        <rect x="2" y="5" width="12" height="4" fill={color} />
-        <rect x="3" y="9" width="10" height="2" fill={color} />
-        <rect x="5" y="11" width="6" height="2" fill={color} />
-        <rect x="7" y="13" width="2" height="2" fill={color} />
-        <rect x="5" y="3" width="2" height="2" fill="#ffffff" opacity="0.85" />
-        <rect x="3" y="5" width="2" height="2" fill="#ffffff" opacity="0.5" />
-        <rect x="11" y="7" width="2" height="2" fill="#000000" opacity="0.28" />
-        <rect x="9" y="11" width="2" height="2" fill="#000000" opacity="0.28" />
-      </g>
-    </svg>
-  )
-}
-
-export function NetheriteBlock({ size = 18, className }: BlockProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" className={`pixelated ${className ?? ''}`} aria-hidden>
-      <rect width="16" height="16" fill="#140f24" />
-      <rect x="1" y="1" width="6" height="6" fill="#1d1533" />
-      <rect x="9" y="2" width="5" height="5" fill="#241a3f" />
-      <rect x="2" y="9" width="5" height="5" fill="#241a3f" />
-      <rect x="9" y="9" width="6" height="6" fill="#1a1230" />
-      <rect x="3" y="3" width="1" height="1" fill="#7c5cff" opacity="0.7" />
-      <rect x="11" y="11" width="1" height="1" fill="#7c5cff" opacity="0.6" />
+      <rect x="6" y="1" width="4" height="2" fill={color} />
+      <rect x="4" y="3" width="8" height="2" fill={color} />
+      <rect x="2" y="5" width="12" height="4" fill={color} />
+      <rect x="3" y="9" width="10" height="2" fill={color} />
+      <rect x="5" y="11" width="6" height="2" fill={color} />
+      <rect x="7" y="13" width="2" height="2" fill={color} />
+      <rect x="5" y="3" width="2" height="2" fill="#ffffff" opacity="0.85" />
+      <rect x="3" y="5" width="2" height="2" fill="#ffffff" opacity="0.5" />
+      <rect x="11" y="7" width="2" height="2" fill="#000000" opacity="0.28" />
+      <rect x="9" y="11" width="2" height="2" fill="#000000" opacity="0.28" />
     </svg>
   )
 }

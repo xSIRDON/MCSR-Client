@@ -176,5 +176,3 @@ export function usePlayerAnalytics(
     detailsLoading: enabled && detailsLoading && details.length === 0
   }
 }
-
-export type PlayerAnalytics = ReturnType<typeof usePlayerAnalytics>

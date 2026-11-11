@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { AppConfig, InstanceId } from '@shared/types'
+import { INSTANCE_LABEL, type AppConfig, type InstanceId } from '@shared/types'
 import { MAP_CATALOG, ALL_MAP_IDS } from '@shared/maps'
 import { useInstances } from '../hooks/useInstances'
-
-const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
 
 const GENERATED_WORLD = /^(Random|Set) Speedrun #\d+/i
 const MAX_LISTED_WORLDS = 200
@@ -101,7 +99,7 @@ export function InstallMapPicker() {
         className="surface flex max-h-[90vh] w-full max-w-[520px] flex-col p-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="font-display text-lg tracking-wide text-text">Install {TITLES[id]}</h2>
+        <h2 className="font-display text-lg tracking-wide text-text">Install {INSTANCE_LABEL[id]}</h2>
 
         <div className="-mr-2 mt-2 min-h-0 flex-1 overflow-y-auto pr-2">
         <p className="text-sm text-muted">
@@ -139,7 +137,7 @@ export function InstallMapPicker() {
                   <option value="">Don’t import (fresh install)</option>
                   {sources.map((s) => (
                     <option key={s} value={s}>
-                      From {TITLES[s]}
+                      From {INSTANCE_LABEL[s]}
                     </option>
                   ))}
                 </select>

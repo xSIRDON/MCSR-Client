@@ -1,17 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { LOW_FREE_MEM_MB, type AppConfig, type GcSessionReport, type InstanceId, type ModInfo, type SeedQueueInfo } from '@shared/types'
+import { LOW_FREE_MEM_MB, type AppConfig, type GcSessionReport, INSTANCE_LABEL, isInstanceId, type InstanceId, type ModInfo, type SeedQueueInfo } from '@shared/types'
 import { MAP_CATALOG, ALL_MAP_IDS } from '@shared/maps'
 import { ipcMessage } from '../lib/ipc-error'
-
-const TITLES: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
 
 export function Instance() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [memoryKey, setMemoryKey] = useState(0)
-  const instanceId: InstanceId | null =
-    id === 'ranked' || id === 'rsg' || id === 'zsg' ? id : null
+  const instanceId = isInstanceId(id) ? id : null
 
   if (!instanceId) {
     return <div className="mx-auto max-w-[760px] px-5 py-6 text-muted">Unknown instance.</div>
@@ -28,7 +25,7 @@ export function Instance() {
           ←
         </button>
         <h1 className="font-display text-xl tracking-wide text-text">
-          {TITLES[instanceId]} <span className="text-muted">· Edit instance</span>
+          {INSTANCE_LABEL[instanceId]} <span className="text-muted">· Edit instance</span>
         </h1>
       </header>
 
@@ -489,8 +486,8 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
       const { copied } = await window.mcsr.instances.importFromInstance(id, source)
       setResult(
         copied.length > 0
-          ? { ok: true, msg: `Imported ${copied.join(', ')} from ${TITLES[source]}.` }
-          : { ok: false, msg: `Nothing to import from ${TITLES[source]} yet.` }
+          ? { ok: true, msg: `Imported ${copied.join(', ')} from ${INSTANCE_LABEL[source]}.` }
+          : { ok: false, msg: `Nothing to import from ${INSTANCE_LABEL[source]} yet.` }
       )
     } catch (e) {
       setResult({ ok: false, msg: ipcMessage(e, 'Could not import from that instance.') })
@@ -556,7 +553,7 @@ function SettingsImportCard({ id }: { id: InstanceId }) {
             ) : (
               sources.map((s) => (
                 <option key={s} value={s}>
-                  {TITLES[s]}
+                  {INSTANCE_LABEL[s]}
                 </option>
               ))
             )}

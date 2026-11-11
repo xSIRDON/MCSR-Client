@@ -8,7 +8,7 @@ if (!SECRET) {
   console.error('SERVER_SECRET is required (any long random string).')
   process.exit(1)
 }
-if (DEV_UNVERIFIED) console.warn('!! DEV_ALLOW_UNVERIFIED is ON, identity checks are OFF. Never run like this in production.')
+if (DEV_UNVERIFIED) console.warn('DEV_ALLOW_UNVERIFIED=1, identity checks are off')
 
 const PORT = Number(process.env.PORT ?? 8787)
 const TRUST_PROXY = process.env.TRUST_PROXY === '1'
@@ -379,7 +379,7 @@ async function route(req, res) {
 createServer((req, res) => {
   route(req, res).catch((e) => {
     const badRequest = e instanceof SyntaxError || e.message === 'body too large'
-    if (badRequest) return send(res, 400, { error: e.message ?? 'error' })
+    if (badRequest) return send(res, 400, { error: e.message })
     console.error('[500]', e)
     send(res, 500, { error: 'internal error' })
   })

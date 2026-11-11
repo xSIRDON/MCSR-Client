@@ -95,10 +95,6 @@ export function rankedStats(
   }
 }
 
-export function seasonRanked(user: McsrUser | undefined): FlatRankedStats {
-  return rankedStats(user, 'season')
-}
-
 export interface MatchPlayer {
   uuid: string
   nickname: string
@@ -256,8 +252,6 @@ export function createMcsrClient(fetchImpl: FetchLike, base = MCSR_BASE) {
     }
   }
 }
-
-export type McsrClient = ReturnType<typeof createMcsrClient>
 
 export function avatarUrl(idOrUuid: string, size = 64): string {
   return `https://mc-heads.net/avatar/${encodeURIComponent(idOrUuid)}/${size}`

@@ -11,7 +11,6 @@ interface Meta {
   tagline: string
   accent: string
   mods: string
-  icon: () => JSX.Element
 }
 
 const META: Record<InstanceId, Meta> = {
@@ -19,23 +18,28 @@ const META: Record<InstanceId, Meta> = {
     title: 'Ranked',
     tagline: 'The 1v1 ladder with the full Ranked modpack.',
     accent: 'var(--gold)',
-    mods: '22 mods · MCSR Ranked',
-    icon: () => <ModeBadge mode="ranked" size={26} />
+    mods: '22 mods · MCSR Ranked'
   },
   rsg: {
     title: 'RSG',
     tagline: 'Random seed glitchless with the SeedQueue wall and paceman.',
     accent: 'var(--portal)',
-    mods: 'SeedQueue · SpeedRunIGT · paceman',
-    icon: () => <ModeBadge mode="rsg" size={26} />
+    mods: 'SeedQueue · SpeedRunIGT · paceman'
   },
   zsg: {
     title: 'ZSG',
     tagline: 'The RSG mods plus FSG for filtered seeds.',
     accent: '#4fd6b0',
-    mods: 'SeedQueue · SpeedRunIGT · FSG',
-    icon: () => <ModeBadge mode="zsg" size={26} />
+    mods: 'SeedQueue · SpeedRunIGT · FSG'
   }
+}
+
+const STATE_LABEL: Record<string, string> = {
+  running: 'Running',
+  launching: 'Launching…',
+  installing: 'Installing…',
+  ready: 'Ready',
+  error: 'Error'
 }
 
 export function InstanceCard({ id }: { id: InstanceId }) {
@@ -49,18 +53,7 @@ export function InstanceCard({ id }: { id: InstanceId }) {
   const prog = progress[id]
   const busy = isBusy(status.state)
 
-  const stateLabel =
-    status.state === 'running'
-      ? 'Running'
-      : status.state === 'launching'
-        ? 'Launching…'
-        : status.state === 'installing'
-          ? 'Installing…'
-          : status.state === 'ready'
-            ? 'Ready'
-            : status.state === 'error'
-              ? 'Error'
-              : 'Not installed'
+  const stateLabel = STATE_LABEL[status.state] ?? 'Not installed'
 
   return (
     <div
@@ -69,7 +62,7 @@ export function InstanceCard({ id }: { id: InstanceId }) {
     >
       <div className="relative flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          {meta.icon()}
+          <ModeBadge mode={id} size={26} />
           <h3 className="font-display text-lg" style={{ color: meta.accent }}>
             {meta.title}
           </h3>

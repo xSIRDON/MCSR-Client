@@ -3,6 +3,7 @@ import { ALL_MAP_IDS } from './maps'
 export type InstanceId = 'ranked' | 'rsg' | 'zsg'
 
 export const INSTANCE_IDS = ['ranked', 'rsg', 'zsg'] as const
+export const INSTANCE_LABEL: Record<InstanceId, string> = { ranked: 'Ranked', rsg: 'RSG', zsg: 'ZSG' }
 
 export function isInstanceId(value: unknown): value is InstanceId {
   return value === 'ranked' || value === 'rsg' || value === 'zsg'
