@@ -6,7 +6,7 @@ Ranked, RSG and ZSG setups for you and shows your MCSR Ranked and paceman stats 
 > **Note:** MCSR Client is not fully legal yet. Getting it approved is in progress, so check the
 > current rules before using it for runs you plan to submit.
 
-**[Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)** (v1.9.2, updates itself after that)
+**[Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)** (v2.0.0, updates itself after that)
 
 ![home screen](.github/assets/home.png)
 
