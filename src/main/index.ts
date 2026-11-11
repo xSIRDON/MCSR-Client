@@ -90,7 +90,8 @@ function createWindow(): void {
   })
 
   if (isDev) {
-    void win.loadURL(process.env['ELECTRON_RENDERER_URL'] as string)
+    void win.loadURL(process.env['ELECTRON_RENDERER_URL'] + (process.env.DEMO_ROUTE ? '#/' + process.env.DEMO_ROUTE : ''))
+    if (process.env.DEMO_HEIGHT) win.setSize(1060, Number(process.env.DEMO_HEIGHT))
     const shot = process.env.RENDERER_VITE_DEMO_PLAYER && process.env.DEMO_SHOT
     if (shot) {
       win.webContents.once('did-finish-load', () => {
