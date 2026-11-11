@@ -16,7 +16,6 @@ type RawConfig = {
   ninjabrain?: boolean
   toolscreen?: boolean
   favorites?: unknown[]
-  friendsServerUrl?: string | null
   extraOptionsPromptSeen?: boolean
   seedQueueAutoTune?: boolean
   pacemanShowWindow?: boolean
@@ -62,11 +61,6 @@ function normalizeConfig(raw: RawConfig): AppConfig {
     favorites: Array.isArray(raw.favorites)
       ? raw.favorites.filter((f): f is string => typeof f === 'string')
       : [...DEFAULT_CONFIG.favorites],
-    friendsServerUrl:
-      typeof raw.friendsServerUrl === 'string' &&
-      /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$))/i.test(raw.friendsServerUrl)
-        ? raw.friendsServerUrl
-        : DEFAULT_CONFIG.friendsServerUrl,
     extraOptionsPromptSeen:
       typeof raw.extraOptionsPromptSeen === 'boolean'
         ? raw.extraOptionsPromptSeen

@@ -3,13 +3,11 @@ import { IPC } from '../shared/ipc'
 import type { McsrApi } from '../shared/ipc'
 import type {
   AppConfig,
-  FriendsNetState,
   GapCheckFilters,
   InstanceId,
   LogKind,
   InstanceStatus,
   LogLine,
-  MessagesEvent,
   ProgressEvent,
   StandardSettings,
   TrackerStatus,
@@ -102,25 +100,6 @@ const api: McsrApi = {
     status: () => ipcRenderer.invoke(IPC.paceStatus),
     onStatusChanged: (cb: (s: TrackerStatus) => void) =>
       subscribe<TrackerStatus>(IPC.paceStatusChanged, cb)
-  },
-  friends: {
-    state: () => ipcRenderer.invoke(IPC.friendsState),
-    autoConnect: () => ipcRenderer.invoke(IPC.friendsAutoConnect),
-    connect: () => ipcRenderer.invoke(IPC.friendsConnect),
-    disconnect: () => ipcRenderer.invoke(IPC.friendsDisconnect),
-    request: (uuid: string, nickname?: string) =>
-      ipcRenderer.invoke(IPC.friendsRequest, uuid, nickname),
-    accept: (uuid: string) => ipcRenderer.invoke(IPC.friendsAccept, uuid),
-    decline: (uuid: string) => ipcRenderer.invoke(IPC.friendsDecline, uuid),
-    remove: (uuid: string) => ipcRenderer.invoke(IPC.friendsRemove, uuid),
-    onChanged: (cb: (s: FriendsNetState) => void) =>
-      subscribe<FriendsNetState>(IPC.friendsChanged, cb),
-    messages: () => ipcRenderer.invoke(IPC.friendsMessages),
-    sendMessage: (uuid: string, body: string) =>
-      ipcRenderer.invoke(IPC.friendsSendMessage, uuid, body),
-    markRead: (uuid: string) => ipcRenderer.invoke(IPC.friendsMarkRead, uuid),
-    onMessages: (cb: (e: MessagesEvent) => void) =>
-      subscribe<MessagesEvent>(IPC.friendsMessagesChanged, cb)
   },
   config: {
     get: () => ipcRenderer.invoke(IPC.cfgGet),

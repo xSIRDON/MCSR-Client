@@ -66,7 +66,6 @@ export interface AppConfig {
   ninjabrain: boolean
   toolscreen: boolean
   favorites: string[]
-  friendsServerUrl: string | null
   extraOptionsPromptSeen: boolean
   seedQueueAutoTune: boolean
   pacemanShowWindow: boolean
@@ -100,47 +99,7 @@ export interface GcSessionReport {
   lowestFreeMemMb?: number | null
 }
 
-export const DEFAULT_FRIENDS_SERVER = 'https://mcsrfriends.duckdns.org:8787'
-
 export const SAVED_KEY_MASK = '••••••••••••••••'
-
-export type FriendNetPresence = 'idle' | 'ranked' | 'rsg' | 'zsg' | 'offline'
-
-export interface FriendEntry {
-  uuid: string
-  nickname: string
-  state: FriendNetPresence
-  lastSeen: number | null
-}
-
-export interface FriendsNetState {
-  configured: boolean
-  connected: boolean
-  error: string | null
-  friends: FriendEntry[]
-  incoming: FriendEntry[]
-  outgoing: FriendEntry[]
-}
-
-export interface FriendMessage {
-  id: number
-  from: string
-  to: string
-  body: string
-  at: number
-  read: boolean
-  readAt?: number | null
-}
-
-export interface MessageStore {
-  byFriend: Record<string, FriendMessage[]>
-  unread: Record<string, number>
-}
-
-export interface MessagesEvent {
-  store: MessageStore
-  toast?: { uuid: string; nickname: string; body: string }
-}
 
 export const DEFAULT_CONFIG: AppConfig = {
   ram: { ranked: 3072, rsg: 3072, zsg: 3072 },
@@ -151,7 +110,6 @@ export const DEFAULT_CONFIG: AppConfig = {
   ninjabrain: true,
   toolscreen: true,
   favorites: [],
-  friendsServerUrl: DEFAULT_FRIENDS_SERVER,
   extraOptionsPromptSeen: false,
   seedQueueAutoTune: true,
   pacemanShowWindow: true

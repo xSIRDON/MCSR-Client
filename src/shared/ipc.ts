@@ -1,16 +1,12 @@
 import type {
   Account,
   AppConfig,
-  FriendMessage,
-  FriendsNetState,
   InstanceId,
   InstanceStatus,
   JavaInfo,
   LogFile,
   LogKind,
   LogLine,
-  MessagesEvent,
-  MessageStore,
   ModInfo,
   Profile,
   GapCheckCounts,
@@ -77,19 +73,6 @@ export const IPC = {
   paceGetKey: 'pace:getKey',
   paceStatus: 'pace:status',
   paceStatusChanged: 'pace:statusChanged',
-  friendsState: 'friends:state',
-  friendsAutoConnect: 'friends:autoConnect',
-  friendsConnect: 'friends:connect',
-  friendsDisconnect: 'friends:disconnect',
-  friendsRequest: 'friends:request',
-  friendsAccept: 'friends:accept',
-  friendsDecline: 'friends:decline',
-  friendsRemove: 'friends:remove',
-  friendsChanged: 'friends:changed',
-  friendsMessages: 'friends:messages',
-  friendsSendMessage: 'friends:sendMessage',
-  friendsMarkRead: 'friends:markRead',
-  friendsMessagesChanged: 'friends:messagesChanged',
   cfgGet: 'cfg:get',
   cfgSet: 'cfg:set',
   cfgPickJar: 'cfg:pickJar',
@@ -184,21 +167,6 @@ export interface McsrApi {
     getKey(): Promise<string | null>
     status(): Promise<TrackerStatus>
     onStatusChanged(cb: (s: TrackerStatus) => void): () => void
-  }
-  friends: {
-    state(): Promise<FriendsNetState>
-    autoConnect(): Promise<FriendsNetState>
-    connect(): Promise<FriendsNetState>
-    disconnect(): Promise<FriendsNetState>
-    request(uuid: string, nickname?: string): Promise<FriendsNetState>
-    accept(uuid: string): Promise<FriendsNetState>
-    decline(uuid: string): Promise<FriendsNetState>
-    remove(uuid: string): Promise<FriendsNetState>
-    onChanged(cb: (s: FriendsNetState) => void): () => void
-    messages(): Promise<MessageStore>
-    sendMessage(uuid: string, body: string): Promise<FriendMessage | null>
-    markRead(uuid: string): Promise<void>
-    onMessages(cb: (e: MessagesEvent) => void): () => void
   }
   config: {
     get(): Promise<AppConfig>

@@ -21,7 +21,6 @@ import * as auth from './auth/msmc-auth'
 import * as gmll from './launcher/gmll-adapter'
 import * as tracker from './paceman/tracker'
 import * as gapcheck from './gapcheck'
-import * as friends from './friends/service'
 import {
   fetchPack,
   installPackFiles,
@@ -215,7 +214,6 @@ function guardConfigPatch(patch: Partial<AppConfig>): Partial<AppConfig> {
     out.java = java
   }
   if ('seedQueueOverride' in patch && patch.seedQueueOverride !== null) delete out.seedQueueOverride
-  delete out.friendsServerUrl
   return out
 }
 async function getIndex(): Promise<ModrinthIndex> {
@@ -629,30 +627,17 @@ export function registerIpc(): void {
   tracker.onStatus((s) => win()?.webContents.send(IPC.paceStatusChanged, s))
   onLog((l) => win()?.webContents.send(IPC.logLine, l))
 
-  friends.setStateProvider(() => {
-    for (const id of ['ranked', 'rsg', 'zsg'] as const) {
-      if (states[id].state === 'running') return id
-    }
-    return 'idle'
-  })
-  friends.onChanged((s) => win()?.webContents.send(IPC.friendsChanged, s))
-  friends.onMessages((e) => win()?.webContents.send(IPC.friendsMessagesChanged, e))
 
   ipcMain.on(IPC.winMinimize, () => win()?.minimize())
   ipcMain.on(IPC.winClose, () => win()?.close())
 
-  const thenSyncFriends = <T>(p: T | Promise<T>): Promise<T> =>
-    Promise.resolve(p).then((r) => {
-      void friends.syncAccount().catch(() => {})
-      return r
-    })
-  ipcMain.handle(IPC.authLogin, () => thenSyncFriends(auth.login()))
+  ipcMain.handle(IPC.authLogin, () => auth.login())
   ipcMain.handle(IPC.authRestore, () => auth.restore())
-  ipcMain.handle(IPC.authLogout, () => thenSyncFriends(auth.logout()))
+  ipcMain.handle(IPC.authLogout, () => auth.logout())
   ipcMain.handle(IPC.authAccounts, () => auth.listAccounts())
-  ipcMain.handle(IPC.authAdd, () => thenSyncFriends(auth.addAccount()))
-  ipcMain.handle(IPC.authSwitch, (_e, uuid: string) => thenSyncFriends(auth.switchAccount(uuid)))
-  ipcMain.handle(IPC.authRemove, (_e, uuid: string) => thenSyncFriends(auth.removeAccount(uuid)))
+  ipcMain.handle(IPC.authAdd, () => auth.addAccount())
+  ipcMain.handle(IPC.authSwitch, (_e, uuid: string) => auth.switchAccount(uuid))
+  ipcMain.handle(IPC.authRemove, (_e, uuid: string) => auth.removeAccount(uuid))
 
   ipcMain.handle(IPC.instStatus, (_e, id: unknown) => states[assertInstanceId(id)])
   ipcMain.handle(IPC.instInstall, (_e, id: unknown) => installInstance(assertInstanceId(id)))
@@ -835,21 +820,6 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.paceGetKey, () => tracker.getKey())
   ipcMain.handle(IPC.paceStatus, () => tracker.status())
 
-  ipcMain.handle(IPC.friendsState, () => friends.getState())
-  ipcMain.handle(IPC.friendsAutoConnect, () => friends.autoConnect())
-  ipcMain.handle(IPC.friendsConnect, () => friends.connect())
-  ipcMain.handle(IPC.friendsDisconnect, () => friends.disconnect())
-  ipcMain.handle(IPC.friendsRequest, (_e, uuid: string, nickname?: string) =>
-    friends.request(uuid, nickname)
-  )
-  ipcMain.handle(IPC.friendsAccept, (_e, uuid: string) => friends.accept(uuid))
-  ipcMain.handle(IPC.friendsDecline, (_e, uuid: string) => friends.decline(uuid))
-  ipcMain.handle(IPC.friendsRemove, (_e, uuid: string) => friends.remove(uuid))
-  ipcMain.handle(IPC.friendsMessages, () => friends.getMessages())
-  ipcMain.handle(IPC.friendsSendMessage, (_e, uuid: string, body: string) =>
-    friends.sendMessage(uuid, body)
-  )
-  ipcMain.handle(IPC.friendsMarkRead, (_e, uuid: string) => friends.markRead(uuid))
 
   ipcMain.handle(IPC.cfgGet, () => store.getConfig())
   ipcMain.handle(IPC.cfgSet, (_e, patch: Partial<AppConfig>) => store.setConfig(guardConfigPatch(patch ?? {})))
