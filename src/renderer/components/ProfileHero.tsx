@@ -84,7 +84,7 @@ export function ProfileHero({
   if (isLoading) return <HeroSkeleton />
   if (isError || !user)
     return (
-      <section className="surface flex flex-wrap items-center gap-5 p-5 animate-fade-up">
+      <section className="surface flex flex-wrap items-center gap-5 p-5">
         <PlayerHead
           id={identifier}
           uuid={identifier}
@@ -110,21 +110,16 @@ export function ProfileHero({
   const stats = rankedStats(user, season === 'all' ? 'total' : 'season')
   const matchesHint = season === 'all' ? 'career' : seasonNum != null ? `season ${seasonNum}` : 'this season'
   const wr = winRate(stats.wins, stats.loses)
-  const decay = seasonNum == null ? user.timestamp?.nextDecay : null
 
   return (
-    <section
-      className="surface relative overflow-hidden p-5 animate-fade-up"
-      style={{ boxShadow: `0 8px 30px rgba(0,0,0,.55), inset 0 0 50px ${rank.color}0d` }}
-    >
+    <section className="surface relative overflow-hidden p-5">
       <div
-        className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full blur-3xl"
-        style={{ background: rank.glow, opacity: 0.12 }}
+        className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full opacity-[0.12] blur-3xl"
+        style={{ background: rank.glow }}
       />
       <div className="relative flex flex-wrap items-center gap-5">
         <div
           className="relative shrink-0 rounded-xl p-1.5"
-          style={{ background: `radial-gradient(circle at 50% 20%, ${rank.color}22, transparent 70%)` }}
         >
           <PlayerHead id={user.uuid} uuid={user.uuid} size={72} render="body" className="rounded-md" />
         </div>
@@ -151,9 +146,9 @@ export function ProfileHero({
 
           <div className="mt-2 flex flex-wrap items-end gap-4">
             <div>
-              <div className="text-[10px] uppercase tracking-[0.16em] text-muted">Elo</div>
+              <div className="text-[10px] text-muted">Elo</div>
               <div
-                className="font-display tnum animate-count text-5xl leading-none"
+                className="font-display tnum text-5xl leading-none"
                 style={{ color: rank.color, textShadow: `0 0 24px ${rank.glow}55` }}
               >
                 {elo ?? '—'}
@@ -166,32 +161,24 @@ export function ProfileHero({
               </div>
             </div>
           </div>
-
-          {decay ? (
-            <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--loss)]/30 bg-[var(--loss)]/10 px-2.5 py-0.5 text-xs text-[var(--loss)]">
-              ⚠ ELO decay scheduled — play a ranked match to reset it.
-            </div>
-          ) : null}
         </div>
       </div>
 
       <div className="relative mt-4 grid gap-2.5 grid-cols-[repeat(auto-fit,minmax(130px,1fr))]">
-        <StatTile label="Win Rate" value={`${wr}%`} accent={wr >= 50 ? 'var(--win)' : undefined} hint={`${stats.wins}W · ${stats.loses}L`} delay={40} />
-        <StatTile label="Win Streak" value={stats.currentStreak} hint={`best ${stats.bestStreak}`} delay={90} />
-        <StatTile label="Best Time" value={msToTime(stats.bestTime)} accent="var(--gold)" delay={140} />
+        <StatTile label="Win Rate" value={`${wr}%`} accent={wr >= 50 ? 'var(--win)' : undefined} hint={`${stats.wins}W · ${stats.loses}L`} />
+        <StatTile label="Win Streak" value={stats.currentStreak} hint={`best ${stats.bestStreak}`} />
+        <StatTile label="Best Time" value={msToTime(stats.bestTime)} accent="var(--gold)" />
         <StatTile
           label="Average"
           value={stats.averageTime != null ? msToTime(stats.averageTime) : '—'}
           hint={`${stats.completions} completions`}
-          delay={165}
         />
         <StatTile
           label="Forfeit Rate"
           value={stats.forfeitRate != null ? `${stats.forfeitRate}%` : '—'}
           hint={`${stats.forfeits} forfeits`}
-          delay={190}
         />
-        <StatTile label="Matches" value={stats.played} hint={matchesHint} delay={215} />
+        <StatTile label="Matches" value={stats.played} hint={matchesHint} />
       </div>
     </section>
   )
