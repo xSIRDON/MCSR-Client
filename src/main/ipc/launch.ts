@@ -20,7 +20,7 @@ import { store } from '../store'
 import { installedVersion, launchSecrets, sendProgress, setState, states, win } from './instance-state'
 import { ensureInstanceExtras, getIndex, installInstance, refreshIndex } from './install'
 import { tuneSeedQueue } from './seedqueue-tuning'
-import { syncPrismAfterClose } from './prism-settings'
+import { prismRoot, syncPrismAfterClose } from './prism-settings'
 
 export type LaunchOptions = { importFrom?: InstanceId | null; importFolder?: string | null; importWorlds?: string[] }
 
@@ -39,7 +39,7 @@ async function startCompanions(id: InstanceId, javaw: string | null): Promise<vo
   }
   if (cfg.toolscreen) {
     try {
-      await spawnToolscreenWatcher(gmll.gameDir(id), javaw)
+      await spawnToolscreenWatcher(join(prismRoot(id), 'instances', id, '.minecraft'), javaw)
       pushLog('system', 'Toolscreen watcher started, it will inject once the game window opens.')
     } catch (e) {
       pushLog('system', `Toolscreen skipped: ${e instanceof Error ? e.message : e}`)
@@ -127,6 +127,7 @@ export async function launchInstance(id: InstanceId, opts?: LaunchOptions): Prom
     }
     child = await launchPrism(id, gmll.gameDir(id), fabric, jvm.java, sendProgress, jvm.args)
   } catch (e) {
+    if (store.getConfig().ninjabrain) killNinjabrain()
     setState(id, { state: 'ready' })
     throw e
   }
