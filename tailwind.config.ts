@@ -12,6 +12,7 @@ export default {
         gold: 'var(--gold)',
         text: 'var(--text)',
         muted: 'var(--muted)',
+        faint: 'var(--faint)',
         portal: 'var(--portal)',
         coal: '#aaaaaa',
         iron: '#d4d4d4',
@@ -22,24 +23,15 @@ export default {
       },
       fontFamily: {
         display: ['Monocraft', 'ui-monospace', 'monospace'],
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
-      },
-      boxShadow: {
-        glow: '0 0 24px var(--gold-glow)',
-        card: '0 8px 30px rgba(0,0,0,0.45)'
+        sans: ['Monocraft', 'ui-monospace', 'monospace']
       },
       keyframes: {
-        'fade-up': {
-          '0%': { opacity: '0', transform: 'translateY(8px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' }
-        },
         'pulse-glow': {
           '0%,100%': { opacity: '0.6' },
           '50%': { opacity: '1' }
         }
       },
       animation: {
-        'fade-up': 'fade-up 0.5s ease-out both',
         'pulse-glow': 'pulse-glow 2.4s ease-in-out infinite'
       }
     }

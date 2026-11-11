@@ -26,13 +26,11 @@
   --gold: #f5c842;
   --gold-dim: #c9a23a;
   --gold-glow: rgba(245, 200, 66, 0.35);
-  --portal: #8b5cf6;
-  --portal-deep: #4c1d95;
-  --portal-glow: rgba(139, 92, 246, 0.4);
+  --portal: #5b9ff0;
 
   --text: #ececf6;
   --muted: #8b8b9e;
-  --faint: #5a5a6e;
+  --faint: #74748a;
 
   --win: #4aff8c;
   --loss: #ff5d6c;
@@ -51,16 +49,14 @@ body,
 
 body {
   color: var(--text);
-  font-family: 'Inter var', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
-  font-feature-settings: 'tnum' 1, 'cv01' 1;
+  font-family: 'Monocraft', ui-monospace, monospace;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow: hidden;
   background-color: var(--bg);
-    background-image:
+  background-image:
     radial-gradient(900px 520px at 12% -8%, rgba(245, 200, 66, 0.1), transparent 60%),
-    radial-gradient(820px 640px at 108% 116%, rgba(139, 92, 246, 0.14), transparent 58%),
-    radial-gradient(600px 400px at 50% 120%, rgba(76, 29, 149, 0.12), transparent 60%),
+    radial-gradient(820px 640px at 108% 116%, rgba(91, 159, 240, 0.12), transparent 58%),
     linear-gradient(180deg, #0a0a10, #07070b);
   background-attachment: fixed;
 }
@@ -95,11 +91,28 @@ body {
 
 .surface {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0)) ,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0)),
     var(--surface);
   border: 1px solid var(--line);
   border-radius: 16px;
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+  animation: fade-up 0.45s ease-out both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .surface {
+    animation: none;
+  }
 }
 .surface-2 {
   background: var(--surface-2);
@@ -132,20 +145,6 @@ body {
 .pixelated {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-}
-
-@keyframes count-pop {
-  0% {
-    transform: translateY(6px) scale(0.98);
-    opacity: 0;
-  }
-  100% {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-}
-.animate-count {
-  animation: count-pop 0.6s cubic-bezier(0.2, 0.9, 0.2, 1) both;
 }
 
 @keyframes sheen {
