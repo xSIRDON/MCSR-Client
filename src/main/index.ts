@@ -6,6 +6,7 @@ import * as gmll from './launcher/gmll-adapter'
 import * as tracker from './paceman/tracker'
 import { setupUpdater, skipInstallOnQuit } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
+import { logFailure } from './log'
 import { removeDesktopShortcut } from './tools/ninjabrain'
 import { isSafeExternalUrl, isSameOrigin } from './security/url-safety'
 
@@ -29,7 +30,8 @@ async function warmLauncher(): Promise<void> {
   try {
     await gmll.ensureCore()
     await gmll.ensureManagedJava()
-  } catch {
+  } catch (e) {
+    logFailure('Launcher setup will retry on first launch', e)
   }
 }
 

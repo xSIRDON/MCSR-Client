@@ -48,7 +48,7 @@ function median(values: number[]): number | null {
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
 }
 
-type Outcome = 'win' | 'loss' | 'draw' | 'skip'
+type Outcome = 'win' | 'loss' | 'draw'
 
 function outcomeFor(uuid: string, m: MatchInfo): Outcome {
   const winner = m.result?.uuid
