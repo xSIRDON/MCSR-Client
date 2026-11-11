@@ -89,6 +89,13 @@ body {
   -webkit-app-region: no-drag;
 }
 
+.nav-on {
+  background: #07070a;
+  box-shadow:
+    inset 2px 2px 0 rgba(0, 0, 0, 0.7),
+    inset -2px -2px 0 rgba(255, 255, 255, 0.07);
+}
+
 .surface {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0)),

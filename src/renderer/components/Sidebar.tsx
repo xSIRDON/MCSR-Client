@@ -52,8 +52,8 @@ export function Sidebar() {
                 to={to}
                 end={end}
                 className={({ isActive }) =>
-                  `flex h-[50px] w-full flex-col items-center justify-center gap-1 rounded-md transition-colors ${
-                    isActive ? 'bg-white/[0.07] text-text' : 'text-muted hover:bg-white/[0.04] hover:text-text'
+                  `flex h-[50px] w-full flex-col items-center justify-center gap-1 rounded-[3px] ${
+                    isActive ? 'nav-on text-[var(--gold)]' : 'text-muted hover:bg-white/[0.04] hover:text-text'
                   }`
                 }
               >
