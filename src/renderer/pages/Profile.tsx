@@ -77,8 +77,8 @@ export function Profile() {
           {tab === 'ranked' ? (
             !noRankedProfile && uuid ? (
               <>
-                <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(320px,1fr))]">
-                  <EloChart uuid={uuid} season={seasonSel} />
+                <div className="grid items-start gap-4 grid-cols-[repeat(auto-fit,minmax(320px,1fr))]">
+                  <EloChart uuid={uuid} season={seasonSel} tall />
                   <div className="flex min-h-[280px] flex-col">
                     <MatchFeed key={uuid} uuid={uuid} season={seasonSel} />
                   </div>

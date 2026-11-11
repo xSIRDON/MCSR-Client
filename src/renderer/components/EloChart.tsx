@@ -18,7 +18,7 @@ interface Point {
   change: number | null
 }
 
-export function EloChart({ uuid, season }: { uuid: string; season?: number | 'all' }) {
+export function EloChart({ uuid, season, tall }: { uuid: string; season?: number | 'all'; tall?: boolean }) {
   const seasonNum = typeof season === 'number' ? season : undefined
   const { data: matches, isLoading } = useQuery({
     queryKey: seasonNum != null ? ['matches-chart', uuid, seasonNum] : ['matches-chart', uuid],
@@ -46,7 +46,7 @@ export function EloChart({ uuid, season }: { uuid: string; season?: number | 'al
   const pad = Math.max(20, Math.round((hi - lo) * 0.18))
 
   return (
-    <section className="surface flex flex-col p-5">
+    <section className="surface p-5">
       <header className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-text">{title}</h2>
         {points.length > 1 && (
@@ -63,8 +63,8 @@ export function EloChart({ uuid, season }: { uuid: string; season?: number | 'al
           Not enough ranked matches yet to chart.
         </div>
       ) : (
-        <div className="relative min-h-[200px] flex-1">
-          <ResponsiveContainer className="absolute inset-0" width="100%" height="100%">
+        <div className={tall ? 'h-[330px]' : 'h-[200px]'}>
+          <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={points} margin={{ top: 6, right: 6, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="eloFill" x1="0" y1="0" x2="0" y2="1">
