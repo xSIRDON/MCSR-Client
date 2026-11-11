@@ -192,6 +192,19 @@ interface JvmChoice {
   label: string
 }
 
+export async function prismJvm(id: InstanceId): Promise<{ java: string; args: string[]; label: string }> {
+  const ramMb = store.getConfig().ram[id]
+  const jvm = await resolveJvm(id, ramMb)
+  if (jvm.javaPath === 'default') throw new Error('No working Java runtime was found for Prism.')
+  const args = withRam(jvmArgsFor(jvm.gc, jvm.major, GMLL_JVM_ARGS), ramMb)
+    .filter((arg) => !/^-Xm[sx]/.test(arg))
+  if (jvm.gc === 'zgc') {
+    mkdirSync(join(paths.instanceDir(id), 'logs'), { recursive: true })
+    args.push(gcLogArg())
+  }
+  return { java: jvm.javaPath, args, label: jvm.label }
+}
+
 async function resolveJvm(id: InstanceId, ramMb: number): Promise<JvmChoice> {
   const custom = store.getConfig().java[id]
   const javaPath = custom ?? (await ensureManagedJava(id))
