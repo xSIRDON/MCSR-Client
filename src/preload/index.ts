@@ -61,6 +61,8 @@ const api: McsrApi = {
     logs: (id: InstanceId) => ipcRenderer.invoke(IPC.instLogs, id),
     readLog: (id: InstanceId, kind: LogKind, name: string) => ipcRenderer.invoke(IPC.instLogRead, id, kind, name),
     uploadLog: (id: InstanceId, kind: LogKind, name: string) => ipcRenderer.invoke(IPC.instLogUpload, id, kind, name),
+    deleteLog: (id: InstanceId, kind: LogKind, name: string) => ipcRenderer.invoke(IPC.instLogDelete, id, kind, name),
+    cleanLogs: (id: InstanceId) => ipcRenderer.invoke(IPC.instLogClean, id),
     getStandardSettings: (id: InstanceId) => ipcRenderer.invoke(IPC.instStdGet, id),
     setStandardSettings: (id: InstanceId, patch: StandardSettings) =>
       ipcRenderer.invoke(IPC.instStdSet, id, patch),

@@ -54,7 +54,7 @@ import { readStandardSettings, writeStandardSettings, importOptionsFile } from '
 import { copyInstanceSettings, resolveGameDir, listWorlds } from './instances/copy-instance'
 import { formatBytes, type CopyProgress } from './instances/copy-tree'
 import { exportPack } from './instances/export-pack'
-import { listLogs, readLog, uploadLog } from './instances/logs'
+import { cleanLogs, deleteLog, listLogs, readLog, uploadLog } from './instances/logs'
 import { makeLineScrubber } from './line-scrub'
 import { getSkin } from './skins'
 import { getCachedMatch, putCachedMatch } from './match-cache'
@@ -752,6 +752,10 @@ export function registerIpc(): void {
     pushLog('system', `Uploaded ${name} to ${url}`)
     return url
   })
+  ipcMain.handle(IPC.instLogDelete, (_e, rawId: unknown, kind: LogKind, name: string) =>
+    deleteLog(gmll.gameDir(assertInstanceId(rawId)), kind, String(name))
+  )
+  ipcMain.handle(IPC.instLogClean, (_e, rawId: unknown) => cleanLogs(gmll.gameDir(assertInstanceId(rawId))))
   ipcMain.handle(IPC.instStdGet, (_e, id: unknown) =>
     readStandardSettings(gmll.gameDir(assertInstanceId(id)))
   )

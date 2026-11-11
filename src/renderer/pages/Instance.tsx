@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { LOW_FREE_MEM_MB, type AppConfig, type GcSessionReport, INSTANCE_LABEL, isInstanceId, type InstanceId, type LogFile, type ModInfo, type SeedQueueInfo } from '@shared/types'
 import { MAP_CATALOG, ALL_MAP_IDS } from '@shared/maps'
 import { ipcMessage } from '../lib/ipc-error'
+import { Icon, type IconName } from '../components/Icon'
 
 export function Instance() {
   const { id } = useParams<{ id: string }>()
@@ -493,7 +494,7 @@ function LogsCard({ id }: { id: InstanceId }) {
   const [pick, setPick] = useState(0)
   const [text, setText] = useState('')
   const [wrap, setWrap] = useState(false)
-  const [confirm, setConfirm] = useState(false)
+  const [confirm, setConfirm] = useState<'upload' | 'delete' | 'clean' | null>(null)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<string | null>(null)
   const file = files[pick]
@@ -508,7 +509,7 @@ function LogsCard({ id }: { id: InstanceId }) {
 
   useEffect(() => {
     setNote(null)
-    setConfirm(false)
+    setConfirm(null)
     if (!file) return setText('')
     let live = true
     window.mcsr.instances
@@ -520,23 +521,46 @@ function LogsCard({ id }: { id: InstanceId }) {
     }
   }, [id, file])
 
-  async function upload() {
-    if (!file) return
-    setConfirm(false)
+  async function run() {
+    const what = confirm
+    if (!file || !what) return
+    setConfirm(null)
     setBusy(true)
     try {
-      const url = await window.mcsr.instances.uploadLog(id, file.kind, file.name)
-      await navigator.clipboard.writeText(url)
-      setNote(`${url} (copied)`)
+      if (what === 'upload') {
+        const url = await window.mcsr.instances.uploadLog(id, file.kind, file.name)
+        await navigator.clipboard.writeText(url)
+        setNote(`${url} (copied)`)
+      } else if (what === 'delete') {
+        await window.mcsr.instances.deleteLog(id, file.kind, file.name)
+        refresh()
+      } else {
+        const n = await window.mcsr.instances.cleanLogs(id)
+        refresh()
+        setNote(`Deleted ${n} old ${n === 1 ? 'file' : 'files'}.`)
+      }
     } catch (e) {
-      setNote(ipcMessage(e, 'Upload failed.'))
+      setNote(ipcMessage(e, what === 'upload' ? 'Upload failed.' : 'Could not delete, is the game running?'))
     } finally {
       setBusy(false)
     }
   }
 
+  const ASK = {
+    upload: 'This posts the log to mclo.gs, where anyone with the link can read it.',
+    delete: `Delete ${file?.name}?`,
+    clean: 'Delete every log and crash report except latest.log?'
+  }
+  const actions: { icon: IconName; label: string; onClick: () => void; off?: boolean }[] = [
+    { icon: 'refresh', label: 'Refresh', onClick: refresh },
+    { icon: 'copy', label: 'Copy', onClick: () => void navigator.clipboard.writeText(text).then(() => setNote('Copied.')) },
+    { icon: 'upload', label: busy ? 'Working…' : 'Upload', onClick: () => setConfirm('upload'), off: busy || !text },
+    { icon: 'trash', label: 'Delete', onClick: () => setConfirm('delete'), off: busy },
+    { icon: 'broom', label: 'Clean', onClick: () => setConfirm('clean'), off: busy || files.length < 2 }
+  ]
+
   const button =
-    'shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted hover:text-text disabled:opacity-40'
+    'flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-xs text-muted hover:text-text disabled:opacity-40'
   return (
     <Card title="Logs">
       {files.length === 0 ? (
@@ -560,23 +584,20 @@ function LogsCard({ id }: { id: InstanceId }) {
               <input type="checkbox" checked={wrap} onChange={(e) => setWrap(e.target.checked)} />
               Wrap
             </label>
-            <button onClick={refresh} className={button}>
-              Refresh
-            </button>
-            <button onClick={() => void navigator.clipboard.writeText(text).then(() => setNote('Copied.'))} className={button}>
-              Copy
-            </button>
-            <button onClick={() => setConfirm(true)} disabled={busy || !text} className={button}>
-              {busy ? 'Uploading…' : 'Upload'}
-            </button>
+            {actions.map((a) => (
+              <button key={a.icon} onClick={a.onClick} disabled={a.off} className={button}>
+                <Icon name={a.icon} size={14} />
+                {a.label}
+              </button>
+            ))}
           </div>
           {confirm && (
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
-              <span>This posts the log to mclo.gs, where anyone with the link can read it.</span>
-              <button onClick={() => void upload()} className="text-[var(--gold)] hover:underline">
-                Upload
+              <span>{ASK[confirm]}</span>
+              <button onClick={() => void run()} className="text-[var(--gold)] hover:underline">
+                {confirm === 'upload' ? 'Upload' : 'Delete'}
               </button>
-              <button onClick={() => setConfirm(false)} className="hover:text-text">
+              <button onClick={() => setConfirm(null)} className="hover:text-text">
                 Cancel
               </button>
             </div>

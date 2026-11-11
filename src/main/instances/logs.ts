@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, statSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import type { LogFile, LogKind } from '../../shared/types'
@@ -42,6 +42,17 @@ export async function readLog(gameDir: string, kind: LogKind, name: string, secr
   const raw = await readFile(join(gameDir, DIRS[kind], name))
   const text = name.endsWith('.gz') ? gunzipSync(raw).toString('utf8') : raw.toString('utf8')
   return trimLog(hideUser(redact(text, secrets)))
+}
+
+export async function deleteLog(gameDir: string, kind: LogKind, name: string): Promise<void> {
+  if (!(kind in DIRS) || !NAME.test(name)) throw new Error('Unknown log file.')
+  await rm(join(gameDir, DIRS[kind], name))
+}
+
+export async function cleanLogs(gameDir: string): Promise<number> {
+  const old = listLogs(gameDir).filter((l) => l.name !== 'latest.log')
+  await Promise.all(old.map((l) => rm(join(gameDir, DIRS[l.kind], l.name))))
+  return old.length
 }
 
 export async function uploadLog(content: string, post: typeof fetch = fetch): Promise<string> {

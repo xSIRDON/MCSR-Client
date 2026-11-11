@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
-import { hideUser, listLogs, readLog, trimLog, uploadLog } from './logs'
+import { cleanLogs, deleteLog, hideUser, listLogs, readLog, trimLog, uploadLog } from './logs'
 
 function game(): string {
   const dir = mkdtempSync(join(tmpdir(), 'logs-'))
@@ -48,6 +48,26 @@ describe('readLog', () => {
     const dir = game()
     await expect(readLog(dir, 'log', '../options.txt', [])).rejects.toThrow('Unknown log file.')
     await expect(readLog(dir, 'log', 'a/b.log', [])).rejects.toThrow('Unknown log file.')
+  })
+})
+
+describe('deleting', () => {
+  it('removes one file, and refuses names outside the log folders', async () => {
+    const dir = game()
+    writeFileSync(join(dir, 'logs', 'a.log'), 'a')
+    writeFileSync(join(dir, 'options.txt'), 'keep')
+    await deleteLog(dir, 'log', 'a.log')
+    expect(listLogs(dir)).toEqual([])
+    await expect(deleteLog(dir, 'log', '../options.txt')).rejects.toThrow('Unknown log file.')
+  })
+
+  it('clean keeps latest.log and removes the rest', async () => {
+    const dir = game()
+    writeFileSync(join(dir, 'logs', 'latest.log'), 'now')
+    writeFileSync(join(dir, 'logs', '2026-06-26-1.log.gz'), gzipSync('old'))
+    writeFileSync(join(dir, 'crash-reports', 'crash-1.txt'), 'boom')
+    expect(await cleanLogs(dir)).toBe(2)
+    expect(listLogs(dir).map((l) => l.name)).toEqual(['latest.log'])
   })
 })
 

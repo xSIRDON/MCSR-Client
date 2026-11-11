@@ -51,6 +51,8 @@ export const IPC = {
   instLogs: 'inst:logs',
   instLogRead: 'inst:logRead',
   instLogUpload: 'inst:logUpload',
+  instLogDelete: 'inst:logDelete',
+  instLogClean: 'inst:logClean',
   instStdGet: 'inst:stdGet',
   instStdSet: 'inst:stdSet',
   instImportSettings: 'inst:importSettings',
@@ -138,6 +140,8 @@ export interface McsrApi {
     logs(id: InstanceId): Promise<LogFile[]>
     readLog(id: InstanceId, kind: LogKind, name: string): Promise<string>
     uploadLog(id: InstanceId, kind: LogKind, name: string): Promise<string>
+    deleteLog(id: InstanceId, kind: LogKind, name: string): Promise<void>
+    cleanLogs(id: InstanceId): Promise<number>
     getStandardSettings(id: InstanceId): Promise<StandardSettings>
     setStandardSettings(id: InstanceId, patch: StandardSettings): Promise<StandardSettings>
     importSettings(id: InstanceId): Promise<{ imported: number } | null>
