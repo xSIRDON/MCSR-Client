@@ -181,61 +181,32 @@ export function Settings() {
       </Card>
 
       <Card title="Game memory">
-        <div className="text-sm text-muted">
-          RAM is now set per instance. Open an instance’s <span className="text-text">Manage</span>{' '}
-          page (Play → Manage) to adjust Ranked and RSG independently.
-        </div>
+        <div className="text-sm text-muted">RAM is set per instance, under Edit instance.</div>
       </Card>
 
-      <Card title="Paceman (RSG pace tracking)">
-        <div className="flex items-center gap-2 text-xs">
-          <Dot ok={tracker.hasKey} />
-          <span className="text-muted">{tracker.hasKey ? 'Access key saved' : 'No access key yet'}</span>
-          <span className="mx-2 text-faint">·</span>
-          <Dot ok={tracker.running} />
-          <span className="text-muted">{tracker.running ? 'Tracker running' : 'Tracker idle'}</span>
-        </div>
-        <div className="mt-3 flex gap-2">
-          <input
-            type="password"
-            value={keyInput}
-            onChange={(e) => setKeyInput(e.target.value)}
-            placeholder="Paste your paceman.gg access key"
-            className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--bg-2)] px-3 py-2 text-sm text-text outline-none focus:border-[var(--gold)]/40"
-          />
-          <button
-            onClick={saveKey}
-            className="font-display rounded-lg bg-[var(--gold)] px-4 py-2 text-sm text-[#0a0a10]"
-          >
-            Save
-          </button>
-        </div>
-        <p className="mt-2 text-xs text-faint">
-          Get a key at paceman.gg → sign in with Discord → Generate Access Token. The tracker starts
-          automatically when you launch RSG, no Julti or Jingle needed.
-        </p>
-        <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={config?.pacemanShowWindow ?? true}
-            onChange={(e) => patch({ pacemanShowWindow: e.target.checked })}
-            className="accent-[var(--gold)]"
-          />
-          <span className="text-muted">Show the tracker window while it runs</span>
-        </label>
-        <p className="mt-1 pl-6 text-xs text-faint">
-          Off, it tracks in the background with no window, your runs still upload, and the RSG card
-          shows TRACKING while it's on.
-        </p>
+      <Card title="Paceman">
+        <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-x-3 gap-y-3">
+          <label className="text-sm text-muted">Access key</label>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={keyInput}
+              onChange={(e) => setKeyInput(e.target.value)}
+              placeholder={tracker.hasKey ? 'Saved. Paste a new one to replace it' : 'Paste your key'}
+              className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--bg-2)] px-3 py-1.5 text-sm text-text outline-none focus:border-[var(--gold)]/40"
+            />
+            <button onClick={saveKey} className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted hover:text-text">
+              Save
+            </button>
+          </div>
 
-        <div className="mt-4">
-          <label className="mb-1 block text-xs text-muted">Paceman / Minecraft name for live pace</label>
+          <label className="text-sm text-muted">Username</label>
           <div className="flex gap-2">
             <input
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
               placeholder={profile?.name ?? 'username'}
-              className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--bg-2)] px-3 py-2 text-sm text-text outline-none focus:border-[var(--gold)]/40"
+              className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--bg-2)] px-3 py-1.5 text-sm text-text outline-none focus:border-[var(--gold)]/40"
             />
             <button
               onClick={() => {
@@ -244,12 +215,31 @@ export function Settings() {
                 setPacemanName(v)
                 flash(v ? 'Paceman connected' : 'Paceman disconnected')
               }}
-              className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm text-muted hover:text-text"
+              className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted hover:text-text"
             >
               Save
             </button>
           </div>
+
+          <span className="text-sm text-muted">Tracker</span>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="flex items-center gap-2 text-sm text-muted">
+              <Dot ok={tracker.running} />
+              {tracker.running ? 'Running' : 'Starts with RSG'}
+            </span>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-muted">
+              <input
+                type="checkbox"
+                checked={config?.pacemanShowWindow ?? true}
+                onChange={(e) => patch({ pacemanShowWindow: e.target.checked })}
+              />
+              Show its window
+            </label>
+          </div>
         </div>
+        <p className="mt-3 text-xs text-faint">
+          Get a key at paceman.gg: sign in with Discord, then Generate Access Token.
+        </p>
       </Card>
 
       <Card title="SeedQueue (RSG)">
