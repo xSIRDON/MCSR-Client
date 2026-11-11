@@ -86,14 +86,6 @@ export function InstanceCard({ id }: { id: InstanceId }) {
 
       <div className="mt-1 truncate text-[11px] text-faint">{meta.mods}</div>
       <p className="mt-2 text-xs leading-relaxed text-muted">{meta.tagline}</p>
-      {id === 'rsg' && (
-        <button
-          onClick={() => window.mcsr.config.pickJar()}
-          className="mt-2 text-left text-xs text-faint underline-offset-2 hover:text-muted hover:underline"
-        >
-          Use my own SeedQueue jar…
-        </button>
-      )}
 
       <div className="mt-auto min-h-[34px] pt-3">
         {busy && prog ? (
