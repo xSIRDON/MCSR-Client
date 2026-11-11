@@ -3,9 +3,10 @@ import { existsSync, mkdirSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { IPC } from '../shared/ipc'
-import type { AppConfig, GapCheckFilters, InstanceId, LogKind, StandardSettings } from '../shared/types'
+import type { AppConfigPatch, GapCheckFilters, InstanceId, LogKind, StandardSettings } from '../shared/types'
 import { INSTANCE_IDS, INSTANCE_LABEL } from '../shared/types'
 import { store } from './store'
+import { syncInstalledPrism, syncPrismInstance } from './ipc/prism-settings'
 import * as auth from './auth/msmc-auth'
 import * as gmll from './launcher/gmll-adapter'
 import * as tracker from './paceman/tracker'
@@ -225,13 +226,14 @@ export function registerIpc(): void {
     listWorlds(resolveGameDir(assertPicked(folder)))
   )
   ipcMain.handle(IPC.instSeedQueue, (_e, id: InstanceId) => seedQueueInfo(assertInstanceId(id)))
-  ipcMain.handle(IPC.instTuneSeedQueue, (_e, id: InstanceId) => {
+  ipcMain.handle(IPC.instTuneSeedQueue, async (_e, id: InstanceId) => {
     const iid = assertInstanceId(id)
     if (BUSY_STATES.includes(states[iid].state)) {
       throw new Error('Close the game first, SeedQueue settings can’t change while it’s running.')
     }
     const changes = tuneSeedQueue(iid)
     if (changes.length > 0) pushLog('system', `[${iid}] Tuned SeedQueue for this PC: ${changes.join(', ')}`)
+    await syncPrismInstance(iid)
     return seedQueueInfo(iid)
   })
   ipcMain.handle(IPC.skinGet, (_e, idOrUuid: string, size: number, kind: 'avatar' | 'body') =>
@@ -254,7 +256,11 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.paceStatus, () => tracker.status())
 
   ipcMain.handle(IPC.cfgGet, () => store.getConfig())
-  ipcMain.handle(IPC.cfgSet, (_e, patch: Partial<AppConfig>) => store.setConfig(guardConfigPatch(patch ?? {})))
+  ipcMain.handle(IPC.cfgSet, async (_e, patch: AppConfigPatch) => {
+    store.setConfig(guardConfigPatch(patch ?? {}))
+    if (patch?.ram || patch?.java) await syncInstalledPrism()
+    return store.getConfig()
+  })
   ipcMain.handle(IPC.cfgPickJar, async () => {
     const res = await dialog.showOpenDialog({
       title: 'Choose a SeedQueue jar',

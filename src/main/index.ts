@@ -7,6 +7,7 @@ import * as tracker from './paceman/tracker'
 import { setupUpdater, skipInstallOnQuit } from './updater'
 import { migrateDataDir, migrateSessionState, paths } from './paths'
 import { logFailure } from './log'
+import { syncInstalledPrism } from './ipc/prism-settings'
 import { removeDesktopShortcut } from './tools/ninjabrain'
 import { isSafeExternalUrl, isSameOrigin } from './security/url-safety'
 
@@ -30,6 +31,7 @@ async function warmLauncher(): Promise<void> {
   try {
     await gmll.ensureCore()
     await gmll.ensureManagedJava()
+    await syncInstalledPrism()
   } catch (e) {
     logFailure('Launcher setup will retry on first launch', e)
   }

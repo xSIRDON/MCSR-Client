@@ -4,14 +4,13 @@ import { join } from 'node:path'
 import type { InstanceId } from '../../shared/types'
 import * as gmll from '../launcher/gmll-adapter'
 import { removeLinkIfPresent } from '../launcher/links'
+import { detachPrismInstance, prismSessionActive } from '../launcher/prism-instance'
 import {
-  fetchPack,
   installPackFiles,
   installLatestRankedMod,
   fabricVersionString,
   PACK_MOD_UPGRADES,
-  RSG_EXCLUDE_PREFIXES,
-  type ModrinthIndex
+  RSG_EXCLUDE_PREFIXES
 } from '../instances/mrpack'
 import { writeRankedConfigs, writeRsgConfigs } from '../instances/configs'
 import { syncMaps } from '../instances/maps'
@@ -25,21 +24,13 @@ import { logFailure, pushLog } from '../log'
 import { paths } from '../paths'
 import { store } from '../store'
 import { BUSY_STATES, sendProgress, setState, states, writeInstalledVersion } from './instance-state'
+import { getIndex } from './pack-index'
+import { prismRoot, syncPrismInstance } from './prism-settings'
 
 const syncQueue = createKeyedQueue<InstanceId>(['ranked', 'rsg', 'zsg'])
 export const installQueue = createKeyedQueue<InstanceId>(['ranked', 'rsg', 'zsg'])
 
-let cachedIndex: ModrinthIndex | null = null
-
-export async function getIndex(): Promise<ModrinthIndex> {
-  if (!cachedIndex) cachedIndex = await fetchPack()
-  return cachedIndex
-}
-
-export async function refreshIndex(): Promise<ModrinthIndex> {
-  cachedIndex = await fetchPack()
-  return cachedIndex
-}
+export { getIndex, refreshIndex } from './pack-index'
 
 export const EXTRA_OPTIONS_MOD = {
   file: 'extra-options-2.2.1+1.16.1.jar',
@@ -155,6 +146,9 @@ async function doInstallInstance(
   importFolder: string | null,
   importWorlds: string[]
 ): Promise<void> {
+  if (BUSY_STATES.includes(states[id].state) || prismSessionActive(prismRoot(id))) {
+    throw new Error('Close the game and wait for this instance to finish before reinstalling it.')
+  }
   setState(id, { state: 'installing', error: undefined })
   try {
     const index = await getIndex()
@@ -248,6 +242,7 @@ async function doInstallInstance(
     }
 
     writeInstalledVersion(id, index.versionId)
+    await syncPrismInstance(id, fabric, true)
     setState(id, { state: 'ready', versionId: index.versionId })
   } catch (e) {
     setState(id, { state: 'error', error: String(e instanceof Error ? e.message : e) })
@@ -256,11 +251,18 @@ async function doInstallInstance(
 }
 
 export async function deleteInstance(id: InstanceId): Promise<void> {
-  if (BUSY_STATES.includes(states[id].state)) {
+  if (BUSY_STATES.includes(states[id].state) || prismSessionActive(prismRoot(id))) {
     throw new Error('Close the game before deleting this instance.')
   }
+  detachPrismInstance(prismRoot(id), id, gmll.gameDir(id))
   removeLinkIfPresent(join(paths.instanceDir(id), 'libraries'))
   removeLinkIfPresent(join(paths.instanceDir(id), 'assets'))
-  await rm(paths.instanceDir(id), { recursive: true, force: true })
+  setState(id, { state: 'installing' })
+  try {
+    await rm(paths.instanceDir(id), { recursive: true, force: true })
+  } catch (error) {
+    setState(id, { state: 'error', error: String(error) })
+    throw error
+  }
   setState(id, { state: 'not-installed', versionId: undefined, error: undefined })
 }

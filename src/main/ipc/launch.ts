@@ -3,6 +3,8 @@ import { join } from 'node:path'
 import type { InstanceId } from '../../shared/types'
 import * as auth from '../auth/msmc-auth'
 import * as gmll from '../launcher/gmll-adapter'
+import { launchPrism, prismLaunchSecrets } from '../launcher/prism-adapter'
+import { gameLogReader } from '../launcher/game-log'
 import * as tracker from '../paceman/tracker'
 import { fabricVersionString, PACK_MOD_UPGRADES } from '../instances/mrpack'
 import { upgradeInstalledMods } from '../instances/mods'
@@ -18,6 +20,7 @@ import { store } from '../store'
 import { installedVersion, launchSecrets, sendProgress, setState, states, win } from './instance-state'
 import { ensureInstanceExtras, getIndex, installInstance, refreshIndex } from './install'
 import { tuneSeedQueue } from './seedqueue-tuning'
+import { syncPrismAfterClose } from './prism-settings'
 
 export type LaunchOptions = { importFrom?: InstanceId | null; importFolder?: string | null; importWorlds?: string[] }
 
@@ -113,12 +116,16 @@ export async function launchInstance(id: InstanceId, opts?: LaunchOptions): Prom
   void startCompanions(id, javaw)
 
   pushLog('system', `Launching ${id}…`)
-  const skipVerify = states[id].state === 'launching' && !!installedVersion(id)
-  let child: Awaited<ReturnType<typeof gmll.launch>>
+  const launchStartedAt = Date.now()
+  let child: Awaited<ReturnType<typeof launchPrism>>
   try {
-    child = await gmll.launch(id, token, fabric, sendProgress, (line) => pushLog('system', line), {
-      skipVerify
-    })
+    const jvm = await gmll.prismJvm(id)
+    pushLog('system', `Starting on ${jvm.label} with ${store.getConfig().ram[id]} MB.`)
+    const freeMb = Math.round(freemem() / 1048576)
+    if (freeMb < store.getConfig().ram[id] * 0.9) {
+      pushLog('system', `Only ${freeMb} MB of RAM is currently free. Close other apps if Minecraft runs slowly.`)
+    }
+    child = await launchPrism(id, gmll.gameDir(id), fabric, jvm.java, sendProgress, jvm.args)
   } catch (e) {
     setState(id, { state: 'ready' })
     throw e
@@ -136,16 +143,21 @@ export async function launchInstance(id: InstanceId, opts?: LaunchOptions): Prom
   }
   fallbackTimer = setTimeout(stepAside, 45_000)
 
-  const secrets = launchSecrets()
+  const secrets = [...launchSecrets(), ...prismLaunchSecrets(id)]
   const onGameText = (text: string): void => {
     pushLog('game', text)
     if (!steppedAside && gameWindowReady(text)) stepAside()
   }
-  for (const stream of [child.stdout, child.stderr]) {
-    const scrub = makeLineScrubber(secrets, onGameText)
-    stream.on('data', (d: Buffer) => scrub.push(d.toString()))
-    stream.on('end', () => scrub.flush())
+  const scrub = makeLineScrubber(secrets, onGameText)
+  const readGameLog = gameLogReader(join(gmll.gameDir(id), 'logs', 'latest.log'), launchStartedAt, (text) => scrub.push(text))
+  const pollGameLog = (): void => {
+    try { readGameLog() } catch (error) {
+      pushLog('system', `Could not read Minecraft's log: ${error instanceof Error ? error.message : error}`)
+      clearInterval(logWatch)
+    }
   }
+  const logWatch = setInterval(pollGameLog, 500)
+  logWatch.unref()
 
   if (id === 'rsg') {
     tracker.start(javaw ?? undefined).catch((e) =>
@@ -160,6 +172,10 @@ export async function launchInstance(id: InstanceId, opts?: LaunchOptions): Prom
   }, 5000)
   memWatch.unref()
   child.on('close', (code) => {
+    if (fallbackTimer) clearTimeout(fallbackTimer)
+    clearInterval(logWatch)
+    pollGameLog()
+    scrub.flush()
     clearInterval(memWatch)
     if (code !== 0 && Date.now() - startedAt < 20_000) {
       pushLog(
@@ -177,6 +193,7 @@ export async function launchInstance(id: InstanceId, opts?: LaunchOptions): Prom
     if (store.getConfig().ninjabrain) killNinjabrain()
     pushLog('system', `${id} closed.`)
     setState(id, { state: 'ready' })
+    syncPrismAfterClose(id)
     const w = win()
     if (w?.isMinimized()) {
       w.restore()
