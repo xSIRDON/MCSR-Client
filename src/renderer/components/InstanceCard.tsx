@@ -17,21 +17,21 @@ interface Meta {
 const META: Record<InstanceId, Meta> = {
   ranked: {
     title: 'Ranked',
-    tagline: '1v1 ladder, the full MCSR Ranked modpack.',
+    tagline: 'The 1v1 ladder with the full Ranked modpack.',
     accent: 'var(--gold)',
     mods: '22 mods · MCSR Ranked',
     icon: () => <ModeBadge mode="ranked" size={26} />
   },
   rsg: {
     title: 'RSG',
-    tagline: 'Random Seed Glitchless, SeedQueue wall + paceman. No ranked mod.',
+    tagline: 'Random seed glitchless with the SeedQueue wall and paceman.',
     accent: 'var(--portal)',
     mods: 'SeedQueue · SpeedRunIGT · paceman',
     icon: () => <ModeBadge mode="rsg" size={26} />
   },
   zsg: {
     title: 'ZSG',
-    tagline: 'RSG set + the FSG (filtered-seed) mod. No ranked mod.',
+    tagline: 'The RSG mods plus FSG for filtered seeds.',
     accent: '#4fd6b0',
     mods: 'SeedQueue · SpeedRunIGT · FSG',
     icon: () => <ModeBadge mode="zsg" size={26} />
@@ -64,7 +64,7 @@ export function InstanceCard({ id }: { id: InstanceId }) {
 
   return (
     <div
-      className="surface relative flex flex-col overflow-hidden p-4"
+      className="surface flex flex-col p-4"
       onMouseEnter={() => select(id)}
     >
       <div className="relative flex items-center justify-between">
@@ -75,20 +75,27 @@ export function InstanceCard({ id }: { id: InstanceId }) {
           </h3>
         </div>
         <span
-          className="rounded-full px-2.5 py-0.5 text-[11px]"
+          className="shrink-0 text-[11px]"
           style={{
-            color: status.state === 'error' ? 'var(--loss)' : meta.accent,
-            border: `1px solid ${status.state === 'error' ? 'var(--loss)' : meta.accent}40`
+            color: status.state === 'error' ? 'var(--loss)' : 'var(--faint)'
           }}
         >
           {stateLabel}
         </span>
       </div>
 
-      <div className="relative mt-1 text-xs text-faint">{meta.mods}</div>
-      <p className="relative mt-2 text-sm text-muted">{meta.tagline}</p>
+      <div className="mt-1 truncate text-[11px] text-faint">{meta.mods}</div>
+      <p className="mt-2 text-xs leading-relaxed text-muted">{meta.tagline}</p>
+      {id === 'rsg' && (
+        <button
+          onClick={() => window.mcsr.config.pickJar()}
+          className="mt-2 text-left text-xs text-faint underline-offset-2 hover:text-muted hover:underline"
+        >
+          Use my own SeedQueue jar…
+        </button>
+      )}
 
-      <div className="relative mt-3 min-h-[34px]">
+      <div className="mt-auto min-h-[34px] pt-3">
         {busy && prog ? (
           <ProgressBar fraction={prog.fraction} label={prog.message} color={meta.accent} />
         ) : status.state === 'error' ? (
@@ -98,11 +105,11 @@ export function InstanceCard({ id }: { id: InstanceId }) {
         ) : null}
       </div>
 
-      <div className="relative mt-3 flex items-center gap-2">
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <button
           onClick={() => launch(id)}
           disabled={!profile || busy}
-          className="font-display flex-1 rounded-lg px-4 py-2 text-sm transition-all disabled:cursor-not-allowed disabled:opacity-40"
+          className="col-span-2 rounded-lg px-4 py-2 text-sm transition-all disabled:cursor-not-allowed disabled:opacity-40"
           style={{ background: meta.accent, color: '#0a0a10' }}
         >
           {status.state === 'running' ? 'PLAYING' : busy ? 'WORKING…' : status.state === 'ready' ? 'PLAY' : 'INSTALL'}
@@ -110,28 +117,19 @@ export function InstanceCard({ id }: { id: InstanceId }) {
         <button
           onClick={() => verify(id)}
           disabled={busy}
-          className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm text-muted transition-colors hover:text-text disabled:opacity-40"
+          className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs text-muted transition-colors hover:text-text disabled:opacity-40"
           title="Re-download and verify all files"
         >
           Verify
         </button>
         <button
           onClick={() => navigate(`/instance/${id}`)}
-          className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm text-muted transition-colors hover:text-text"
+          className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs text-muted transition-colors hover:text-text"
           title="Mods, RAM, game settings, folder"
         >
           Manage
         </button>
       </div>
-
-      {id === 'rsg' && (
-        <button
-          onClick={() => window.mcsr.config.pickJar()}
-          className="relative mt-2.5 text-left text-xs text-faint underline-offset-2 hover:text-muted hover:underline"
-        >
-          Use my own SeedQueue jar (Discord beta)…
-        </button>
-      )}
     </div>
   )
 }

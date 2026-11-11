@@ -312,18 +312,18 @@ function InsightsCard({ insights }: { insights: RankedInsight[] }) {
       {insights.length === 0 ? (
         <div className="text-sm text-muted">No standout patterns yet.</div>
       ) : (
-        <ul className="space-y-2.5">
+        <ul className="space-y-3">
           {insights.map((ins, i) => {
             const color = KIND_COLOR[ins.kind]
             return (
               <li key={`${ins.label}-${i}`} className="flex gap-3">
                 <span
-                  className="mt-[7px] h-2 w-2 shrink-0 rounded-full"
+                  className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full"
                   style={{ background: color }}
                 />
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className="font-display text-sm tracking-wide text-text">{ins.label}</span>
+                    <span className="text-xs text-text">{ins.label}</span>
                     <span
                       className="text-[10px]"
                       style={{ color }}
@@ -331,7 +331,7 @@ function InsightsCard({ insights }: { insights: RankedInsight[] }) {
                       {KIND_LABEL[ins.kind]}
                     </span>
                   </div>
-                  <div className="text-sm text-muted">{ins.detail}</div>
+                  <div className="mt-0.5 text-xs text-muted">{ins.detail}</div>
                 </div>
               </li>
             )

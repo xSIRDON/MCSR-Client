@@ -62,11 +62,9 @@ export function Practice() {
   return (
     <div className="mx-auto max-w-[980px] space-y-4 px-5 py-4">
       <header className="">
-        <div className="text-[11px] text-faint">Practice</div>
-        <h1 className="font-display text-2xl tracking-wide text-text">Play the same seeds as the best</h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          Draw a top-runner match, paste its seeds into a ranked private room, and play it out, then
-          see where your pace breaks, split by split, and jump straight to their POV.
+        <h1 className="font-display text-xl text-text">Practice</h1>
+        <p className="mt-1 text-xs text-muted">
+          Draw a top runner's ranked match, play its seeds in a private room, then compare splits.
         </p>
         <p className="mt-1.5 text-xs text-faint">
           Seeds, VODs and timelines from{' '}
