@@ -101,7 +101,7 @@ function ProfileAnalytics({ uuid, season }: { uuid: string; season?: SeasonSel }
   const { scorecard, runs, detailsLoading, hasData } = usePlayerAnalytics(uuid, season)
   if (!hasData) return null
   return (
-    <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(360px,1fr))]">
+    <div className="grid items-start gap-4 grid-cols-[repeat(auto-fit,minmax(360px,1fr))]">
       <PlayStyleRadar dims={scorecard} />
       <SplitRunsCard a={runs.splits} compareTo="world" loading={detailsLoading} />
     </div>

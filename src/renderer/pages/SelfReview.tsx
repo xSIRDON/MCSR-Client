@@ -146,7 +146,7 @@ function Review({ uuid, name }: { uuid: string; name: string }) {
               clutchReady: analyzedN > 0 && detailsLoaded >= analyzedN
             }}
           />
-          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(360px,1fr))]">
+          <div className="grid items-start gap-4 grid-cols-[repeat(auto-fit,minmax(360px,1fr))]">
             <PlayStyleRadar dims={scorecard} />
             <SplitRunsCard a={runs.splits} compareTo={compareTo} loading={detailsLoading} />
           </div>

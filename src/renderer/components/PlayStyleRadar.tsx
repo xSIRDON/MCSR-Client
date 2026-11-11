@@ -43,7 +43,7 @@ export function PlayStyleRadar({ dims }: { dims: ScoreDim[] }) {
           Play more ranked games to build your profile.
         </div>
       ) : (
-        <div className="h-[240px]">
+        <div className="h-[270px]">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={data} outerRadius="70%">
               <PolarGrid stroke="rgba(255,255,255,0.08)" />
@@ -61,6 +61,19 @@ export function PlayStyleRadar({ dims }: { dims: ScoreDim[] }) {
             </RadarChart>
           </ResponsiveContainer>
         </div>
+      )}
+      {data.length >= 3 && (
+        <ul className="mt-3 space-y-2">
+          {data.map((d) => (
+            <li key={d.axis} className="grid grid-cols-[110px_1fr_28px] items-center gap-3 text-xs" title={d.detail}>
+              <span className="truncate text-muted">{d.axis}</span>
+              <div className="h-1.5 bg-white/[0.05]">
+                <div className="h-full bg-[var(--gold)]" style={{ width: `${Math.max(0, Math.min(100, d.score))}%` }} />
+              </div>
+              <span className="tnum text-right text-text">{Math.round(d.score)}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   )
