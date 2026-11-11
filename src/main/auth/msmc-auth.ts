@@ -148,3 +148,18 @@ export async function logout(): Promise<void> {
 export function getLaunchToken(): GmllUser | null {
   return activeToken
 }
+
+export function prismAccount(): { uuid: string; name: string; refreshToken: string } {
+  const state = readState()
+  const account = state.list.find((a) => a.uuid === state.active)
+  if (!account || !activeToken) throw new Error('Sign in with Microsoft before launching.')
+  return { uuid: account.uuid, name: account.name, refreshToken: account.token }
+}
+
+export function savePrismRefresh(uuid: string, refreshToken: string): void {
+  const state = readState()
+  const account = state.list.find((a) => a.uuid === uuid)
+  if (!account) return
+  account.token = refreshToken
+  writeState(state)
+}
