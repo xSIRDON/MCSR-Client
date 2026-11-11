@@ -74,7 +74,7 @@ export async function launchPrism(
       'ShowConsole=false', 'ShowConsoleOnError=false', 'CloseAfterLaunch=false', 'QuitAfterGameStop=true', ''
     ].join('\n'))
     atomicText(accounts, JSON.stringify(prismAccounts(account)))
-    progress({ instance: id, phase: 'launch', fraction: null, message: 'Starting Minecraft through Prism…' })
+    progress({ instance: id, phase: 'launch', fraction: null, message: 'Starting Minecraft… the first launch downloads the game and can take a minute' })
     child = spawn(executable, ['-platform', 'offscreen', '--dir', root, '--launch', id], { windowsHide: true, stdio: 'pipe' })
     const prism = child
     prism.once('close', () => {
