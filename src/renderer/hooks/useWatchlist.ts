@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { mcsr, paceman } from '../lib/clients'
 import { useUi } from '../store/uiStore'
 import { epochToAgo } from '@core/format'
 import type { LiveMatch } from '@services/mcsr-ranked'
-import type { FriendsNetState } from '@shared/types'
 
 export function normUuid(uuid: string): string {
   return uuid.replace(/-/g, '').toLowerCase()
@@ -44,7 +43,7 @@ const RSG_EVENT_LABEL: Record<string, string> = {
 
 const ONLINE_WINDOW_S = 10 * 60
 
-export interface FriendPresence {
+export interface RunnerPresence {
   uuid: string
   nickname: string
   eloRate: number | null
@@ -54,7 +53,7 @@ export interface FriendPresence {
   liveUrl: string | null
 }
 
-const STATUS_RANK: Record<FriendPresence['status'], number> = {
+const STATUS_RANK: Record<RunnerPresence['status'], number> = {
   ranked: 0,
   pace: 1,
   online: 2,
@@ -76,7 +75,7 @@ function rankedDetail(
   }
 }
 
-export function useLivePresence(uuids: string[]): FriendPresence[] {
+export function useLivePresence(uuids: string[]): RunnerPresence[] {
   const liveQ = useQuery({
     queryKey: ['live-feed'],
     queryFn: () => mcsr.getLive(),
@@ -102,7 +101,7 @@ export function useLivePresence(uuids: string[]): FriendPresence[] {
     }))
   })
 
-  return useMemo<FriendPresence[]>(() => {
+  return useMemo<RunnerPresence[]>(() => {
     const nowS = Math.floor(Date.now() / 1000)
     const byRanked = new Map<string, LiveMatch>()
     for (const m of live?.liveMatches ?? []) {
@@ -155,88 +154,18 @@ export function useLivePresence(uuids: string[]): FriendPresence[] {
   }, [uuids, live, liveRuns, users])
 }
 
-export function sortPresence(list: FriendPresence[]): FriendPresence[] {
+export function sortPresence(list: RunnerPresence[]): RunnerPresence[] {
   return [...list].sort(
     (a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status] || a.nickname.localeCompare(b.nickname)
   )
 }
 
-export function useFriendsPresence(): { friends: FriendPresence[]; inGame: number } {
+export function useWatchlist(): { runners: RunnerPresence[]; inGame: number } {
   const favorites = useUi((s) => s.favorites)
   const presence = useLivePresence(favorites)
-  const friends = useMemo(() => sortPresence(presence), [presence])
+  const runners = useMemo(() => sortPresence(presence), [presence])
   return {
-    friends,
-    inGame: friends.filter((f) => f.status === 'ranked' || f.status === 'pace').length
-  }
-}
-
-const EMPTY_NET: FriendsNetState = {
-  configured: false,
-  connected: false,
-  error: null,
-  friends: [],
-  incoming: [],
-  outgoing: []
-}
-
-export function useFriendsNet(): FriendsNetState {
-  const [net, setNet] = useState<FriendsNetState>(EMPTY_NET)
-  useEffect(() => {
-    let active = true
-    void window.mcsr.friends.state().then((s) => {
-      if (active) setNet(s)
-    })
-    const off = window.mcsr.friends.onChanged(setNet)
-    return () => {
-      active = false
-      off()
-    }
-  }, [])
-  return net
-}
-
-const NET_STATE_LABEL: Record<string, string> = {
-  idle: 'In the client',
-  ranked: 'In the client · Ranked',
-  rsg: 'In the client · RSG',
-  zsg: 'In the client · ZSG'
-}
-
-export function useMutualPresence(
-  net: FriendsNetState
-): { rows: FriendPresence[]; inGame: number; online: number } {
-  const uuids = useMemo(() => net.friends.map((f) => normUuid(f.uuid)), [net.friends])
-  const pub = useLivePresence(uuids)
-  const rows = useMemo(() => {
-    const merged = net.friends.map((f, i) => {
-      const p = pub[i]
-      const nickname = f.nickname || p?.nickname || '…'
-      if (p && (p.status === 'ranked' || p.status === 'pace')) return { ...p, nickname }
-      if (f.state !== 'offline') {
-        return {
-          uuid: normUuid(f.uuid),
-          nickname,
-          eloRate: p?.eloRate ?? null,
-          status: 'online' as const,
-          detail: NET_STATE_LABEL[f.state] ?? 'In the client',
-          liveUrl: null
-        }
-      }
-      return {
-        uuid: normUuid(f.uuid),
-        nickname,
-        eloRate: p?.eloRate ?? null,
-        status: 'offline' as const,
-        detail: f.lastSeen ? `Last seen ${epochToAgo(f.lastSeen)}` : (p?.detail ?? 'Offline'),
-        liveUrl: null
-      }
-    })
-    return sortPresence(merged)
-  }, [net.friends, pub])
-  return {
-    rows,
-    inGame: rows.filter((f) => f.status === 'ranked' || f.status === 'pace').length,
-    online: rows.filter((f) => f.status !== 'offline').length
+    runners,
+    inGame: runners.filter((f) => f.status === 'ranked' || f.status === 'pace').length
   }
 }

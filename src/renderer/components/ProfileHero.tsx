@@ -4,45 +4,11 @@ import { rankedStats } from '@services/mcsr-ranked'
 import { eloToRank } from '@core/rank'
 import { msToTime, winRate } from '@core/format'
 import type { SeasonSel } from '../hooks/usePlayerAnalytics'
-import { useFavorites, useFriendsNet, normUuid } from '../hooks/useFriends'
-import { useUi } from '../store/uiStore'
+import { useFavorites } from '../hooks/useWatchlist'
 import { PlayerHead } from './PlayerHead'
 import { RankBadge } from './RankBadge'
 import { StatTile } from './StatTile'
 import { DonorBadge } from './DonorBadge'
-
-function AddFriendButton({ uuid, nickname }: { uuid: string; nickname: string }) {
-  const net = useFriendsNet()
-  const self = useUi((s) => s.profile)
-  const id = normUuid(uuid)
-  if (!net.connected || !self || normUuid(self.uuid) === id) return null
-
-  const isFriend = net.friends.some((f) => normUuid(f.uuid) === id)
-  const isOutgoing = net.outgoing.some((f) => normUuid(f.uuid) === id)
-  const isIncoming = net.incoming.some((f) => normUuid(f.uuid) === id)
-
-  if (isFriend)
-    return <span className="rounded-full bg-[var(--win)]/12 px-2.5 py-1 text-[11px] text-[var(--win)]">Friends</span>
-  if (isOutgoing)
-    return <span className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] text-faint">Request sent</span>
-  if (isIncoming)
-    return (
-      <button
-        onClick={() => void window.mcsr.friends.accept(id)}
-        className="rounded-full bg-[var(--gold)]/15 px-2.5 py-1 text-[11px] text-[var(--gold)] transition-all hover:brightness-125"
-      >
-        Accept request
-      </button>
-    )
-  return (
-    <button
-      onClick={() => void window.mcsr.friends.request(id, nickname)}
-      className="rounded-full border border-[var(--gold)]/35 bg-[var(--gold)]/10 px-2.5 py-1 text-[11px] text-[var(--gold)] transition-all hover:brightness-125"
-    >
-      + Add friend
-    </button>
-  )
-}
 
 function FavoriteStar({ uuid }: { uuid: string }) {
   const { isFavorite, toggle } = useFavorites()
@@ -50,7 +16,7 @@ function FavoriteStar({ uuid }: { uuid: string }) {
   return (
     <button
       onClick={() => void toggle(uuid)}
-      title={fav ? 'Remove from friends' : 'Add to friends'}
+      title={fav ? 'Remove from watchlist' : 'Add to watchlist'}
       className="shrink-0 transition-transform hover:scale-110"
       style={{ color: fav ? 'var(--gold)' : 'var(--faint)' }}
     >
@@ -128,7 +94,6 @@ export function ProfileHero({
           <div className="flex items-center gap-2.5">
             <h1 className="truncate text-2xl font-bold tracking-tight">{user.nickname}</h1>
             <FavoriteStar uuid={user.uuid} />
-            <AddFriendButton uuid={user.uuid} nickname={user.nickname} />
             <DonorBadge roleType={user.roleType} withLabel />
             {user.country && (
               <img

@@ -43,11 +43,10 @@ Pulls top-runner ranked matches from [GapCheck](https://gapcheck.gg), filtered b
 bastion, finish time, rank or runner. You get all four seeds to paste into a private room, then
 your splits against theirs once you've played it, with links to the runner's VOD at each split.
 
-**Friends**
+**Watchlist**
 
-A friends list with presence and direct messages, plus a watchlist that shows when a runner is in a
-ranked match or on pace. Login uses the same Mojang session check a Minecraft server does, so
-there's no separate account. The server is in [`server/`](server/) if you want to host your own.
+Star any runner and the rail on the right shows when they are in a ranked match or on pace, with a
+live run timer and a link to their stream.
 
 ## Building
 

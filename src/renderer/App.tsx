@@ -4,9 +4,7 @@ import type { UpdateStatus } from '@shared/types'
 import { useUi } from './store/uiStore'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
-import { FriendsRail } from './components/FriendsRail'
-import { ToastHost } from './components/Toast'
-import { useMessagesBridge } from './store/messagesStore'
+import { WatchlistRail } from './components/WatchlistRail'
 import { PlayBar } from './components/PlayBar'
 import { InstallMapPicker } from './components/InstallMapPicker'
 import { ExtraOptionsPrompt } from './components/ExtraOptionsPrompt'
@@ -25,7 +23,6 @@ import { McsrLogo } from './components/Logo'
 
 export function App() {
   const { profile, authReady, setProfile, setAuthReady, setPacemanName, setFavorites } = useUi()
-  useMessagesBridge()
 
   useEffect(() => {
     let active = true
@@ -48,7 +45,6 @@ export function App() {
         if (p) setProfile(p)
         setPacemanName(cfg.pacemanName ?? (pace.hasKey ? (p?.name ?? null) : null))
         setFavorites(cfg.favorites ?? [])
-        if (p) void window.mcsr.friends.autoConnect()
       } finally {
         if (active) setAuthReady(true)
       }
@@ -84,12 +80,11 @@ export function App() {
                 <Route path="/settings" element={<Settings />} />
               </Routes>
             </main>
-            <FriendsRail />
+            <WatchlistRail />
           </div>
           <PlayBar />
           <InstallMapPicker />
           <ExtraOptionsPrompt />
-          <ToastHost />
         </div>
       )}
     </div>

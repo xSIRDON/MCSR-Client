@@ -6,12 +6,12 @@ interface UiState {
   authReady: boolean
   pacemanName: string | null
   favorites: string[]
-  friendsOpen: boolean
+  railOpen: boolean
   setProfile: (p: Profile | null) => void
   setAuthReady: (v: boolean) => void
   setPacemanName: (name: string | null) => void
   setFavorites: (uuids: string[]) => void
-  setFriendsOpen: (open: boolean) => void
+  setRailOpen: (open: boolean) => void
 }
 
 export const useUi = create<UiState>((set) => ({
@@ -19,10 +19,10 @@ export const useUi = create<UiState>((set) => ({
   authReady: false,
   pacemanName: null,
   favorites: [],
-  friendsOpen: false,
+  railOpen: false,
   setProfile: (profile) => set({ profile }),
   setAuthReady: (authReady) => set({ authReady }),
   setPacemanName: (pacemanName) => set({ pacemanName }),
   setFavorites: (favorites) => set({ favorites }),
-  setFriendsOpen: (friendsOpen) => set({ friendsOpen })
+  setRailOpen: (railOpen) => set({ railOpen })
 }))

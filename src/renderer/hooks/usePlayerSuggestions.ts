@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { mcsr } from '../lib/clients'
-import { useFriendsNet } from './useFriends'
 import type { McsrUser } from '@services/mcsr-ranked'
 
 const MAX = 7
@@ -9,7 +8,6 @@ const MAX = 7
 export function usePlayerSuggestions(query: string): string[] {
   const q = query.trim().toLowerCase()
   const qc = useQueryClient()
-  const net = useFriendsNet()
 
   const { data: lb } = useQuery({
     queryKey: ['leaderboard'],
@@ -24,12 +22,11 @@ export function usePlayerSuggestions(query: string): string[] {
       if (n && !byLower.has(n.toLowerCase())) byLower.set(n.toLowerCase(), n)
     }
     for (const u of lb?.users ?? []) add(u.nickname)
-    for (const f of [...net.friends, ...net.incoming, ...net.outgoing]) add(f.nickname)
     for (const [, data] of qc.getQueriesData<McsrUser>({ queryKey: ['user'] })) {
       add(data?.nickname)
     }
     return [...byLower.values()]
-  }, [lb, qc, net.friends, net.incoming, net.outgoing])
+  }, [lb, qc])
 
   const [exact, setExact] = useState<string | null>(null)
   useEffect(() => {
