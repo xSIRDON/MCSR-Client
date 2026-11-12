@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { SAVED_KEY_MASK, type Account, type AppConfig, type JavaInfo, type TrackerStatus, type UpdateStatus } from '@shared/types'
+import type { DataLocation, DataMoveProgress, DataMoveResult } from '@shared/ipc'
 import { useUi } from '../store/uiStore'
 import { PlayerHead } from '../components/PlayerHead'
 
@@ -184,6 +185,8 @@ export function Settings() {
         <div className="text-sm text-muted">RAM is set per instance, under Edit instance.</div>
       </Card>
 
+      <GameFiles />
+
       <Card title="Paceman">
         <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-x-3 gap-y-3">
           <label className="text-sm text-muted">Access key</label>
@@ -316,6 +319,79 @@ export function Settings() {
         </div>
       )}
     </div>
+  )
+}
+
+function GameFiles() {
+  const [location, setLocation] = useState<DataLocation | null>(null)
+  const [progress, setProgress] = useState<DataMoveProgress | null>(null)
+  const [moving, setMoving] = useState(false)
+  const [done, setDone] = useState<DataMoveResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    void window.mcsr.data.location().then(setLocation)
+    return window.mcsr.data.onMoveProgress(setProgress)
+  }, [])
+
+  async function move(toDefault: boolean) {
+    setError(null)
+    setProgress(null)
+    setMoving(true)
+    try {
+      const result = await window.mcsr.data.move(toDefault)
+      if (result) setDone(result)
+    } catch (e) {
+      setError(e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e))
+    } finally {
+      setMoving(false)
+    }
+  }
+
+  const pct = progress && progress.totalBytes > 0 ? Math.floor((progress.doneBytes / progress.totalBytes) * 100) : null
+
+  return (
+    <Card title="Game files">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 text-sm text-muted">
+          Instances, worlds and downloads are kept in{' '}
+          <span className="break-all text-text">{done?.path ?? location?.path ?? '…'}</span>
+        </div>
+        <button
+          onClick={() => void move(false)}
+          disabled={moving || !!done}
+          className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-muted hover:text-text disabled:opacity-50"
+        >
+          Move…
+        </button>
+      </div>
+      {moving && (
+        <p className="mt-2 text-xs text-faint">
+          {progress?.stage === 'copying'
+            ? `Copying… ${pct ?? 0}% (${progress.doneFiles.toLocaleString()} of ${progress.totalFiles.toLocaleString()} files)`
+            : progress?.stage === 'cleaning'
+              ? 'Removing the old copy…'
+              : progress?.stage === 'scanning'
+                ? `Counting files… ${progress.totalFiles.toLocaleString()}`
+                : 'Moving…'}
+        </p>
+      )}
+      {done && (
+        <p className="mt-2 text-xs text-[var(--win)]">
+          Moved. Restarting MCSR Client…
+          {done.leftover && <span className="text-faint"> The old folder couldn’t be fully removed: {done.leftover}</span>}
+        </p>
+      )}
+      {error && <p className="mt-2 text-xs text-[var(--loss)]">{error}</p>}
+      {location && !location.isDefault && !moving && !done && (
+        <button onClick={() => void move(true)} className="mt-2 text-xs text-faint hover:text-text">
+          Move back to the default folder
+        </button>
+      )}
+      <p className="mt-2 text-xs text-faint">
+        Close Minecraft first. Moving to another drive copies everything, which can take a while if you have a lot of worlds.
+      </p>
+    </Card>
   )
 }
 

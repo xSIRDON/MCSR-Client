@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipc'
-import type { McsrApi } from '../shared/ipc'
+import type { DataMoveProgress, McsrApi } from '../shared/ipc'
 import type {
   AppConfigPatch,
   GapCheckFilters,
@@ -107,6 +107,11 @@ const api: McsrApi = {
     pickJar: () => ipcRenderer.invoke(IPC.cfgPickJar),
     pickJava: () => ipcRenderer.invoke(IPC.cfgPickJava),
     pickFolder: () => ipcRenderer.invoke(IPC.cfgPickFolder)
+  },
+  data: {
+    location: () => ipcRenderer.invoke(IPC.dataLocation),
+    move: (toDefault?: boolean) => ipcRenderer.invoke(IPC.dataMove, toDefault === true),
+    onMoveProgress: (cb: (p: DataMoveProgress) => void) => subscribe<DataMoveProgress>(IPC.dataMoveProgress, cb)
   },
   skins: {
     get: (idOrUuid: string, size: number, kind: 'avatar' | 'body') =>

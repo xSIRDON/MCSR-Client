@@ -41,6 +41,7 @@ If you add mods yourself, such as a SeedQueue beta jar, check that they are on t
 - Sizes the SeedQueue settings and RAM to your PC before launch (can be turned off per instance).
 - Imports `options.txt`, `hotbar.nbt`, `config/`, resource packs and worlds from another instance.
 - Exports an instance as a zip that MultiMC and Prism can import.
+- Game files can be moved to another drive from Settings.
 - Shows each instance's game logs and crash reports, with a button to upload one to mclo.gs.
 - Sign in with Microsoft. Multiple accounts are supported.
 

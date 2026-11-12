@@ -20,6 +20,24 @@ import type {
   UpdateStatus
 } from './types'
 
+export interface DataLocation {
+  path: string
+  isDefault: boolean
+}
+
+export interface DataMoveProgress {
+  stage: 'scanning' | 'copying' | 'cleaning'
+  doneBytes: number
+  totalBytes: number
+  doneFiles: number
+  totalFiles: number
+}
+
+export interface DataMoveResult {
+  path: string
+  leftover: string | null
+}
+
 export const IPC = {
   winMinimize: 'win:minimize',
   winClose: 'win:close',
@@ -79,6 +97,9 @@ export const IPC = {
   cfgPickJar: 'cfg:pickJar',
   cfgPickJava: 'cfg:pickJava',
   cfgPickFolder: 'cfg:pickFolder',
+  dataLocation: 'data:location',
+  dataMove: 'data:move',
+  dataMoveProgress: 'data:moveProgress',
   skinGet: 'skin:get',
   matchCacheGet: 'matchCache:get',
   matchCachePut: 'matchCache:put'
@@ -175,6 +196,11 @@ export interface McsrApi {
     pickJar(): Promise<string | null>
     pickJava(): Promise<string | null>
     pickFolder(): Promise<string | null>
+  }
+  data: {
+    location(): Promise<DataLocation>
+    move(toDefault?: boolean): Promise<DataMoveResult | null>
+    onMoveProgress(cb: (p: DataMoveProgress) => void): () => void
   }
   skins: {
     get(idOrUuid: string, size: number, kind: 'avatar' | 'body'): Promise<string | null>

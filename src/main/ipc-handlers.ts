@@ -1,12 +1,15 @@
-import { ipcMain, dialog, shell } from 'electron'
-import { existsSync, mkdirSync } from 'node:fs'
+import { app, ipcMain, dialog, shell } from 'electron'
+import { existsSync, mkdirSync, readdirSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { IPC } from '../shared/ipc'
 import type { AppConfigPatch, GapCheckFilters, InstanceId, LogKind, StandardSettings } from '../shared/types'
 import { INSTANCE_IDS, INSTANCE_LABEL } from '../shared/types'
 import { store } from './store'
-import { syncInstalledPrism, syncPrismInstance } from './ipc/prism-settings'
+import { prismRoot, syncInstalledPrism, syncPrismInstance } from './ipc/prism-settings'
+import { prismSessionActive } from './launcher/prism-instance'
+import { moveDataDir, moveTarget } from './instances/move-data'
+import { killNinjabrain } from './tools/ninjabrain'
 import * as auth from './auth/msmc-auth'
 import * as gmll from './launcher/gmll-adapter'
 import * as tracker from './paceman/tracker'
@@ -21,7 +24,7 @@ import { getCachedMatch, putCachedMatch } from './match-cache'
 import { checkForUpdates, currentUpdateStatus, quitAndInstall } from './updater'
 import { detectJava } from './system/java'
 import { pushLog, onLog, logHistory, clearLog } from './log'
-import { paths } from './paths'
+import { defaultRoot, paths, setDataLocation } from './paths'
 import {
   assertInstanceId,
   BUSY_STATES,
@@ -288,5 +291,49 @@ export function registerIpc(): void {
     })
     if (res.canceled || res.filePaths.length === 0) return null
     return picked(res.filePaths[0])
+  })
+
+  let moving = false
+  ipcMain.handle(IPC.dataLocation, () => ({
+    path: paths.root(),
+    isDefault: paths.root().toLowerCase() === defaultRoot().toLowerCase()
+  }))
+  ipcMain.handle(IPC.dataMove, async (_e, toDefault: unknown) => {
+    if (moving) throw new Error('Already moving the game files.')
+    const busy = INSTANCE_IDS.some(
+      (id) => BUSY_STATES.includes(states[id].state) || prismSessionActive(prismRoot(id))
+    )
+    if (busy) throw new Error('Close Minecraft and wait for any install to finish first.')
+    const from = paths.root()
+    let dest: string
+    if (toDefault === true) {
+      dest = defaultRoot()
+      if (existsSync(dest) && readdirSync(dest).length > 0) {
+        throw new Error(`${dest} already has files in it. Empty it first.`)
+      }
+    } else {
+      const res = await dialog.showOpenDialog({
+        title: 'Choose where to keep the game files',
+        properties: ['openDirectory', 'createDirectory']
+      })
+      if (res.canceled || res.filePaths.length === 0) return null
+      dest = moveTarget(res.filePaths[0], from)
+    }
+    moving = true
+    try {
+      tracker.stop()
+      killNinjabrain()
+      const { leftover } = await moveDataDir(from, dest, () => setDataLocation(dest), (p) =>
+        win()?.webContents.send(IPC.dataMoveProgress, p)
+      )
+      pushLog('system', `Game files moved to ${dest}.`)
+      setTimeout(() => {
+        app.relaunch()
+        app.exit(0)
+      }, 2500)
+      return { path: dest, leftover: leftover ? from : null }
+    } finally {
+      moving = false
+    }
   })
 }

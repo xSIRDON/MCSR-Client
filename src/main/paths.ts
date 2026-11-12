@@ -1,6 +1,6 @@
 import { app } from 'electron'
-import { existsSync, renameSync, mkdirSync, copyFileSync, unlinkSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, renameSync, mkdirSync, copyFileSync, unlinkSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { isInstanceId, type InstanceId } from '../shared/types'
 import { logFailure } from './log'
 
@@ -19,8 +19,36 @@ function sessionDir(): string {
   return app.getPath('userData')
 }
 
-function rootDir(): string {
+const LOCATION_FILE = 'data-location.txt'
+let chosenRoot: string | null | undefined
+
+export function defaultRoot(): string {
   return join(sessionDir(), DATA_DIR)
+}
+
+function rootDir(): string {
+  if (chosenRoot === undefined) {
+    try {
+      const saved = readFileSync(join(sessionDir(), LOCATION_FILE), 'utf8').trim()
+      chosenRoot = saved && isAbsolute(saved) ? saved : null
+    } catch {
+      chosenRoot = null
+    }
+  }
+  return chosenRoot ?? defaultRoot()
+}
+
+export function setDataLocation(dir: string): void {
+  const file = join(sessionDir(), LOCATION_FILE)
+  if (resolve(dir).toLowerCase() === resolve(defaultRoot()).toLowerCase()) {
+    rmSync(file, { force: true })
+    chosenRoot = null
+    return
+  }
+  const tmp = file + '.tmp'
+  writeFileSync(tmp, resolve(dir), 'utf8')
+  renameSync(tmp, file)
+  chosenRoot = resolve(dir)
 }
 
 export function migrateDataDir(): void {
