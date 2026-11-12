@@ -11,7 +11,8 @@ import {
   hasExtraOptions,
   shouldPromptExtraOptions,
   pruneSupersededMods,
-  upgradeInstalledMods
+  upgradeInstalledMods,
+  brokenJars
 } from './mods'
 
 describe('parseModFilename', () => {
@@ -375,5 +376,24 @@ describe('upgradeInstalledMods', () => {
       })
     ).rejects.toThrow()
     expect(calls).toBe(0)
+  })
+})
+
+describe('brokenJars', () => {
+  it('flags empty and non-zip jars but leaves real ones and disabled ones alone', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mcsr-broken-'))
+    try {
+      writeFileSync(join(dir, 'empty.jar'), '')
+      writeFileSync(join(dir, 'html.jar'), '<html>')
+      writeFileSync(join(dir, 'good.jar'), Buffer.from([0x50, 0x4b, 3, 4]))
+      writeFileSync(join(dir, 'off.jar.disabled'), '')
+      expect(brokenJars(dir).sort()).toEqual(['empty.jar', 'html.jar'])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('returns nothing for a missing folder', () => {
+    expect(brokenJars(join(tmpdir(), 'mcsr-no-such-dir'))).toEqual([])
   })
 })

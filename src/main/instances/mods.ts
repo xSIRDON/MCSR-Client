@@ -1,7 +1,7 @@
-import { existsSync, readdirSync, renameSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { closeSync, existsSync, openSync, readdirSync, readSync, renameSync, mkdirSync, rmSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import type { InstanceId, ModInfo } from '../../shared/types'
-import { assertTrustedDownloadUrl, verifyBuffer, type PackModUpgrade } from './mrpack'
+import { assertTrustedDownloadUrl, verifyBuffer, writeAtomic, type PackModUpgrade } from './mrpack'
 import { logFailure } from '../log'
 
 const DISABLED = '.disabled'
@@ -26,6 +26,24 @@ export function listMods(modsDir: string): ModInfo[] {
     .filter((f) => /\.jar(\.disabled)?$/i.test(f))
     .map(modFromFile)
     .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+export function brokenJars(modsDir: string): string[] {
+  if (!existsSync(modsDir)) return []
+  return readdirSync(modsDir).filter((f) => {
+    if (!/\.jar$/i.test(f)) return false
+    try {
+      const fd = openSync(join(modsDir, f), 'r')
+      try {
+        const head = Buffer.alloc(2)
+        return readSync(fd, head, 0, 2, 0) < 2 || head.toString('latin1') !== 'PK'
+      } finally {
+        closeSync(fd)
+      }
+    } catch {
+      return true
+    }
+  })
 }
 
 export function setModEnabled(modsDir: string, file: string, enabled: boolean): void {
@@ -68,7 +86,7 @@ export async function installModJar(
     try {
       const buf = await fetchBuffer(url)
       if (mod.sha512) verifyBuffer(buf, { sha512: mod.sha512 })
-      writeFileSync(dest, buf)
+      writeAtomic(dest, buf)
       return true
     } catch (e) {
       lastErr = e
@@ -122,7 +140,7 @@ export async function upgradeInstalledMods(
         }
       }
       if (!buf) throw new Error(`Failed to update to ${file}: ${String(lastErr)}`)
-      writeFileSync(dest, buf)
+      writeAtomic(dest, buf)
       done.push(file)
     }
     rmSync(oldJar, { force: true })

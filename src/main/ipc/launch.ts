@@ -1,3 +1,4 @@
+import { rmSync } from 'node:fs'
 import { freemem } from 'node:os'
 import { join } from 'node:path'
 import type { InstanceId } from '../../shared/types'
@@ -7,7 +8,7 @@ import { launchPrism, prismLaunchSecrets } from '../launcher/prism-adapter'
 import { gameLogReader } from '../launcher/game-log'
 import * as tracker from '../paceman/tracker'
 import { fabricVersionString, PACK_MOD_UPGRADES } from '../instances/mrpack'
-import { upgradeInstalledMods } from '../instances/mods'
+import { brokenJars, upgradeInstalledMods } from '../instances/mods'
 import { launchNinjabrain, killNinjabrain } from '../tools/ninjabrain'
 import { spawnToolscreenWatcher } from '../tools/toolscreen'
 import { detectJava } from '../system/java'
@@ -67,7 +68,14 @@ export async function launchInstance(id: InstanceId, opts?: LaunchOptions): Prom
   const wasFresh =
     states[id].state === 'not-installed' || (states[id].state === 'error' && !installedVersion(id))
   const stale = latest !== undefined && installedVersion(id) !== latest
-  if (states[id].state !== 'ready' || stale) {
+  const modsDir = join(gmll.gameDir(id), 'mods')
+  const broken = brokenJars(modsDir)
+  for (const f of broken) rmSync(join(modsDir, f), { force: true })
+  if (broken.length > 0) {
+    pushLog('system', `Removed broken mod files: ${broken.join(', ')}. Reinstalling them.`)
+    sendProgress({ instance: id, phase: 'mods', fraction: null, message: 'Repairing broken mod files…' })
+  }
+  if (states[id].state !== 'ready' || stale || broken.length > 0) {
     if (stale) {
       sendProgress({ instance: id, phase: 'mods', fraction: null, message: `Updating MCSR pack to ${latest}…` })
     }

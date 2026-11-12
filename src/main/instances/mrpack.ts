@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync, cpSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync, cpSync, renameSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { unzip } from '../security/safe-unzip'
@@ -131,6 +131,12 @@ export function fabricVersionString(index: ModrinthIndex): string {
 
 type FetchBuffer = (url: string) => Promise<Buffer>
 
+export function writeAtomic(dest: string, buf: Buffer): void {
+  const tmp = `${dest}.part`
+  writeFileSync(tmp, buf)
+  renameSync(tmp, dest)
+}
+
 const STALL_MS = 30_000
 
 const nodeFetchBuffer: FetchBuffer = async (url) => {
@@ -238,7 +244,7 @@ export async function installPackFiles(
         assertTrustedDownloadUrl(url)
         const buf = await fetchWithRetry(fetchBuffer, url, 3, opts.retryDelayMs ?? 2000)
         verifyBuffer(buf, file.hashes)
-        writeFileSync(dest, buf)
+        writeAtomic(dest, buf)
         ok = true
         break
       } catch (e) {
@@ -291,7 +297,7 @@ export async function installLatestRankedMod(
   if (!alreadyInstalled(join(modsDir, jarName), file.hashes)) {
     const buf = await fetchWithRetry(fetchBuffer, file.url, 3, 2000)
     verifyBuffer(buf, file.hashes)
-    writeFileSync(join(modsDir, jarName), buf)
+    writeAtomic(join(modsDir, jarName), buf)
   }
 
   for (const f of readdirSync(modsDir)) {
