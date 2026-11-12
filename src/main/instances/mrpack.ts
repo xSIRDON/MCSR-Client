@@ -131,12 +131,53 @@ export function fabricVersionString(index: ModrinthIndex): string {
 
 type FetchBuffer = (url: string) => Promise<Buffer>
 
+const STALL_MS = 30_000
+
 const nodeFetchBuffer: FetchBuffer = async (url) => {
   assertTrustedDownloadUrl(url)
-  const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(120_000) })
-  if (!res.ok) throw new Error(`download failed ${res.status} for ${url}`)
-  if (res.url) assertTrustedDownloadUrl(res.url)
-  return Buffer.from(await res.arrayBuffer())
+  const controller = new AbortController()
+  let timer: NodeJS.Timeout | undefined
+  const arm = (): void => {
+    clearTimeout(timer)
+    timer = setTimeout(() => controller.abort(new Error(`download stalled for ${url}`)), STALL_MS)
+  }
+  arm()
+  try {
+    const res = await fetch(url, { redirect: 'follow', signal: controller.signal })
+    if (!res.ok) throw new Error(`download failed ${res.status} for ${url}`)
+    if (res.url) assertTrustedDownloadUrl(res.url)
+    const chunks: Buffer[] = []
+    if (res.body) {
+      for await (const chunk of res.body) {
+        chunks.push(Buffer.from(chunk))
+        arm()
+      }
+    }
+    return Buffer.concat(chunks)
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function fetchWithRetry(fetchBuffer: FetchBuffer, url: string, tries: number, delayMs: number): Promise<Buffer> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetchBuffer(url)
+    } catch (e) {
+      if (attempt >= tries || /failed 4\d\d/.test(String(e))) throw e
+      await new Promise((r) => setTimeout(r, delayMs * attempt))
+    }
+  }
+}
+
+function alreadyInstalled(dest: string, hashes: PackFile['hashes']): boolean {
+  if (!existsSync(dest)) return false
+  try {
+    verifyBuffer(readFileSync(dest), hashes)
+    return true
+  } catch {
+    return false
+  }
 }
 
 export async function fetchPack(
@@ -164,6 +205,7 @@ export interface InstallOpts {
   seedQueueOverride?: string | null
   onProgress?: (done: number, total: number, label: string) => void
   fetchBuffer?: FetchBuffer
+  retryDelayMs?: number
 }
 
 export async function installPackFiles(
@@ -184,13 +226,17 @@ export async function installPackFiles(
     opts.onProgress?.(done, total, file.path.split('/').pop() ?? file.path)
     const dest = safeJoin(gameDir, file.path)
     mkdirSync(dirname(dest), { recursive: true })
+    if (alreadyInstalled(dest, file.hashes)) {
+      done++
+      continue
+    }
 
     let lastErr: unknown
     let ok = false
     for (const url of file.downloads) {
       try {
         assertTrustedDownloadUrl(url)
-        const buf = await fetchBuffer(url)
+        const buf = await fetchWithRetry(fetchBuffer, url, 3, opts.retryDelayMs ?? 2000)
         verifyBuffer(buf, file.hashes)
         writeFileSync(dest, buf)
         ok = true
@@ -236,15 +282,17 @@ export async function installLatestRankedMod(
   if (!file) throw new Error('MCSR Ranked release has no downloadable file')
 
   assertTrustedDownloadUrl(file.url)
-  const buf = await fetchBuffer(file.url)
-  verifyBuffer(buf, file.hashes)
   const modsDir = join(gameDir, 'mods')
   mkdirSync(modsDir, { recursive: true })
   const jarName = basename(file.filename)
   if (!jarName || !/\.jar$/i.test(jarName)) {
     throw new Error(`Unexpected mod filename from Modrinth: ${file.filename}`)
   }
-  writeFileSync(join(modsDir, jarName), buf)
+  if (!alreadyInstalled(join(modsDir, jarName), file.hashes)) {
+    const buf = await fetchWithRetry(fetchBuffer, file.url, 3, 2000)
+    verifyBuffer(buf, file.hashes)
+    writeFileSync(join(modsDir, jarName), buf)
+  }
 
   for (const f of readdirSync(modsDir)) {
     if (f !== jarName && f.toLowerCase().startsWith('mcsrranked')) {

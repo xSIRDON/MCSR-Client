@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -255,6 +255,72 @@ describe('installPackFiles URL containment', () => {
       )
       expect(fetched).toEqual(['https://github.com/Minecraft-Java-Edition-Speedrunning/legal-mods/raw/new'])
       expect(written).toEqual(['mods/hermes-0.15.1+MC1.16.1.jar'])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('skips files that are already on disk with the right hash', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mcsr-test-'))
+    const body = Buffer.from('jar-bytes')
+    const sha512 = createHash('sha512').update(body).digest('hex')
+    try {
+      mkdirSync(join(dir, 'mods'))
+      writeFileSync(join(dir, 'mods', 'a.jar'), body)
+      let calls = 0
+      await installPackFiles(
+        indexWith([{ path: 'mods/a.jar', hashes: { sha512 }, downloads: ['https://cdn.modrinth.com/data/a.jar'] }]),
+        dir,
+        { fetchBuffer: async () => { calls++; return body } }
+      )
+      expect(calls).toBe(0)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('retries a dropped download before giving up', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mcsr-test-'))
+    const body = Buffer.from('jar-bytes')
+    const sha512 = createHash('sha512').update(body).digest('hex')
+    try {
+      let calls = 0
+      await installPackFiles(
+        indexWith([{ path: 'mods/a.jar', hashes: { sha512 }, downloads: ['https://cdn.modrinth.com/data/a.jar'] }]),
+        dir,
+        {
+          retryDelayMs: 0,
+          fetchBuffer: async () => {
+            if (++calls < 3) throw new Error('socket hang up')
+            return body
+          }
+        }
+      )
+      expect(calls).toBe(3)
+      expect(readFileSync(join(dir, 'mods', 'a.jar'))).toEqual(body)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not retry a missing file', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mcsr-test-'))
+    try {
+      let calls = 0
+      await expect(
+        installPackFiles(
+          indexWith([{ path: 'mods/a.jar', hashes: { sha512: 'ab' }, downloads: ['https://cdn.modrinth.com/data/a.jar'] }]),
+          dir,
+          {
+            retryDelayMs: 0,
+            fetchBuffer: async (url) => {
+              calls++
+              throw new Error(`download failed 404 for ${url}`)
+            }
+          }
+        )
+      ).rejects.toThrow(/404/)
+      expect(calls).toBe(1)
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

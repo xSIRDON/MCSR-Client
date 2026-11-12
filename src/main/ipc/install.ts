@@ -164,9 +164,21 @@ async function doInstallInstance(
       pushLog('system', `Toolscreen download skipped: ${e instanceof Error ? e.message : e}`)
     }
 
+    let latestRanked = false
+    if (id === 'ranked') {
+      sendProgress({ instance: id, phase: 'mods', fraction: null, message: 'Installing the latest MCSR Ranked mod…' })
+      try {
+        const v = await installLatestRankedMod(gameDir)
+        latestRanked = true
+        pushLog('system', `MCSR Ranked ${v} installed from Modrinth.`)
+      } catch (e) {
+        pushLog('system', `Latest Ranked mod fetch failed; using the pack version. ${e instanceof Error ? e.message : e}`)
+      }
+    }
+
     sendProgress({ instance: id, phase: 'mods', fraction: 0, message: 'Installing mods…' })
     const packPaths = await installPackFiles(index, gameDir, {
-      excludePrefixes: id === 'rsg' || id === 'zsg' ? RSG_EXCLUDE_PREFIXES : [],
+      excludePrefixes: id === 'rsg' || id === 'zsg' ? RSG_EXCLUDE_PREFIXES : latestRanked ? ['mcsrranked'] : [],
       upgrades: id === 'ranked' ? [] : PACK_MOD_UPGRADES,
       seedQueueOverride: store.getConfig().seedQueueOverride,
       onProgress: (done, total, label) =>
@@ -197,16 +209,6 @@ async function doInstallInstance(
         await installInstanceMod(gameDir, id, FSG_MOD, 'FSG mod')
       } catch (e) {
         pushLog('system', `FSG mod install skipped: ${e instanceof Error ? e.message : e}`)
-      }
-    }
-
-    if (id === 'ranked') {
-      sendProgress({ instance: id, phase: 'mods', fraction: null, message: 'Installing the latest MCSR Ranked mod…' })
-      try {
-        const v = await installLatestRankedMod(gameDir)
-        pushLog('system', `MCSR Ranked ${v} installed from Modrinth.`)
-      } catch (e) {
-        pushLog('system', `Latest Ranked mod fetch failed; keeping the pack version. ${e instanceof Error ? e.message : e}`)
       }
     }
 
