@@ -7,7 +7,7 @@ Ranked, RSG and ZSG setups for you and shows your MCSR Ranked and paceman stats 
 by an unmodified Prism Launcher, one of the allowed launchers, and the client only installs and starts
 legal setups. See [Following the rules](#following-the-rules) for how each rule is met.
 
-**[Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)** (v2.0.1, updates itself after that)
+**[Download the latest installer](https://github.com/xSIRDON/MCSR-Client/releases/latest)** (v2.0.2, updates itself after that)
 
 ![home screen](.github/assets/home.png)
 
